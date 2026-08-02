@@ -7,10 +7,9 @@ du matériel et du format de stockage. Elles sont validées avant de construire
 `ControllerConfig` et `LockSequenceConfig`. Une valeur invalide désactive le
 démarrage distant ; elle n'est jamais tronquée ou remplacée silencieusement.
 
-Le simulateur et le configurateur Windows fournissent aujourd'hui un adaptateur
-de fichier `key=value`. Le futur boîtier pourra utiliser une mémoire non volatile
-et une interface web, Bluetooth ou USB tout en conservant exactement le même
-modèle et le même validateur.
+Le simulateur et le configurateur Windows fournissent un adaptateur de fichier
+`key=value`. Le prototype ESP32-S3 utilise le même modèle dans sa mémoire flash
+et le configurateur le lit ou l'écrit par USB.
 
 ## Réglages disponibles
 
@@ -87,13 +86,12 @@ Exécuter le parcours configuré :
 
 Le menu interactif du simulateur propose la même fonction au choix `6`.
 
-Le configurateur ne transmet encore rien au véhicule ou au futur boîtier. Il
-produit aujourd'hui le fichier PC utilisé pour la simulation ; le même modèle
-sera raccordé à la mémoire réelle lorsque la carte et l'interface de transport
-auront été choisies.
+Le configurateur ne transmet aucune commande au véhicule. Il peut transmettre
+uniquement `UserSettings` au prototype par USB, puis relire la valeur persistée.
+Le fichier PC reste utilisable par le simulateur.
 
 Le format de trame indépendant du transport et les conditions d'autorisation
-sont déjà définis dans [settings-protocol.md](settings-protocol.md). Un réglage
+sont définis dans [settings-protocol.md](settings-protocol.md). Un réglage
 reçu est enregistré uniquement au repos et prend effet au prochain démarrage du
 boîtier ; il ne transforme jamais une session distante en cours.
 
@@ -113,14 +111,16 @@ Ces éléments relèvent de la sûreté du produit, pas d'une préférence. Les 
 propres à une variante automobile pourront évoluer dans un profil qualifié, mais
 ne seront pas librement modifiables par l'utilisateur final.
 
-## Persistance dans le futur boîtier
+## Persistance dans le prototype
 
 `UserSettingsStore` définit les opérations de chargement et d'enregistrement.
 Le journal portable fourni utilise deux générations, une version de schéma, un
 CRC-32 et un retour aux valeurs sûres si la mémoire est corrompue. Il reste à
-raccorder son port `SettingsByteStorage` à la mémoire non volatile du matériel
-choisi. Le contrôleur ne doit être construit qu'après validation réussie des
-valeurs chargées.
+raccorder son port `SettingsByteStorage` à une mémoire automobile qualifiée pour
+la carte définitive ; le prototype utilise déjà une EEPROM émulée dans la flash
+de l'ESP32-S3.
+Le contrôleur ne doit être construit qu'après validation réussie des valeurs
+chargées.
 
 Une modification ne sera appliquée que moteur arrêté et contrôleur en `Idle`, ou
 au redémarrage suivant du boîtier. Elle ne raccourcit, ne prolonge et ne transforme

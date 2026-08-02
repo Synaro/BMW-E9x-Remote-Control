@@ -42,7 +42,8 @@ Le premier jalon logiciel est opérationnel :
 - analyse différentielle hors ligne des octets et bits candidats ;
 - ESP32-S3-DevKitC-1-N8 sélectionné pour le prototype de banc avec USB filaire ;
 - endpoint USB ESP32-S3 raccordé au journal de configuration en flash ;
-- 80 tests C++, 8 scénarios du simulateur, 2 contrôles du configurateur et
+- configurateur Windows relié au port COM avec écriture et relecture vérifiée ;
+- 84 tests C++, 8 scénarios du simulateur, 2 contrôles du configurateur et
   21 tests Python automatisés en intégration continue.
 
 L'adaptateur BMW qui observera réellement le verrouillage, qualifiera la reprise
@@ -170,9 +171,17 @@ le simulateur :
 ```
 
 L'exécutable généré se trouve dans `build/bmw_remote_configurator.exe`. Le codec
-et le service de communication avec le futur boîtier existent, mais aucun
-transport USB, Bluetooth ou réseau n'est encore sélectionné. Voir
-[docs/configurator.md](docs/configurator.md).
+et le service communiquent avec le prototype par son port série USB. Pour lister
+les ports puis lire ou écrire le boîtier :
+
+```powershell
+.\scripts\configure.ps1 -ListDevices
+.\scripts\configure.ps1 -ReadDevice COM3
+.\scripts\configure.ps1 -WriteDevice COM3
+```
+
+Une écriture n'est déclarée réussie qu'après relecture et comparaison complète.
+Voir [docs/configurator.md](docs/configurator.md).
 
 ## Simulateur applicatif
 

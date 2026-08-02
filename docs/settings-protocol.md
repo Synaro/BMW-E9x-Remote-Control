@@ -2,8 +2,8 @@
 
 ## Objectif
 
-Le protocole relie le configurateur PC au futur boîtier sans dépendre d'un port
-série, de Bluetooth ou d'une interface web. Il transporte uniquement les
+Le protocole relie le configurateur PC au boîtier sans dépendre des détails du
+transport. La V1 l'utilise sur le port série USB natif de l'ESP32-S3. Il transporte uniquement les
 préférences `UserSettings`. Il ne transporte aucune commande moteur, aucun ordre
 d'actionneur et aucun contournement d'antidémarrage.
 
@@ -91,9 +91,11 @@ requête applicative.
 - le transport doit fournir confidentialité, authentification et anti-rejeu si
   son exposition le nécessite.
 
-Le choix USB, Bluetooth ou réseau reste volontairement ouvert. Aucun adaptateur
-ne doit positionner `authorized=true` par défaut ou déduire cette autorisation du
-seul CRC.
+Sur le prototype de banc, l'accès physique au connecteur USB dédié constitue
+l'autorisation locale et le firmware reste figé dans l'état `Idle`. Cette règle
+est limitée à cette cible sans adaptateur véhicule. Toute exposition sans accès
+physique contrôlé devra ajouter une authentification et une protection anti-rejeu.
+Le CRC seul ne fournit aucune de ces propriétés.
 
 ## Réception en flux
 

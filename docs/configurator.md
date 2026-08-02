@@ -6,10 +6,9 @@
 et modifier les préférences sans connaître la syntaxe du fichier `key=value`.
 Il utilise le même `UserSettings` et le même validateur que le contrôleur.
 
-Il ne communique actuellement ni avec une BMW ni avec un microcontrôleur. Le
-fichier produit sert au simulateur. Le codec et le service de dialogue avec le
-futur boîtier sont maintenant définis, mais l'adaptateur USB, Bluetooth ou réseau
-reste à choisir et à implémenter.
+Il ne communique jamais avec une BMW. Il peut en revanche lire et écrire les
+préférences du prototype ESP32-S3 par son port série USB. Le même fichier sert
+au simulateur et à l'écriture du boîtier.
 
 ## Utilisation recommandée sous Windows
 
@@ -52,10 +51,25 @@ librement la durée moteur entre 1 et 60 minutes.
 
 # Utiliser un autre fichier
 .\scripts\configure.ps1 -ConfigPath .\config\essai.local.conf
+
+# Lister les ports COM présents sous Windows
+.\scripts\configure.ps1 -ListDevices
+
+# Lire et afficher les réglages du prototype
+.\scripts\configure.ps1 -ReadDevice COM3
+
+# Écrire le fichier local, puis vérifier le résultat par relecture
+.\scripts\configure.ps1 -WriteDevice COM3
 ```
 
 L'exécutable accepte aussi directement `--show`, `--check`,
-`--write-defaults`, `--print-defaults`, `--config CHEMIN` et `--help`.
+`--write-defaults`, `--print-defaults`, `--list-devices`,
+`--read-device PORT`, `--write-device PORT`, `--config CHEMIN` et `--help`.
+
+La détection liste volontairement tous les ports série actifs : elle ne devine
+pas lequel correspond au boîtier. Cette sélection explicite évite d'écrire par
+erreur sur un autre appareil. Le débit configuré est 115200 bauds ; l'USB CDC
+natif de l'ESP32-S3 conserve néanmoins son propre transport USB.
 
 ## Garanties d'enregistrement
 
@@ -67,5 +81,17 @@ nouvelle version, elle reste utilisable.
 
 Les invariants non configurables restent ceux décrits dans
 [user-configuration.md](user-configuration.md) et [safety.md](safety.md).
-Le contrat de transfert futur est décrit dans
+Le contrat de transfert est décrit dans
 [settings-protocol.md](settings-protocol.md).
+
+## Garanties de la liaison USB
+
+- chaque échange possède un identifiant vérifié ;
+- le temps de réponse total est limité à 2 secondes ;
+- une trame partielle est abandonnée après 250 ms entre deux octets ;
+- longueur, version et CRC sont contrôlés avant d'interpréter une réponse ;
+- un statut `busy`, `unauthorized` ou une panne de stockage est affiché comme
+  un échec, jamais comme un succès ;
+- une écriture réussie est immédiatement suivie d'une lecture complète et
+  d'une comparaison champ par champ ;
+- aucune commande moteur ou véhicule n'existe dans ce protocole.

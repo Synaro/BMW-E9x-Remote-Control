@@ -25,6 +25,7 @@
 #include "bmw_remote/infrastructure/vehicle_state_assembler.hpp"
 #include "bmw_remote/simulation/synthetic_can.hpp"
 #include "tools/can_trace_csv.hpp"
+#include "tools/settings_device_client.hpp"
 #include "tools/user_settings_file.hpp"
 
 namespace {
@@ -1097,6 +1098,179 @@ void testSettingsEndpointReportsTimeoutAndTransportFailure() {
           bmw::remote::infrastructure::SettingsProtocolStatus::SettingsUnavailable);
 }
 
+struct LoopbackSettingsDeviceChannel final
+    : bmw::remote::host::SettingsDeviceChannel {
+    MemorySettingsStorage storage{};
+    JournaledUserSettingsStore store{storage};
+    bmw::remote::infrastructure::SettingsProtocolService service{store};
+    bmw::remote::infrastructure::SettingsProtocolAccess access{
+        true,
+        ControllerState::Idle};
+    bmw::remote::infrastructure::SettingsProtocolCodec::EncodedFrame response{};
+    std::size_t responseSize{0U};
+    std::size_t readOffset{0U};
+    std::size_t timeoutAfterBytes{std::numeric_limits<std::size_t>::max()};
+    std::uint32_t requestCount{0U};
+    bool clearSucceeds{true};
+    bool writeSucceeds{true};
+    bool readFails{false};
+    bool corruptResponse{false};
+    bool mismatchRequestId{false};
+    bool dropResponse{false};
+
+    bool clearInput(std::string& error) override {
+        if (!clearSucceeds) {
+            error = "simulated clear failure";
+            return false;
+        }
+        response.fill(0U);
+        responseSize = 0U;
+        readOffset = 0U;
+        error.clear();
+        return true;
+    }
+
+    bool writeAll(
+        const std::uint8_t* const data,
+        const std::size_t size,
+        const std::uint32_t timeoutMs,
+        std::string& error) override {
+        ++requestCount;
+        if (!writeSucceeds || data == nullptr || timeoutMs == 0U) {
+            error = "simulated write failure";
+            return false;
+        }
+
+        const auto decoded =
+            bmw::remote::infrastructure::SettingsProtocolCodec::decode(
+                data, size);
+        if (!decoded.valid()) {
+            error = "invalid simulated request";
+            return false;
+        }
+        auto protocolResponse = service.handle(decoded.frame, access);
+        if (mismatchRequestId) {
+            ++protocolResponse.requestId;
+        }
+        if (dropResponse) {
+            responseSize = 0U;
+            error.clear();
+            return true;
+        }
+        if (!bmw::remote::infrastructure::SettingsProtocolCodec::encode(
+                protocolResponse, response, responseSize)) {
+            error = "unable to encode simulated response";
+            return false;
+        }
+        if (corruptResponse && responseSize != 0U) {
+            response[responseSize - 1U] ^= 0x01U;
+        }
+        readOffset = 0U;
+        error.clear();
+        return true;
+    }
+
+    bmw::remote::host::SettingsChannelReadStatus readByte(
+        std::uint8_t& byte,
+        const std::uint32_t timeoutMs,
+        std::string& error) override {
+        if (readFails || timeoutMs == 0U) {
+            error = "simulated read failure";
+            return bmw::remote::host::SettingsChannelReadStatus::Failure;
+        }
+        if (readOffset >= responseSize || readOffset >= timeoutAfterBytes) {
+            error.clear();
+            return bmw::remote::host::SettingsChannelReadStatus::Timeout;
+        }
+        byte = response[readOffset];
+        ++readOffset;
+        error.clear();
+        return bmw::remote::host::SettingsChannelReadStatus::Data;
+    }
+};
+
+void testSettingsDeviceClientReadsPersistedSettings() {
+    LoopbackSettingsDeviceChannel channel{};
+    UserSettings expected{};
+    expected.hoodMonitoring = HoodMonitoringMode::Disabled;
+    expected.maximumRemoteRunTimeMs = 19U * 60U * 1'000U;
+    CHECK(channel.store.save(expected));
+    bmw::remote::host::SettingsDeviceClient client{channel};
+    UserSettings received{};
+    std::string error{};
+
+    CHECK(client.read(received, error));
+    CHECK(error.empty());
+    CHECK(bmw::remote::infrastructure::userSettingsEqual(expected, received));
+    CHECK(channel.requestCount == 1U);
+}
+
+void testSettingsDeviceClientWritesAndVerifiesByReadingBack() {
+    LoopbackSettingsDeviceChannel channel{};
+    bmw::remote::host::SettingsDeviceClient client{channel};
+    UserSettings expected{};
+    expected.hoodMonitoring = HoodMonitoringMode::Disabled;
+    expected.maximumRemoteRunTimeMs = 31U * 60U * 1'000U;
+    expected.lockPressCount = 4U;
+    std::string error{};
+
+    CHECK(client.writeAndVerify(expected, error));
+    CHECK(error.empty());
+    CHECK(channel.requestCount == 2U);
+
+    UserSettings persisted{};
+    CHECK(channel.store.load(persisted));
+    CHECK(bmw::remote::infrastructure::userSettingsEqual(expected, persisted));
+}
+
+void testSettingsDeviceClientRejectsProtocolFailures() {
+    LoopbackSettingsDeviceChannel channel{};
+    UserSettings persisted{};
+    CHECK(channel.store.save(persisted));
+    bmw::remote::host::SettingsDeviceClient client{channel};
+    UserSettings received{};
+    std::string error{};
+
+    channel.mismatchRequestId = true;
+    CHECK(!client.read(received, error));
+    CHECK(error.find("identifiant") != std::string::npos);
+
+    channel.mismatchRequestId = false;
+    channel.corruptResponse = true;
+    CHECK(!client.read(received, error));
+    CHECK(error.find("checksum_mismatch") != std::string::npos);
+
+    channel.corruptResponse = false;
+    channel.access.authorized = false;
+    CHECK(!client.read(received, error));
+    CHECK(error.find("unauthorized") != std::string::npos);
+}
+
+void testSettingsDeviceClientBoundsTimeoutsAndTransportFailures() {
+    LoopbackSettingsDeviceChannel channel{};
+    UserSettings persisted{};
+    CHECK(channel.store.save(persisted));
+    bmw::remote::host::SettingsDeviceClient client{
+        channel,
+        bmw::remote::host::SettingsDeviceClientConfig{10U, 5U}};
+    UserSettings received{};
+    std::string error{};
+
+    channel.timeoutAfterBytes = 5U;
+    CHECK(!client.read(received, error));
+    CHECK(error.find("reponse partielle") != std::string::npos);
+
+    channel.timeoutAfterBytes = std::numeric_limits<std::size_t>::max();
+    channel.dropResponse = true;
+    CHECK(!client.read(received, error));
+    CHECK(error.find("delai de reponse") != std::string::npos);
+
+    channel.dropResponse = false;
+    channel.readFails = true;
+    CHECK(!client.read(received, error));
+    CHECK(error.find("simulated read failure") != std::string::npos);
+}
+
 void testSafeAutomaticVehicleIsApproved() {
     const SafetyPolicy policy{};
     const auto assessment = policy.assessStart(safeAutomaticVehicle());
@@ -1914,6 +2088,10 @@ int main() {
         {"settings endpoint idle writes", testSettingsEndpointPersistsOnlyIdleWritesAndReadsWhileActive},
         {"settings endpoint corrupt frame", testSettingsEndpointDoesNotRespondToCorruptFrame},
         {"settings endpoint failures", testSettingsEndpointReportsTimeoutAndTransportFailure},
+        {"settings device read", testSettingsDeviceClientReadsPersistedSettings},
+        {"settings device write verify", testSettingsDeviceClientWritesAndVerifiesByReadingBack},
+        {"settings device protocol failures", testSettingsDeviceClientRejectsProtocolFailures},
+        {"settings device transport failures", testSettingsDeviceClientBoundsTimeoutsAndTransportFailures},
         {"safe automatic vehicle", testSafeAutomaticVehicleIsApproved},
         {"unavailable signal", testUnavailableSignalFailsClosed},
         {"multiple safety reasons", testUnsafeVehicleReportsAllDetectedReasons},

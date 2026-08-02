@@ -76,7 +76,7 @@ circuits de réveil et mesures de courant nécessaires sur le schéma final.
 ### Phase A — carte seule sur USB
 
 1. Compiler et flasher le firmware inerte.
-2. Vérifier l'identification USB et la console série.
+2. Vérifier l'identification USB et l'apparition du port COM.
 3. Vérifier le protocole de configuration déjà raccordé au port USB.
 4. Tester les débranchements, trames partielles et redémarrages.
 

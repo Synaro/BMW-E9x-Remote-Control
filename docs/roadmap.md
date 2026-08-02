@@ -77,7 +77,7 @@
 - [x] Implémenter `SettingsByteStorage` dans la mémoire flash du prototype
 - [x] Choisir l'USB filaire entre le configurateur et le boîtier V1
 - [x] Implémenter le transport USB sur ESP32-S3
-- [ ] Raccorder le configurateur Windows au port série USB
+- [x] Raccorder le configurateur Windows au port série USB avec relecture
 - [ ] Implémenter l'authentification et l'anti-rejeu propres au transport choisi
 - [ ] Valider la consommation au repos
 

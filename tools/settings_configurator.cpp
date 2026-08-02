@@ -7,8 +7,11 @@
 #include <limits>
 #include <string>
 #include <string_view>
+#include <vector>
 
 #include "bmw_remote/application/user_settings.hpp"
+#include "tools/serial_settings_channel.hpp"
+#include "tools/settings_device_client.hpp"
 #include "tools/user_settings_file.hpp"
 
 namespace {
@@ -23,11 +26,15 @@ enum class Mode : std::uint8_t {
     Check,
     WriteDefaults,
     PrintDefaults,
+    ListDevices,
+    ReadDevice,
+    WriteDevice,
 };
 
 struct Options final {
     Mode mode{Mode::Interactive};
     std::string configPath{"config/user-settings.conf"};
+    std::string devicePort{};
 };
 
 void printUsage(const char* const executable) {
@@ -38,7 +45,11 @@ void printUsage(const char* const executable) {
         << "  " << executable << " --show [--config CHEMIN]\n"
         << "  " << executable << " --check [--config CHEMIN]\n"
         << "  " << executable << " --write-defaults [--config CHEMIN]\n"
-        << "  " << executable << " --print-defaults\n\n"
+        << "  " << executable << " --print-defaults\n"
+        << "  " << executable << " --list-devices\n"
+        << "  " << executable << " --read-device PORT\n"
+        << "  " << executable
+        << " --write-device PORT [--config CHEMIN]\n\n"
         << "Sans option, un assistant interactif modifie la configuration.\n";
 }
 
@@ -99,6 +110,30 @@ bool parseArguments(
         }
         if (argument == "--print-defaults") {
             if (!selectMode(Mode::PrintDefaults, options, error)) {
+                return false;
+            }
+            continue;
+        }
+        if (argument == "--list-devices") {
+            if (!selectMode(Mode::ListDevices, options, error)) {
+                return false;
+            }
+            continue;
+        }
+        if (argument == "--read-device" || argument == "--write-device") {
+            if (index + 1 >= argc) {
+                error = std::string{argument} + " exige un port COM";
+                return false;
+            }
+            const Mode requested = argument == "--read-device"
+                                       ? Mode::ReadDevice
+                                       : Mode::WriteDevice;
+            if (!selectMode(requested, options, error)) {
+                return false;
+            }
+            options.devicePort = argv[++index];
+            if (options.devicePort.empty()) {
+                error = "le nom du port COM est vide";
                 return false;
             }
             continue;
@@ -376,6 +411,76 @@ int runInteractive(const Options& options) {
     return 0;
 }
 
+int runListDevices() {
+    std::string error{};
+    const std::vector<std::string> ports =
+        bmw::remote::host::listSerialPorts(error);
+    if (!error.empty()) {
+        std::cerr << "Erreur : " << error << '\n';
+        return 2;
+    }
+    if (ports.empty()) {
+        std::cout << "Aucun port serie detecte.\n";
+        return 0;
+    }
+
+    std::cout << "Ports serie detectes :\n";
+    for (const std::string& port : ports) {
+        std::cout << "  " << port << '\n';
+    }
+    return 0;
+}
+
+int runReadDevice(const Options& options) {
+    constexpr std::uint32_t UsbSerialBaudRate = 115'200U;
+    std::string error{};
+    bmw::remote::host::SerialSettingsChannel channel{};
+    if (!channel.open(options.devicePort, UsbSerialBaudRate, error)) {
+        std::cerr << "Erreur : " << error << '\n';
+        return 2;
+    }
+
+    bmw::remote::host::SettingsDeviceClient client{channel};
+    UserSettings settings{};
+    if (!client.read(settings, error)) {
+        std::cerr << "Erreur : " << error << '\n';
+        return 2;
+    }
+    if (!printSettings(settings, error)) {
+        std::cerr << "Erreur : " << error << '\n';
+        return 2;
+    }
+    std::cout << "device_read_result: PASS\n";
+    return 0;
+}
+
+int runWriteDevice(const Options& options) {
+    UserSettings settings{};
+    std::string error{};
+    if (!bmw::remote::host::loadUserSettingsFile(
+            options.configPath.c_str(), settings, error)) {
+        std::cerr << "Erreur : " << error << '\n';
+        return 2;
+    }
+
+    constexpr std::uint32_t UsbSerialBaudRate = 115'200U;
+    bmw::remote::host::SerialSettingsChannel channel{};
+    if (!channel.open(options.devicePort, UsbSerialBaudRate, error)) {
+        std::cerr << "Erreur : " << error << '\n';
+        return 2;
+    }
+
+    bmw::remote::host::SettingsDeviceClient client{channel};
+    if (!client.writeAndVerify(settings, error)) {
+        std::cerr << "Erreur : " << error << '\n';
+        return 2;
+    }
+    std::cout
+        << "Configuration enregistree et relue sur " << options.devicePort
+        << ".\ndevice_write_result: PASS\n";
+    return 0;
+}
+
 }  // namespace
 
 int main(const int argc, char* argv[]) {
@@ -390,6 +495,16 @@ int main(const int argc, char* argv[]) {
     if (helpRequested) {
         printUsage(argv[0]);
         return 0;
+    }
+
+    if (options.mode == Mode::ListDevices) {
+        return runListDevices();
+    }
+    if (options.mode == Mode::ReadDevice) {
+        return runReadDevice(options);
+    }
+    if (options.mode == Mode::WriteDevice) {
+        return runWriteDevice(options);
     }
 
     if (options.mode == Mode::PrintDefaults) {
