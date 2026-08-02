@@ -21,6 +21,11 @@ retard, duplication et ordre incorrect des messages.
 
 ## ActuatorPort
 
+Le noyau fournit `ActuatorSafetySupervisor`, à placer obligatoirement entre le
+runtime et ce futur adaptateur. Il impose le heartbeat, la séquence, les délais
+et les retours d'état, mais ne remplace pas les protections électriques. Voir
+[actuator-safety-supervisor.md](actuator-safety-supervisor.md).
+
 L'adaptateur d'actionneurs doit :
 
 - conserver toutes les sorties inactives à la construction et au reset ;

@@ -48,7 +48,9 @@ Le premier jalon logiciel est opérationnel :
 - identification du produit, de la cible, de la version et des capacités avant écriture ;
 - journal de diagnostic circulaire, borné et dépourvu de données véhicule brutes ;
 - campagnes déterministes de perte, retard et corruption des données véhicule ;
-- 106 tests C++, 13 scénarios du simulateur, 3 contrôles du configurateur et
+- superviseur logiciel des actionneurs avec heartbeat, séquencement, retours
+  d'état et défauts mémorisés ;
+- 114 tests C++, 14 scénarios du simulateur, 3 contrôles du configurateur et
   21 tests Python automatisés en intégration continue.
 
 L'adaptateur BMW qui observera réellement le verrouillage, qualifiera la reprise
@@ -107,6 +109,8 @@ Le journal sémantique borné est décrit dans
 La cible matérielle de banc, les achats autorisés et les limites avant connexion
 au véhicule sont détaillés dans
 [docs/hardware-v1-reference.md](docs/hardware-v1-reference.md).
+La barrière logicielle placée devant le futur pilote de sorties est spécifiée
+dans [docs/actuator-safety-supervisor.md](docs/actuator-safety-supervisor.md).
 
 ## Validation locale
 
@@ -211,11 +215,11 @@ Sous Windows, l'exécutable interactif peut être construit avec :
 .\build\bmw_remote_simulator.exe
 ```
 
-Treize scénarios permettent de tester le parcours nominal, le capot obligatoire ou
+Quatorze scénarios permettent de tester le parcours nominal, le capot obligatoire ou
 facultatif, la reprise conducteur, la perte, le retard et la corruption des
 données, un profil utilisateur, la récupération du stockage et la liaison de
 configuration, la garde anti-rejeu et l'adaptateur CAN qualifié sur un vecteur
-fictif. Un scénario précis
+fictif, ainsi que le watchdog et les retours d'actionneurs simulés. Un scénario précis
 peut aussi être compilé et exécuté avec :
 
 ```powershell
@@ -230,6 +234,7 @@ peut aussi être compilé et exécuté avec :
 .\scripts\simulate.ps1 -Scenario settings-link
 .\scripts\simulate.ps1 -Scenario lock-replay-guard
 .\scripts\simulate.ps1 -Scenario qualified-lock-adapter
+.\scripts\simulate.ps1 -Scenario actuator-supervisor
 ```
 
 Chaque parcours affiche aussi le journal chronologique des commandes,

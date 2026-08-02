@@ -33,7 +33,8 @@ flowchart LR
     Decision --> Runtime
     Runtime --> Diagnostics["Journal diagnostic borné"]
     Runtime --> Ports["Ports abstraits"]
-    Ports --> Adapters["Adaptateurs matériels futurs"]
+    Ports --> ActuatorSupervisor["Superviseur actionneurs"]
+    ActuatorSupervisor --> Adapters["Adaptateurs matériels futurs"]
 ```
 
 - **Domaine** : valeurs observées, signaux sémantiques, profils, transmission et rapport.
@@ -172,6 +173,14 @@ aucune broche ou trame réseau.
 - `ActuatorPort` ;
 - `TimerPort` ;
 - `NotificationSink`.
+
+Le futur pilote concret d'`ActuatorPort` est enveloppé par
+`ActuatorSafetySupervisor`. Cette infrastructure de taille fixe impose un
+heartbeat, l'autorisation matérielle observée, l'ordre des commandes, la durée
+maximale du démarreur et la cohérence des retours. Elle sécurise directement le
+pilote dès qu'une de ces preuves disparaît, puis le runtime reçoit le défaut
+pour synchroniser la machine d'état. Voir
+[actuator-safety-supervisor.md](actuator-safety-supervisor.md).
 
 Si une opération véhicule, actionneur ou minuterie échoue, le runtime injecte un
 événement `InfrastructureFailure`. Le contrôleur passe en `Fault` et ordonne

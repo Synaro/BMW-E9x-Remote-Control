@@ -15,6 +15,7 @@ New-Item -ItemType Directory -Path $buildDirectory -Force | Out-Null
     -Werror `
     -I (Join-Path $projectRoot 'include') `
     -I $projectRoot `
+    (Join-Path $projectRoot 'src/infrastructure/actuator_safety_supervisor.cpp') `
     (Join-Path $projectRoot 'src/application/controller.cpp') `
     (Join-Path $projectRoot 'src/application/lock_command_gate.cpp') `
     (Join-Path $projectRoot 'src/application/lock_sequence_detector.cpp') `

@@ -3,6 +3,7 @@ cmake_minimum_required(VERSION 3.16)
 project(bmw_e9x_remote_control LANGUAGES CXX)
 
 add_library(bmw_remote_core
+    src/infrastructure/actuator_safety_supervisor.cpp
     src/application/controller.cpp
     src/application/lock_command_gate.cpp
     src/application/lock_sequence_detector.cpp
@@ -133,6 +134,9 @@ if(BMW_REMOTE_BUILD_TESTS)
         add_test(
             NAME bmw_remote_simulator_qualified_lock_adapter
             COMMAND bmw_remote_simulator --scenario qualified-lock-adapter)
+        add_test(
+            NAME bmw_remote_simulator_actuator_supervisor
+            COMMAND bmw_remote_simulator --scenario actuator-supervisor)
     endif()
 
     if(BMW_REMOTE_BUILD_CONFIGURATOR)
