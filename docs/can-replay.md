@@ -20,7 +20,9 @@ Une trace est un tableau contigu de `CanFrame` :
 - charge utile de taille fixe ;
 - horodatages triés dans l'ordre croissant ou égal.
 
-Une trace vide est valide. Un pointeur nul avec une taille non nulle, un
+Le moteur bas niveau accepte une trace vide. L'importeur de fichiers exige au
+moins une trame afin d'éviter qu'une capture vide soit prise pour une validation
+réussie. Un pointeur nul avec une taille non nulle, un
 identifiant hors plage, une longueur supérieure à huit ou un horodatage non
 monotone rend toute la trace invalide avant le premier rejeu.
 
@@ -74,14 +76,9 @@ sont pas des identifiants BMW et ne doivent jamais être transmis à un véhicul
 Le scénario de `tools/vehicle_simulator.cpp` utilise uniquement ce protocole. Il
 peut être exécuté avec `scripts/simulate.ps1`.
 
-## Ajout futur d'une capture réelle
+## Import de captures
 
-Le format d'import ne sera choisi qu'après sélection de l'interface de capture
-(par exemple un export texte de l'outil utilisé). L'importeur devra :
-
-1. convertir les horodatages en temps relatif monotone ;
-2. rejeter les lignes ambiguës ou tronquées ;
-3. borner le nombre de trames et la taille du fichier ;
-4. anonymiser les captures avant leur partage ;
-5. rester dans les outils hôte, sans ajouter de parseur de fichiers au firmware ;
-6. conserver le décodeur BMW dans l'infrastructure, jamais dans le domaine.
+Le format hôte canonique et le convertisseur `python-can` sont décrits dans
+[trace-import.md](trace-import.md). Le parseur de fichiers reste lié aux outils
+PC et n'est pas compilé dans le firmware. Le décodeur BMW futur restera dans
+l'infrastructure, jamais dans le domaine.

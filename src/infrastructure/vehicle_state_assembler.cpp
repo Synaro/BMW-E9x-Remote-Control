@@ -3,7 +3,7 @@
 namespace bmw::remote::infrastructure {
 
 bool DecodedSignalBatch::add(
-    const VehicleSignal signal,
+    const domain::VehicleSignal signal,
     const std::uint32_t value) noexcept {
     if (count >= signals.size()) {
         return false;
@@ -100,25 +100,28 @@ bool VehicleStateAssembler::validateBatch(const DecodedSignalBatch& batch) const
 
 bool VehicleStateAssembler::validateSignal(const DecodedSignal& signal) const noexcept {
     switch (signal.signal) {
-        case VehicleSignal::BatteryMillivolts:
+        case domain::VehicleSignal::BatteryMillivolts:
             return signal.value <= 20'000U;
 
-        case VehicleSignal::EngineRpm:
+        case domain::VehicleSignal::EngineRpm:
             return signal.value <= 10'000U;
 
-        case VehicleSignal::HoodClosed:
-        case VehicleSignal::DoorsClosed:
-        case VehicleSignal::TrunkClosed:
-        case VehicleSignal::BrakePressed:
-        case VehicleSignal::ParkingBrakeApplied:
-        case VehicleSignal::CriticalFaultPresent:
+        case domain::VehicleSignal::HoodClosed:
+        case domain::VehicleSignal::DoorsClosed:
+        case domain::VehicleSignal::TrunkClosed:
+        case domain::VehicleSignal::BrakePressed:
+        case domain::VehicleSignal::ParkingBrakeApplied:
+        case domain::VehicleSignal::CriticalFaultPresent:
             return signal.value <= 1U;
 
-        case VehicleSignal::Transmission:
+        case domain::VehicleSignal::Transmission:
             return signal.value <= static_cast<std::uint32_t>(domain::Transmission::Manual);
 
-        case VehicleSignal::Gear:
+        case domain::VehicleSignal::Gear:
             return signal.value <= static_cast<std::uint32_t>(domain::Gear::Drive);
+
+        case domain::VehicleSignal::Count:
+            return false;
     }
     return false;
 }
@@ -135,46 +138,49 @@ void VehicleStateAssembler::applySignal(
     const DecodedSignal& signal,
     const std::uint32_t timestampMs) noexcept {
     switch (signal.signal) {
-        case VehicleSignal::BatteryMillivolts:
+        case domain::VehicleSignal::BatteryMillivolts:
             batteryMillivolts_ = {
                 static_cast<std::uint16_t>(signal.value), timestampMs, true};
             break;
 
-        case VehicleSignal::EngineRpm:
+        case domain::VehicleSignal::EngineRpm:
             engineRpm_ = {static_cast<std::uint16_t>(signal.value), timestampMs, true};
             break;
 
-        case VehicleSignal::HoodClosed:
+        case domain::VehicleSignal::HoodClosed:
             hoodClosed_ = {signal.value != 0U, timestampMs, true};
             break;
 
-        case VehicleSignal::DoorsClosed:
+        case domain::VehicleSignal::DoorsClosed:
             doorsClosed_ = {signal.value != 0U, timestampMs, true};
             break;
 
-        case VehicleSignal::TrunkClosed:
+        case domain::VehicleSignal::TrunkClosed:
             trunkClosed_ = {signal.value != 0U, timestampMs, true};
             break;
 
-        case VehicleSignal::BrakePressed:
+        case domain::VehicleSignal::BrakePressed:
             brakePressed_ = {signal.value != 0U, timestampMs, true};
             break;
 
-        case VehicleSignal::ParkingBrakeApplied:
+        case domain::VehicleSignal::ParkingBrakeApplied:
             parkingBrakeApplied_ = {signal.value != 0U, timestampMs, true};
             break;
 
-        case VehicleSignal::Transmission:
+        case domain::VehicleSignal::Transmission:
             transmission_ = {
                 static_cast<domain::Transmission>(signal.value), timestampMs, true};
             break;
 
-        case VehicleSignal::Gear:
+        case domain::VehicleSignal::Gear:
             gear_ = {static_cast<domain::Gear>(signal.value), timestampMs, true};
             break;
 
-        case VehicleSignal::CriticalFaultPresent:
+        case domain::VehicleSignal::CriticalFaultPresent:
             criticalFaultPresent_ = {signal.value != 0U, timestampMs, true};
+            break;
+
+        case domain::VehicleSignal::Count:
             break;
     }
 }

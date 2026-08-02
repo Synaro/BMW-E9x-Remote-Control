@@ -1,0 +1,3 @@
+timestamp_ms,identifier,extended,dlc,data_hex
+0,0x1FFFFF00,1,8,0000D430010100A5
+0,0x1FFFFF01,1,8,17000000000000A5

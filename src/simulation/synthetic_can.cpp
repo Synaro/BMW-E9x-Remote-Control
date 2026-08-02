@@ -22,7 +22,7 @@ void encodeLittleEndian16(
 [[nodiscard]] bool addPowertrainSignals(
     const infrastructure::CanFrame& frame,
     infrastructure::DecodedSignalBatch& output) noexcept {
-    using infrastructure::VehicleSignal;
+    using domain::VehicleSignal;
 
     const std::uint16_t engineRpm = decodeLittleEndian16(frame.data[0], frame.data[1]);
     const std::uint16_t batteryMillivolts =
@@ -38,7 +38,7 @@ void encodeLittleEndian16(
 [[nodiscard]] bool addBodySignals(
     const infrastructure::CanFrame& frame,
     infrastructure::DecodedSignalBatch& output) noexcept {
-    using infrastructure::VehicleSignal;
+    using domain::VehicleSignal;
     const std::uint8_t flags = frame.data[0];
 
     return output.add(VehicleSignal::HoodClosed, (flags >> 0U) & 0x01U) &&

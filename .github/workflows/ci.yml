@@ -22,3 +22,6 @@ jobs:
 
       - name: Test
         run: ctest --test-dir build --output-on-failure -C Release
+
+      - name: Test trace importer
+        run: python -m unittest discover -s tools -p 'test_*.py' -v

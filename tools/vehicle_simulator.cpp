@@ -1,11 +1,15 @@
 #include <array>
 #include <cstdint>
 #include <iostream>
+#include <string>
+#include <vector>
 
 #include "bmw_remote/application/controller.hpp"
+#include "bmw_remote/application/safety_policy.hpp"
 #include "bmw_remote/infrastructure/replay_vehicle_gateway.hpp"
 #include "bmw_remote/infrastructure/runtime.hpp"
 #include "bmw_remote/simulation/synthetic_can.hpp"
+#include "tools/can_trace_csv.hpp"
 
 namespace {
 
@@ -69,9 +73,57 @@ void printDecision(
               << application::toString(decision.state) << '\n';
 }
 
-}  // namespace
+const char* qualityName(const domain::SignalQuality quality) noexcept {
+    switch (quality) {
+        case domain::SignalQuality::Unavailable: return "unavailable";
+        case domain::SignalQuality::Stale: return "stale";
+        case domain::SignalQuality::Fresh: return "fresh";
+    }
+    return "unknown";
+}
 
-int main() {
+int inspectExternalTrace(const char* const path) {
+    constexpr std::size_t MaximumFrames = 1'000'000U;
+
+    std::vector<infrastructure::CanFrame> trace{};
+    std::string error{};
+    if (!host::loadCanonicalCanTrace(path, trace, MaximumFrames, error)) {
+        std::cerr << "Unable to load trace: " << error << '\n';
+        return 1;
+    }
+
+    simulation::SyntheticCanDecoder decoder{};
+    infrastructure::ReplayVehicleGateway gateway{
+        trace.data(), trace.size(), decoder};
+    if (!gateway.setElapsedTime(trace.back().timestampMs) || !gateway.requestState()) {
+        std::cerr << "Replay rejected the trace\n";
+        return 2;
+    }
+
+    const infrastructure::AssemblyStatistics stats = gateway.statistics();
+    const domain::VehicleState vehicle = gateway.state();
+    const application::SafetyAssessment safety =
+        application::SafetyPolicy{}.assessStart(vehicle);
+
+    std::cout << "trace: " << trace.size() << " classic CAN frame(s), duration "
+              << trace.back().timestampMs << " ms\n"
+              << "decoder: " << stats.decodedFrames << " decoded, "
+              << stats.ignoredFrames << " ignored, " << stats.rejectedFrames
+              << " rejected\n"
+              << "engine_rpm_quality: " << qualityName(vehicle.engineRpm.quality) << '\n'
+              << "hood_closed_quality: " << qualityName(vehicle.hoodClosed.quality) << '\n'
+              << "remote_start_safety: "
+              << (safety.approved() ? "approved" : "denied")
+              << " reasons_mask=" << safety.reasons << '\n';
+
+    if (stats.decodedFrames == 0U) {
+        std::cout << "note: this build only decodes the documented synthetic protocol; "
+                     "BMW frames stay ignored until a read-only decoder is qualified\n";
+    }
+    return 0;
+}
+
+int runBuiltInScenario() {
     using namespace bmw::remote;
 
     simulation::SyntheticPowertrainState stopped{};
@@ -145,4 +197,18 @@ int main() {
         decision.fault == application::FaultCode::SafetyInterlock &&
         decision.safety.contains(application::SafetyReason::HoodOpen);
     return expectedFault ? 0 : 2;
+}
+
+}  // namespace
+
+int main(const int argumentCount, char* arguments[]) {
+    if (argumentCount == 1) {
+        return runBuiltInScenario();
+    }
+    if (argumentCount == 2) {
+        return inspectExternalTrace(arguments[1]);
+    }
+
+    std::cerr << "Usage: bmw_remote_simulator.exe [trace.cantrace.csv]\n";
+    return 64;
 }

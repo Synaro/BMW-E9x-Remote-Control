@@ -22,7 +22,7 @@ flowchart LR
     Ports --> Adapters["Adaptateurs matériels futurs"]
 ```
 
-- **Domaine** : valeurs observées, qualité des signaux, transmission et rapport.
+- **Domaine** : valeurs observées, signaux sémantiques, profils, transmission et rapport.
 - **Application** : politique de sécurité, machine d'état, événements et actions.
 - **Infrastructure** : exécution des actions au travers de ports abstraits.
 - **Simulation** : décodeur synthétique et génération de scénarios hors véhicule.
@@ -30,6 +30,11 @@ flowchart LR
   inerte.
 
 Le domaine et l'application ne dépendent d'aucun framework embarqué.
+
+Les profils décrivent les variantes de véhicule et le niveau de preuve de chaque
+signal sans contenir de détail CAN. Un garde d'application distinct empêche un
+profil de découverte d'autoriser une fonctionnalité réelle. Voir
+[vehicle-profiles.md](vehicle-profiles.md).
 
 ## Modèle des signaux
 
@@ -124,6 +129,10 @@ et ignorées ; une trame reconnue mais mal formée interrompt le rejeu.
 `ReplayVehicleGateway` adapte cette chaîne au port `VehicleGateway`. Le protocole
 fourni dans `simulation` utilise des identifiants étendus synthétiques et une
 signature dédiée. Il n'encode aucune connaissance BMW.
+
+Les outils hôte peuvent convertir et charger un CSV canonique. Ils utilisent des
+conteneurs dynamiques acceptables sur PC, mais restent hors de `bmw_remote_core`
+et du firmware embarqué. Voir [trace-import.md](trace-import.md).
 
 ## Contraintes temporelles
 
