@@ -28,6 +28,7 @@
 #include "bmw_remote/infrastructure/vehicle_state_assembler.hpp"
 #include "bmw_remote/simulation/synthetic_can.hpp"
 #include "tools/can_trace_csv.hpp"
+#include "tools/sandbox_session.hpp"
 #include "tools/settings_device_client.hpp"
 #include "tools/user_settings_file.hpp"
 
@@ -96,6 +97,7 @@ using bmw::remote::simulation::SyntheticPowertrainState;
 using bmw::remote::simulation::makeSyntheticBodyFrame;
 using bmw::remote::simulation::makeSyntheticPowertrainFrame;
 using bmw::remote::simulation::syntheticVehicleProfile;
+using bmw::remote::host::SandboxSession;
 
 int failures = 0;
 
@@ -3108,6 +3110,100 @@ void testCanonicalTraceParserRejectsMalformedAndEmptyTraces() {
     CHECK(frames.empty());
 }
 
+void testSandboxNominalInteractiveFlow() {
+    SandboxSession session{};
+
+    CHECK(session.snapshot().state == ControllerState::Idle);
+    CHECK(session.execute("start").snapshot.state == ControllerState::Preparing);
+
+    const auto cranking = session.execute("timer");
+    CHECK(cranking.ok);
+    CHECK(cranking.snapshot.state == ControllerState::Cranking);
+    CHECK(cranking.snapshot.ignitionActive);
+    CHECK(cranking.snapshot.starterActive);
+
+    const auto running = session.execute("vehicle rpm=850");
+    CHECK(running.ok);
+    CHECK(running.snapshot.state == ControllerState::Running);
+    CHECK(running.snapshot.ignitionActive);
+    CHECK(!running.snapshot.starterActive);
+
+    const auto stopping = session.execute("stop");
+    CHECK(stopping.snapshot.state == ControllerState::Stopping);
+    CHECK(!stopping.snapshot.ignitionActive);
+    CHECK(!stopping.snapshot.starterActive);
+
+    const auto stopped = session.execute("vehicle rpm=0");
+    CHECK(stopped.snapshot.state == ControllerState::Idle);
+    CHECK(!stopped.snapshot.timerArmed);
+}
+
+void testSandboxOptionalHoodAndDriverTakeover() {
+    SandboxSession session{};
+    CHECK(session.execute("new optional").ok);
+    CHECK(session.execute("vehicle hood=unavailable").ok);
+    CHECK(session.execute("start").snapshot.state == ControllerState::Preparing);
+    CHECK(session.execute("timer").snapshot.state == ControllerState::Cranking);
+    CHECK(session.execute("vehicle rpm=850").snapshot.state == ControllerState::Running);
+    CHECK(session.execute("vehicle doors=open").snapshot.state ==
+          ControllerState::AwaitingTakeover);
+
+    const auto takeover = session.execute("takeover");
+    CHECK(takeover.snapshot.state == ControllerState::DriverControl);
+    CHECK(!takeover.snapshot.ignitionActive);
+    CHECK(!takeover.snapshot.timerArmed);
+
+    CHECK(session.execute("new required").snapshot.hoodMonitoringRequired);
+    CHECK(session.execute("vehicle hood=unavailable").ok);
+    CHECK(session.execute("start").snapshot.state == ControllerState::Idle);
+}
+
+void testSandboxRejectsInvalidUpdatesAndPropagatesWatchdog() {
+    SandboxSession session{};
+    const auto invalid = session.execute("vehicle rpm=9000 doors=open");
+    CHECK(!invalid.ok);
+    CHECK(invalid.snapshot.vehicle.engineRpm.value == 0U);
+    CHECK(invalid.snapshot.vehicle.doorsClosed.value);
+
+    CHECK(session.execute("start").snapshot.state == ControllerState::Preparing);
+    const auto watchdog = session.execute("watchdog");
+    CHECK(watchdog.snapshot.state == ControllerState::Fault);
+    CHECK(watchdog.snapshot.fault == FaultCode::ActuatorFailure);
+    CHECK(watchdog.snapshot.supervisorFault == ActuatorSupervisorFault::WatchdogExpired);
+    CHECK(!watchdog.snapshot.ignitionActive);
+    CHECK(!watchdog.snapshot.starterActive);
+
+    const auto reset = session.execute("reset");
+    CHECK(reset.ok);
+    CHECK(reset.snapshot.state == ControllerState::Idle);
+    CHECK(reset.snapshot.fault == FaultCode::None);
+    CHECK(reset.snapshot.supervisorFault == ActuatorSupervisorFault::None);
+
+    CHECK(session.execute("start").snapshot.state == ControllerState::Preparing);
+    const auto interlock = session.execute("interlock off");
+    CHECK(interlock.snapshot.state == ControllerState::Fault);
+    CHECK(interlock.snapshot.supervisorFault ==
+          ActuatorSupervisorFault::HardwareInterlockLost);
+    CHECK(!interlock.snapshot.ignitionActive);
+}
+
+void testSandboxLineProtocolReturnsOneJsonObjectPerCommand() {
+    std::istringstream input{"status\nstart\nquit\n"};
+    std::ostringstream output{};
+    CHECK(bmw::remote::host::runSandboxProtocol(input, output) == 0);
+
+    std::istringstream lines{output.str()};
+    std::string line{};
+    std::size_t lineCount = 0U;
+    while (std::getline(lines, line)) {
+        ++lineCount;
+        CHECK(!line.empty() && line.front() == '{' && line.back() == '}');
+        CHECK(line.find("\"ok\":true") != std::string::npos);
+    }
+    CHECK(lineCount == 3U);
+    CHECK(output.str().find("\"state\":\"preparing\"") != std::string::npos);
+}
+
 using TestFunction = void (*)();
 
 struct TestCase final {
@@ -3234,6 +3330,10 @@ int main() {
         {"canonical trace parsing", testCanonicalTraceParserLoadsValidClassicFrames},
         {"canonical trace monotonicity", testCanonicalTraceParserRejectsNonMonotonicInputAtomically},
         {"canonical trace rejection", testCanonicalTraceParserRejectsMalformedAndEmptyTraces},
+        {"sandbox nominal flow", testSandboxNominalInteractiveFlow},
+        {"sandbox optional hood takeover", testSandboxOptionalHoodAndDriverTakeover},
+        {"sandbox watchdog", testSandboxRejectsInvalidUpdatesAndPropagatesWatchdog},
+        {"sandbox line protocol", testSandboxLineProtocolReturnsOneJsonObjectPerCommand},
     };
 
     for (const TestCase& test : tests) {

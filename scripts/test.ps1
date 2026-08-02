@@ -38,6 +38,7 @@ New-Item -ItemType Directory -Path $buildDirectory -Force | Out-Null
     (Join-Path $projectRoot 'src/infrastructure/vehicle_state_assembler.cpp') `
     (Join-Path $projectRoot 'src/simulation/synthetic_can.cpp') `
     (Join-Path $projectRoot 'tools/can_trace_csv.cpp') `
+    (Join-Path $projectRoot 'tools/sandbox_session.cpp') `
     (Join-Path $projectRoot 'tools/settings_device_client.cpp') `
     (Join-Path $projectRoot 'tools/serial_settings_channel.cpp') `
     (Join-Path $projectRoot 'tools/user_settings_file.cpp') `

@@ -20,6 +20,7 @@
 #include "bmw_remote/infrastructure/settings_stream.hpp"
 #include "bmw_remote/simulation/synthetic_can.hpp"
 #include "tools/can_trace_csv.hpp"
+#include "tools/sandbox_session.hpp"
 #include "tools/user_settings_file.hpp"
 
 namespace {
@@ -323,6 +324,7 @@ void printUsage(const char* const executable) {
         << "  " << executable
         << " --trace <trace.cantrace.csv> [--hood required|optional]\n"
         << "  " << executable << " --list-scenarios\n"
+        << "  " << executable << " --sandbox\n"
         << "  " << executable << " --help\n"
         << "  " << executable << " <trace.cantrace.csv>  (legacy form)\n";
 }
@@ -1470,6 +1472,9 @@ int main(const int argumentCount, char* arguments[]) {
     if (command == "--list-scenarios" && argumentCount == 2) {
         printScenarioList();
         return 0;
+    }
+    if (command == "--sandbox" && argumentCount == 2) {
+        return host::runSandboxProtocol(std::cin, std::cout);
     }
     if (command == "--scenario" && argumentCount == 3) {
         Scenario scenario{};

@@ -34,7 +34,7 @@ Le premier jalon logiciel est opérationnel :
 - rejeu temporel de traces CAN et assemblage des signaux avec gestion de fraîcheur ;
 - protocole CAN synthétique réservé aux simulations hors véhicule ;
 - simulateur interactif avec parcours nominal et injection d'un défaut de sécurité ;
-- interface graphique Windows locale pour lancer les scénarios, configurations et traces ;
+- interface graphique Windows locale avec scénarios et bac à sable interactif ;
 - session distante limitée à 15 minutes et reprise conducteur bornée à 60 secondes ;
 - profils véhicule extensibles avec qualification fermée par défaut ;
 - profil de découverte pour l'E90 2009 N47D20C boîte automatique ;
@@ -51,7 +51,7 @@ Le premier jalon logiciel est opérationnel :
 - campagnes déterministes de perte, retard et corruption des données véhicule ;
 - superviseur logiciel des actionneurs avec heartbeat, séquencement, retours
   d'état et défauts mémorisés ;
-- 115 tests C++, 15 scénarios du simulateur, 3 contrôles du configurateur et
+- 119 tests C++, 15 scénarios du simulateur, 3 contrôles du configurateur et
   21 tests Python automatisés en intégration continue.
 
 L'adaptateur BMW qui observera réellement le verrouillage, qualifiera la reprise
@@ -112,6 +112,8 @@ au véhicule sont détaillés dans
 [docs/hardware-v1-reference.md](docs/hardware-v1-reference.md).
 La barrière logicielle placée devant le futur pilote de sorties est spécifiée
 dans [docs/actuator-safety-supervisor.md](docs/actuator-safety-supervisor.md).
+Le protocole local du bac à sable graphique est documenté dans
+[docs/sandbox-protocol.md](docs/sandbox-protocol.md).
 
 ## Validation locale
 
@@ -218,8 +220,11 @@ Sous Windows, le moyen le plus simple est l'interface graphique :
 Le fichier `scripts/start-simulator-gui.cmd` peut aussi être ouvert par double
 clic. L'interface compile le simulateur uniquement lorsque ses sources sont
 plus récentes, permet de choisir un scénario, un fichier de configuration ou
-une trace, puis affiche et copie le rapport. Elle reste entièrement locale et
-ne se connecte à aucun véhicule.
+une trace, puis affiche et copie le rapport. Le bouton **Ouvrir le bac à sable**
+garde une session vivante : l'utilisateur peut modifier les portes, le capot,
+le frein, le rapport et le régime moteur, déclencher les timers et observer en
+direct l'état, les sorties simulées et les défauts. Elle reste entièrement
+locale et ne se connecte à aucun véhicule.
 
 Sous Windows, l'exécutable interactif peut être construit avec :
 
