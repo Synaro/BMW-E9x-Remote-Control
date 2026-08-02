@@ -32,6 +32,8 @@ endif()
 
 add_library(bmw_remote_host_tools
     tools/can_trace_csv.cpp
+    tools/serial_settings_channel.cpp
+    tools/settings_device_client.cpp
     tools/user_settings_file.cpp
 )
 target_link_libraries(bmw_remote_host_tools PUBLIC bmw_remote_core)
