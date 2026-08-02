@@ -25,7 +25,7 @@ Le premier jalon logiciel est opérationnel :
 - firmware ESP32 de référence inerte ;
 - rejeu temporel de traces CAN et assemblage des signaux avec gestion de fraîcheur ;
 - protocole CAN synthétique réservé aux simulations hors véhicule ;
-- simulateur de scénario complet avec injection d'un défaut de sécurité ;
+- simulateur interactif avec parcours nominal et injection d'un défaut de sécurité ;
 - profils véhicule extensibles avec qualification fermée par défaut ;
 - profil de découverte pour l'E90 2009 N47D20C boîte automatique ;
 - absence de capteur de capot déclarée pour ce véhicule de référence, contrôle activable au choix de l'utilisateur ;
@@ -33,7 +33,7 @@ Le premier jalon logiciel est opérationnel :
 - capture PC bornée avec refus des interfaces sans mode silencieux documenté ;
 - sélection explicite d'un profil obligatoire dans le contrôleur ;
 - analyse différentielle hors ligne des octets et bits candidats ;
-- 37 scénarios C++ et 21 tests Python automatisés en intégration continue.
+- 37 tests C++, 3 parcours CLI et 21 tests Python automatisés en intégration continue.
 
 Les communications BMW, la commande distante et les sorties physiques restent à
 implémenter lorsque le matériel, les signaux et les critères d'acceptation auront
@@ -122,19 +122,28 @@ scenarios/                          Traces synthétiques partageables
 docs/                               Architecture, sécurité et intégration
 ```
 
-## Simulateur CAN
+## Simulateur applicatif
 
-Sous Windows, le scénario synthétique peut être compilé et exécuté avec :
+Sous Windows, l'exécutable interactif peut être construit avec :
 
 ```powershell
-./scripts/simulate.ps1
+.\scripts\build-simulator.ps1
+.\build\bmw_remote_simulator.exe
 ```
 
-Le scénario rejoue six trames synthétiques : véhicule sûr, démarrage confirmé,
-puis ouverture du capot pendant la session distante. Le résultat attendu est une
-transition immédiate vers `Fault` et la sécurisation des sorties abstraites.
+Trois scénarios permettent de tester le parcours nominal ainsi que le capot
+obligatoire ou facultatif. Un scénario précis peut aussi être compilé et exécuté
+avec :
 
-Voir [docs/can-replay.md](docs/can-replay.md) pour le contrat du moteur de rejeu.
+```powershell
+.\scripts\simulate.ps1 -Scenario hood-optional
+```
+
+Le résultat attendu est affiché sous la forme `scenario_result: PASS` et le code
+de sortie reste non nul si le comportement diverge.
+
+Voir [docs/simulator.md](docs/simulator.md) pour la CLI et
+[docs/can-replay.md](docs/can-replay.md) pour le contrat du moteur de rejeu.
 
 Le simulateur accepte aussi une trace canonique externe :
 

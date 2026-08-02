@@ -69,4 +69,16 @@ if(BMW_REMOTE_BUILD_TESTS)
     target_link_libraries(
         bmw_remote_tests PRIVATE bmw_remote_simulation bmw_remote_host_tools)
     add_test(NAME bmw_remote_tests COMMAND bmw_remote_tests)
+
+    if(BMW_REMOTE_BUILD_SIMULATOR)
+        add_test(
+            NAME bmw_remote_simulator_nominal
+            COMMAND bmw_remote_simulator --scenario nominal)
+        add_test(
+            NAME bmw_remote_simulator_hood_required
+            COMMAND bmw_remote_simulator --scenario hood-required)
+        add_test(
+            NAME bmw_remote_simulator_hood_optional
+            COMMAND bmw_remote_simulator --scenario hood-optional)
+    endif()
 endif()
