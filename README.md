@@ -29,7 +29,9 @@ Le premier jalon logiciel est opérationnel :
 - profils véhicule extensibles avec qualification fermée par défaut ;
 - profil de découverte pour l'E90 2009 N47D20C boîte automatique ;
 - import PC de journaux `python-can` vers un format canonique strict ;
-- 31 scénarios C++ et 5 tests d'importeur automatisés en intégration continue.
+- sélection explicite d'un profil obligatoire dans le contrôleur ;
+- analyse différentielle hors ligne des octets et bits candidats ;
+- 34 scénarios C++ et 11 tests Python automatisés en intégration continue.
 
 Les communications BMW, la commande distante et les sorties physiques restent à
 implémenter lorsque le matériel, les signaux et les critères d'acceptation auront
@@ -141,6 +143,17 @@ Le simulateur accepte aussi une trace canonique externe :
 Pour convertir une capture reconnue par `python-can`, voir
 [docs/trace-import.md](docs/trace-import.md). Les captures privées restent hors
 du dépôt via `captures/private/`.
+
+Une comparaison synthétique capot fermé / ouvert peut être lancée avec :
+
+```powershell
+./scripts/analyze-trace-change.ps1 `
+  ./scenarios/synthetic_idle.cantrace.csv `
+  ./scenarios/synthetic_hood_open.cantrace.csv
+```
+
+Le protocole destiné aux premières observations réelles est décrit dans
+[docs/read-only-discovery.md](docs/read-only-discovery.md).
 
 ## Principes de contribution
 

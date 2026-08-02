@@ -59,4 +59,8 @@ niveau `Discovery` : son évaluation échoue donc volontairement de manière sû
 6. ne promouvoir le niveau qu'avec des preuves de test conservées.
 
 La sélection automatique d'un profil et la détection d'identité véhicule ne
-font pas encore partie du firmware.
+font pas encore partie du firmware. En revanche, une sélection explicite via
+`ControllerConfig::vehicleProfile` est obligatoire : un pointeur nul ou un
+profil non qualifié fait refuser la demande en `Idle` avant tout accès véhicule.
+Les tests et le simulateur emploient un profil synthétique qualifié qui ne doit
+jamais être sélectionné dans une intégration réelle.

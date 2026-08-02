@@ -21,11 +21,14 @@ certification fonctionnelle ou automobile.
 9. Une deuxième demande de démarrage ne peut pas réengager le démarreur depuis
    un état actif.
 10. La durée de fonctionnement distant est bornée.
+11. Une demande de démarrage sans profil explicitement sélectionné et qualifié
+    reste en `Idle`, sécurise les sorties et n'interroge pas le véhicule.
 
 ## Matrice d'autorisation initiale
 
 | Condition | Exigence par défaut | Résultat en cas d'échec |
 |---|---|---|
+| Profil véhicule | Sélectionné, signaux vérifiés, niveau lecture seule | Refus avant communication |
 | Tension batterie | ≥ 11,8 V et fraîche | Refus |
 | Régime moteur | < 500 tr/min et frais | Refus |
 | Capot | Fermé et frais | Refus |

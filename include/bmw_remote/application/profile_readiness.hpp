@@ -13,6 +13,7 @@ enum class ProfileReadinessReason : std::uint8_t {
     QualificationTooLow = 1U << 2U,
     TransmissionUnknown = 1U << 3U,
     ManualTransmissionNotAllowed = 1U << 4U,
+    ProfileNotSelected = 1U << 5U,
 };
 
 [[nodiscard]] constexpr std::uint8_t mask(const ProfileReadinessReason reason) noexcept {
@@ -42,6 +43,10 @@ struct ProfileReadinessPolicy final {
 
 [[nodiscard]] ProfileReadinessAssessment assessRemoteStartReadiness(
     const domain::VehicleProfile& profile,
+    ProfileReadinessPolicy policy = {}) noexcept;
+
+[[nodiscard]] ProfileReadinessAssessment assessRemoteStartReadiness(
+    const domain::VehicleProfile* profile,
     ProfileReadinessPolicy policy = {}) noexcept;
 
 }  // namespace bmw::remote::application

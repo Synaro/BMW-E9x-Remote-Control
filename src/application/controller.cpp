@@ -19,7 +19,10 @@ void Decision::add(const ActionType type, const std::uint32_t durationMs) noexce
 }
 
 Controller::Controller(const ControllerConfig config) noexcept
-    : config_(config), safetyPolicy_(config.safety) {}
+    : config_(config),
+      safetyPolicy_(config.safety),
+      profileReadiness_(
+          assessRemoteStartReadiness(config.vehicleProfile, config.profilePolicy)) {}
 
 Decision Controller::handle(
     const Event event,
@@ -28,6 +31,7 @@ Decision Controller::handle(
     decision.previousState = state_;
     decision.state = state_;
     decision.fault = fault_;
+    decision.profileReadiness = profileReadiness_;
 
     switch (event.type) {
         case EventType::RemoteStartRequested:
@@ -65,6 +69,12 @@ Decision Controller::handle(
 void Controller::handleStartRequest(Decision& decision) noexcept {
     if (state_ != ControllerState::Idle) {
         decision.add(ActionType::NotifyRequestIgnored);
+        return;
+    }
+
+    if (!profileReadiness_.ready()) {
+        decision.add(ActionType::SecureOutputs);
+        decision.add(ActionType::NotifyProfileRejected);
         return;
     }
 
@@ -312,6 +322,7 @@ const char* toString(const ActionType action) noexcept {
         case ActionType::SecureOutputs: return "secure_outputs";
         case ActionType::ArmTimer: return "arm_timer";
         case ActionType::CancelTimer: return "cancel_timer";
+        case ActionType::NotifyProfileRejected: return "notify_profile_rejected";
         case ActionType::NotifyStartAccepted: return "notify_start_accepted";
         case ActionType::NotifyStartRejected: return "notify_start_rejected";
         case ActionType::NotifyRunning: return "notify_running";

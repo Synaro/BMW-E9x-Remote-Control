@@ -4,6 +4,7 @@
 #include <cstddef>
 #include <cstdint>
 
+#include "bmw_remote/application/profile_readiness.hpp"
 #include "bmw_remote/application/safety_policy.hpp"
 #include "bmw_remote/domain/vehicle_state.hpp"
 
@@ -58,6 +59,7 @@ enum class ActionType : std::uint8_t {
     SecureOutputs,
     ArmTimer,
     CancelTimer,
+    NotifyProfileRejected,
     NotifyStartAccepted,
     NotifyStartRejected,
     NotifyRunning,
@@ -81,6 +83,7 @@ struct Decision final {
     ControllerState state{ControllerState::Idle};
     FaultCode fault{FaultCode::None};
     SafetyAssessment safety{};
+    ProfileReadinessAssessment profileReadiness{};
     std::array<Action, MaximumActions> actions{};
     std::size_t actionCount{0U};
 
@@ -92,6 +95,8 @@ private:
 };
 
 struct ControllerConfig final {
+    const domain::VehicleProfile* vehicleProfile{nullptr};
+    ProfileReadinessPolicy profilePolicy{};
     SafetyPolicyConfig safety{};
     std::uint32_t authorizationTimeoutMs{2'000U};
     std::uint32_t preparationDelayMs{1'500U};
@@ -114,6 +119,10 @@ public:
 
     [[nodiscard]] constexpr FaultCode fault() const noexcept {
         return fault_;
+    }
+
+    [[nodiscard]] constexpr ProfileReadinessAssessment profileReadiness() const noexcept {
+        return profileReadiness_;
     }
 
 private:
@@ -142,6 +151,7 @@ private:
 
     ControllerConfig config_{};
     SafetyPolicy safetyPolicy_{};
+    ProfileReadinessAssessment profileReadiness_{};
     ControllerState state_{ControllerState::Idle};
     FaultCode fault_{FaultCode::None};
 };

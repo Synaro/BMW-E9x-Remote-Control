@@ -64,4 +64,16 @@ ProfileReadinessAssessment assessRemoteStartReadiness(
     return assessment;
 }
 
+ProfileReadinessAssessment assessRemoteStartReadiness(
+    const domain::VehicleProfile* const profile,
+    const ProfileReadinessPolicy policy) noexcept {
+    if (profile != nullptr) {
+        return assessRemoteStartReadiness(*profile, policy);
+    }
+
+    ProfileReadinessAssessment assessment{};
+    assessment.add(ProfileReadinessReason::ProfileNotSelected);
+    return assessment;
+}
+
 }  // namespace bmw::remote::application

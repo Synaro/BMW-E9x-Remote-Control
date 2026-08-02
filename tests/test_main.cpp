@@ -53,6 +53,7 @@ using bmw::remote::simulation::SyntheticCanDecoder;
 using bmw::remote::simulation::SyntheticPowertrainState;
 using bmw::remote::simulation::makeSyntheticBodyFrame;
 using bmw::remote::simulation::makeSyntheticPowertrainFrame;
+using bmw::remote::simulation::syntheticVehicleProfile;
 
 int failures = 0;
 
@@ -78,6 +79,11 @@ VehicleState safeAutomaticVehicle() {
     vehicle.gear = Observed<Gear>::fresh(Gear::Park);
     vehicle.criticalFaultPresent = Observed<bool>::fresh(false);
     return vehicle;
+}
+
+Controller qualifiedController(ControllerConfig config = {}) {
+    config.vehicleProfile = &syntheticVehicleProfile();
+    return Controller{config};
 }
 
 void advanceToRunning(Controller& controller, VehicleState& vehicle) {
@@ -142,8 +148,39 @@ void testManualTransmissionRequiresExplicitOptIn() {
     CHECK(policy.assessStart(vehicle).approved());
 }
 
-void testNominalStartSequence() {
+void testControllerRejectsStartWhenNoProfileIsSelected() {
     Controller controller{};
+
+    const auto decision = controller.handle(
+        Event{EventType::RemoteStartRequested}, safeAutomaticVehicle());
+
+    CHECK(decision.state == ControllerState::Idle);
+    CHECK(decision.profileReadiness.contains(
+        ProfileReadinessReason::ProfileNotSelected));
+    CHECK(decision.contains(ActionType::SecureOutputs));
+    CHECK(decision.contains(ActionType::NotifyProfileRejected));
+    CHECK(!decision.contains(ActionType::RequestVehicleState));
+}
+
+void testControllerRejectsUnqualifiedReferenceProfile() {
+    ControllerConfig config{};
+    config.vehicleProfile =
+        &bmw::remote::domain::profiles::e90_2009_n47d20c_automatic();
+    Controller controller{config};
+
+    const auto decision = controller.handle(
+        Event{EventType::RemoteStartRequested}, safeAutomaticVehicle());
+
+    CHECK(decision.state == ControllerState::Idle);
+    CHECK(decision.profileReadiness.contains(
+        ProfileReadinessReason::UnverifiedRequiredSignal));
+    CHECK(decision.profileReadiness.contains(ProfileReadinessReason::QualificationTooLow));
+    CHECK(decision.contains(ActionType::NotifyProfileRejected));
+    CHECK(!decision.contains(ActionType::EnableIgnition));
+}
+
+void testNominalStartSequence() {
+    Controller controller = qualifiedController();
     VehicleState vehicle = safeAutomaticVehicle();
 
     const auto authorization = controller.handle(
@@ -171,7 +208,7 @@ void testNominalStartSequence() {
 }
 
 void testUnsafeStartReturnsToIdleWithoutLatchingFault() {
-    Controller controller{};
+    Controller controller = qualifiedController();
     VehicleState vehicle = safeAutomaticVehicle();
     vehicle.hoodClosed.value = false;
 
@@ -186,7 +223,7 @@ void testUnsafeStartReturnsToIdleWithoutLatchingFault() {
 }
 
 void testDuplicateStartRequestIsIgnored() {
-    Controller controller{};
+    Controller controller = qualifiedController();
     const VehicleState vehicle = safeAutomaticVehicle();
     static_cast<void>(controller.handle(Event{EventType::RemoteStartRequested}, vehicle));
 
@@ -197,7 +234,7 @@ void testDuplicateStartRequestIsIgnored() {
 }
 
 void testCrankingTimeoutLatchesFaultAndSafesOutputs() {
-    Controller controller{};
+    Controller controller = qualifiedController();
     VehicleState vehicle = safeAutomaticVehicle();
     static_cast<void>(controller.handle(Event{EventType::RemoteStartRequested}, vehicle));
     static_cast<void>(controller.handle(Event{EventType::VehicleStateUpdated}, vehicle));
@@ -212,7 +249,7 @@ void testCrankingTimeoutLatchesFaultAndSafesOutputs() {
 }
 
 void testSafetyViolationWhileRunningLatchesFault() {
-    Controller controller{};
+    Controller controller = qualifiedController();
     VehicleState vehicle = safeAutomaticVehicle();
     advanceToRunning(controller, vehicle);
     CHECK(controller.state() == ControllerState::Running);
@@ -226,7 +263,7 @@ void testSafetyViolationWhileRunningLatchesFault() {
 }
 
 void testRemoteStopRequiresStoppedEngineConfirmation() {
-    Controller controller{};
+    Controller controller = qualifiedController();
     VehicleState vehicle = safeAutomaticVehicle();
     advanceToRunning(controller, vehicle);
 
@@ -242,7 +279,7 @@ void testRemoteStopRequiresStoppedEngineConfirmation() {
 }
 
 void testRemoteRunTimerInitiatesStop() {
-    Controller controller{};
+    Controller controller = qualifiedController();
     VehicleState vehicle = safeAutomaticVehicle();
     advanceToRunning(controller, vehicle);
 
@@ -253,7 +290,7 @@ void testRemoteRunTimerInitiatesStop() {
 }
 
 void testFaultResetRequiresStoppedEngineAndNoCriticalFault() {
-    Controller controller{};
+    Controller controller = qualifiedController();
     VehicleState vehicle = safeAutomaticVehicle();
     static_cast<void>(controller.handle(Event{EventType::InfrastructureFailure, FaultCode::ActuatorFailure}, vehicle));
 
@@ -303,17 +340,43 @@ struct FakeTimer final : TimerPort {
 
 struct FakeNotifications final : NotificationSink {
     std::uint32_t faultNotifications{0U};
+    std::uint32_t profileRejectedNotifications{0U};
+    std::uint8_t lastProfileReasons{0U};
 
     void publish(
         const ActionType notification,
         ControllerState,
         FaultCode,
-        bmw::remote::application::SafetyAssessment) noexcept override {
+        bmw::remote::application::SafetyAssessment,
+        const bmw::remote::application::ProfileReadinessAssessment
+            profileReadiness) noexcept override {
+        lastProfileReasons = profileReadiness.reasons;
         if (notification == ActionType::NotifyFault) {
             ++faultNotifications;
+        } else if (notification == ActionType::NotifyProfileRejected) {
+            ++profileRejectedNotifications;
         }
     }
 };
+
+void testRuntimeRejectsMissingProfileWithoutRequestingVehicle() {
+    FakeVehicleGateway gateway{};
+    FakeActuator actuator{};
+    FakeTimer timer{};
+    FakeNotifications notifications{};
+    Runtime runtime{Controller{}, gateway, actuator, timer, notifications};
+
+    const auto result = runtime.dispatch(
+        Event{EventType::RemoteStartRequested}, safeAutomaticVehicle());
+
+    CHECK(result.state == ControllerState::Idle);
+    CHECK(gateway.requests == 0U);
+    CHECK(actuator.secureCalls == 1U);
+    CHECK(notifications.profileRejectedNotifications == 1U);
+    CHECK(
+        (notifications.lastProfileReasons &
+         bmw::remote::application::mask(ProfileReadinessReason::ProfileNotSelected)) != 0U);
+}
 
 void testRuntimeConvertsGatewayFailureIntoSafeFault() {
     FakeVehicleGateway gateway{};
@@ -321,7 +384,7 @@ void testRuntimeConvertsGatewayFailureIntoSafeFault() {
     FakeActuator actuator{};
     FakeTimer timer{};
     FakeNotifications notifications{};
-    Runtime runtime{Controller{}, gateway, actuator, timer, notifications};
+    Runtime runtime{qualifiedController(), gateway, actuator, timer, notifications};
 
     const auto result = runtime.dispatch(
         Event{EventType::RemoteStartRequested}, safeAutomaticVehicle());
@@ -340,7 +403,7 @@ void testRuntimeConvertsActuatorFailureIntoSafeFault() {
     actuator.ignitionSucceeds = false;
     FakeTimer timer{};
     FakeNotifications notifications{};
-    Runtime runtime{Controller{}, gateway, actuator, timer, notifications};
+    Runtime runtime{qualifiedController(), gateway, actuator, timer, notifications};
     VehicleState vehicle = safeAutomaticVehicle();
 
     static_cast<void>(runtime.dispatch(Event{EventType::RemoteStartRequested}, vehicle));
@@ -621,6 +684,8 @@ int main() {
         {"multiple safety reasons", testUnsafeVehicleReportsAllDetectedReasons},
         {"manual denied by default", testManualTransmissionIsDeniedByDefault},
         {"manual explicit opt-in", testManualTransmissionRequiresExplicitOptIn},
+        {"missing profile rejection", testControllerRejectsStartWhenNoProfileIsSelected},
+        {"unqualified profile rejection", testControllerRejectsUnqualifiedReferenceProfile},
         {"nominal start sequence", testNominalStartSequence},
         {"unsafe start rejection", testUnsafeStartReturnsToIdleWithoutLatchingFault},
         {"duplicate start", testDuplicateStartRequestIsIgnored},
@@ -629,6 +694,7 @@ int main() {
         {"remote stop confirmation", testRemoteStopRequiresStoppedEngineConfirmation},
         {"remote run timeout", testRemoteRunTimerInitiatesStop},
         {"fault reset guards", testFaultResetRequiresStoppedEngineAndNoCriticalFault},
+        {"runtime missing profile", testRuntimeRejectsMissingProfileWithoutRequestingVehicle},
         {"gateway failure", testRuntimeConvertsGatewayFailureIntoSafeFault},
         {"actuator failure", testRuntimeConvertsActuatorFailureIntoSafeFault},
         {"non-monotonic trace", testReplayRejectsNonMonotonicTrace},
