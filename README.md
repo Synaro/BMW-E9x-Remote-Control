@@ -41,6 +41,7 @@ Le premier jalon logiciel est opérationnel :
 - sélection explicite d'un profil obligatoire dans le contrôleur ;
 - analyse différentielle hors ligne des octets et bits candidats ;
 - ESP32-S3-DevKitC-1-N8 sélectionné pour le prototype de banc avec USB filaire ;
+- endpoint USB ESP32-S3 raccordé au journal de configuration en flash ;
 - 80 tests C++, 8 scénarios du simulateur, 2 contrôles du configurateur et
   21 tests Python automatisés en intégration continue.
 
@@ -122,7 +123,8 @@ pio run -e esp32s3dev
 ```
 
 Cette carte est la cible du prototype de banc, pas celle de l'installation
-automobile définitive. Le firmware reste inerte et n'active aucune sortie.
+automobile définitive. Le firmware dessert uniquement le protocole local de
+configuration sur USB ; il n'active aucun bus véhicule ni aucune sortie.
 
 Avec CMake :
 
