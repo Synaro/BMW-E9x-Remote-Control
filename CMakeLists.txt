@@ -58,11 +58,19 @@ else()
 endif()
 
 option(BMW_REMOTE_BUILD_SIMULATOR "Build the offline vehicle simulator" ON)
+option(BMW_REMOTE_BUILD_CONFIGURATOR "Build the user settings configurator" ON)
 
 if(BMW_REMOTE_BUILD_SIMULATOR)
     add_executable(bmw_remote_simulator tools/vehicle_simulator.cpp)
     target_link_libraries(
         bmw_remote_simulator PRIVATE bmw_remote_simulation bmw_remote_host_tools)
+endif()
+
+if(BMW_REMOTE_BUILD_CONFIGURATOR)
+    add_executable(
+        bmw_remote_configurator tools/settings_configurator.cpp)
+    target_link_libraries(
+        bmw_remote_configurator PRIVATE bmw_remote_host_tools)
 endif()
 
 option(BMW_REMOTE_BUILD_TESTS "Build the host-side unit tests" ON)
@@ -98,5 +106,16 @@ if(BMW_REMOTE_BUILD_TESTS)
         add_test(
             NAME bmw_remote_simulator_settings_recovery
             COMMAND bmw_remote_simulator --scenario settings-recovery)
+    endif()
+
+    if(BMW_REMOTE_BUILD_CONFIGURATOR)
+        add_test(
+            NAME bmw_remote_configurator_defaults
+            COMMAND bmw_remote_configurator --print-defaults)
+        add_test(
+            NAME bmw_remote_configurator_example
+            COMMAND bmw_remote_configurator
+                --check
+                --config ${CMAKE_CURRENT_SOURCE_DIR}/config/user-settings.example.conf)
     endif()
 endif()

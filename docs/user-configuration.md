@@ -7,9 +7,10 @@ du matériel et du format de stockage. Elles sont validées avant de construire
 `ControllerConfig` et `LockSequenceConfig`. Une valeur invalide désactive le
 démarrage distant ; elle n'est jamais tronquée ou remplacée silencieusement.
 
-Le simulateur fournit aujourd'hui un adaptateur de fichier `key=value`. Le futur
-boîtier pourra utiliser une mémoire non volatile et une interface web, Bluetooth
-ou USB tout en conservant exactement le même modèle et le même validateur.
+Le simulateur et le configurateur Windows fournissent aujourd'hui un adaptateur
+de fichier `key=value`. Le futur boîtier pourra utiliser une mémoire non volatile
+et une interface web, Bluetooth ou USB tout en conservant exactement le même
+modèle et le même validateur.
 
 ## Réglages disponibles
 
@@ -33,7 +34,30 @@ la fenêtre totale doit pouvoir contenir le nombre d'appuis choisi.
 capteur. Aucune valeur fictive « capot fermé » n'est créée : le signal est
 réellement retiré de la décision.
 
-## Créer sa configuration
+## Créer sa configuration avec l'assistant
+
+Lancer le configurateur depuis la racine du dépôt :
+
+```powershell
+.\scripts\configure.ps1
+```
+
+Il charge `config/user-settings.conf` s'il existe, sinon il part des valeurs par
+défaut. Entrée conserve la valeur affichée. Le fichier final est relu et validé
+avant de remplacer l'ancienne version ; une saisie interrompue ou invalide ne
+détruit pas la configuration précédente.
+
+Afficher ou contrôler le fichier sans le modifier :
+
+```powershell
+.\scripts\configure.ps1 -Show
+.\scripts\configure.ps1 -Check
+```
+
+Le fonctionnement complet et la CLI sont décrits dans
+[configurator.md](configurator.md).
+
+## Édition manuelle facultative
 
 Copier le modèle sans modifier le fichier suivi par Git :
 
@@ -61,7 +85,12 @@ Exécuter le parcours configuré :
   -ConfigPath .\config\user-settings.conf
 ```
 
-Le menu interactif de l'exécutable propose la même fonction au choix `6`.
+Le menu interactif du simulateur propose la même fonction au choix `6`.
+
+Le configurateur ne transmet encore rien au véhicule ou au futur boîtier. Il
+produit aujourd'hui le fichier PC utilisé pour la simulation ; le même modèle
+sera raccordé à la mémoire réelle lorsque la carte et l'interface de transport
+auront été choisies.
 
 ## Réglages volontairement non désactivables
 

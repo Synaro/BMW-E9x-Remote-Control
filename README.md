@@ -21,6 +21,7 @@ Le premier jalon logiciel est opérationnel :
 - machine d'état événementielle complète ;
 - détection applicative configurable de trois impulsions de verrouillage ;
 - profil utilisateur validé avant application, sans recompilation du noyau ;
+- configurateur Windows interactif avec enregistrement vérifié et remplacement sûr ;
 - persistance versionnée sur deux emplacements avec CRC et récupération ;
 - décisions et listes d'actions de taille fixe, sans allocation dynamique ;
 - arrêt fail-safe en cas de défaut d'un adaptateur ;
@@ -37,7 +38,8 @@ Le premier jalon logiciel est opérationnel :
 - capture PC bornée avec refus des interfaces sans mode silencieux documenté ;
 - sélection explicite d'un profil obligatoire dans le contrôleur ;
 - analyse différentielle hors ligne des octets et bits candidats ;
-- 59 tests C++, 7 parcours CLI et 21 tests Python automatisés en intégration continue.
+- 62 tests C++, 7 scénarios du simulateur, 2 contrôles du configurateur et
+  21 tests Python automatisés en intégration continue.
 
 L'adaptateur BMW qui observera réellement le verrouillage, qualifiera la reprise
 conducteur et pilotera les sorties physiques reste à implémenter lorsque le
@@ -82,6 +84,8 @@ Les préférences, leurs limites et leur future persistance sont décrites dans
 [docs/user-configuration.md](docs/user-configuration.md).
 Le journal binaire redondant est spécifié dans
 [docs/settings-persistence.md](docs/settings-persistence.md).
+Le configurateur PC est décrit dans
+[docs/configurator.md](docs/configurator.md).
 
 ## Validation locale
 
@@ -133,6 +137,31 @@ tools/                              Simulateur et importeur de traces PC
 scenarios/                          Traces synthétiques partageables
 docs/                               Architecture, sécurité et intégration
 ```
+
+## Configurateur utilisateur Windows
+
+Le fichier personnel peut être créé ou modifié sans éditer de texte à la main :
+
+```powershell
+.\scripts\configure.ps1
+```
+
+L'assistant conserve une valeur lorsque l'utilisateur appuie simplement sur
+Entrée, valide toutes les limites de sûreté puis écrit
+`config/user-settings.conf`. Le contrôle du capot peut notamment être placé sur
+`disabled` pour une E9x qui ne possède pas ce capteur.
+
+La configuration produite peut être contrôlée puis exécutée immédiatement dans
+le simulateur :
+
+```powershell
+.\scripts\configure.ps1 -Check
+.\scripts\simulate.ps1 -ConfigPath .\config\user-settings.conf
+```
+
+L'exécutable généré se trouve dans `build/bmw_remote_configurator.exe`. À ce
+stade, il prépare la configuration et ne communique ni avec le véhicule ni avec
+un boîtier physique. Voir [docs/configurator.md](docs/configurator.md).
 
 ## Simulateur applicatif
 

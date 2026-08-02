@@ -13,6 +13,8 @@ Thumbs.db
 captures/private/
 config/user-settings.conf
 config/*.local.conf
+config/*.tmp
+config/*.bak
 *.blf
 __pycache__/
 *.pyc

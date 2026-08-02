@@ -1,5 +1,6 @@
 #include <array>
 #include <cstdint>
+#include <filesystem>
 #include <iostream>
 #include <sstream>
 #include <string>
@@ -296,6 +297,91 @@ void testUserSettingsFileRejectsUnsafeDurations() {
 
     CHECK(!bmw::remote::host::parseUserSettings(input, settings, error));
     CHECK(error.find("safety bounds") != std::string::npos);
+}
+
+void testUserSettingsFileWriterRoundTripsEverySetting() {
+    UserSettings original{};
+    original.remoteStartEnabled = false;
+    original.hoodMonitoring = HoodMonitoringMode::Disabled;
+    original.driverEntryMode =
+        bmw::remote::application::DriverEntryMode::StopImmediately;
+    original.maximumRemoteRunTimeMs = 42U * 60U * 1'000U;
+    original.driverTakeoverTimeoutMs = 180'000U;
+    original.lockPressCount = 5U;
+    original.lockMinimumGapMs = 120U;
+    original.lockMaximumGapMs = 2'200U;
+    original.lockMaximumSequenceMs = 9'000U;
+    std::ostringstream output{};
+    std::string error{};
+
+    CHECK(bmw::remote::host::writeUserSettings(output, original, error));
+    CHECK(error.empty());
+
+    UserSettings loaded{};
+    std::istringstream input{output.str()};
+    CHECK(bmw::remote::host::parseUserSettings(input, loaded, error));
+    CHECK(loaded.remoteStartEnabled == original.remoteStartEnabled);
+    CHECK(loaded.hoodMonitoring == original.hoodMonitoring);
+    CHECK(loaded.driverEntryMode == original.driverEntryMode);
+    CHECK(loaded.maximumRemoteRunTimeMs == original.maximumRemoteRunTimeMs);
+    CHECK(loaded.driverTakeoverTimeoutMs == original.driverTakeoverTimeoutMs);
+    CHECK(loaded.lockPressCount == original.lockPressCount);
+    CHECK(loaded.lockMinimumGapMs == original.lockMinimumGapMs);
+    CHECK(loaded.lockMaximumGapMs == original.lockMaximumGapMs);
+    CHECK(loaded.lockMaximumSequenceMs == original.lockMaximumSequenceMs);
+}
+
+void testUserSettingsFileWriterRejectsPrecisionLoss() {
+    UserSettings settings{};
+    settings.maximumRemoteRunTimeMs = 60'001U;
+    std::ostringstream output{};
+    std::string error{};
+
+    CHECK(!bmw::remote::host::writeUserSettings(output, settings, error));
+    CHECK(output.str().empty());
+    CHECK(error.find("whole minutes") != std::string::npos);
+}
+
+void testUserSettingsFileSaveReplacesOnlyWithValidatedContent() {
+    const std::filesystem::path path =
+        std::filesystem::temp_directory_path() /
+        "bmw_remote_user_settings_test.conf";
+    std::error_code ignored{};
+    static_cast<void>(std::filesystem::remove(path, ignored));
+    static_cast<void>(std::filesystem::remove(path.string() + ".tmp", ignored));
+    static_cast<void>(std::filesystem::remove(path.string() + ".bak", ignored));
+
+    UserSettings first{};
+    first.hoodMonitoring = HoodMonitoringMode::Disabled;
+    first.maximumRemoteRunTimeMs = 12U * 60U * 1'000U;
+    UserSettings second = first;
+    second.maximumRemoteRunTimeMs = 35U * 60U * 1'000U;
+    std::string error{};
+    const std::string pathText = path.string();
+
+    CHECK(bmw::remote::host::saveUserSettingsFile(
+        pathText.c_str(), first, error));
+    CHECK(bmw::remote::host::saveUserSettingsFile(
+        pathText.c_str(), second, error));
+
+    UserSettings loaded{};
+    CHECK(bmw::remote::host::loadUserSettingsFile(
+        pathText.c_str(), loaded, error));
+    CHECK(loaded.maximumRemoteRunTimeMs == second.maximumRemoteRunTimeMs);
+    CHECK(loaded.hoodMonitoring == HoodMonitoringMode::Disabled);
+    CHECK(!std::filesystem::exists(path.string() + ".tmp"));
+    CHECK(!std::filesystem::exists(path.string() + ".bak"));
+
+    UserSettings invalid = second;
+    invalid.maximumRemoteRunTimeMs = 0U;
+    CHECK(!bmw::remote::host::saveUserSettingsFile(
+        pathText.c_str(), invalid, error));
+    CHECK(bmw::remote::host::loadUserSettingsFile(
+        pathText.c_str(), loaded, error));
+    CHECK(loaded.maximumRemoteRunTimeMs == second.maximumRemoteRunTimeMs);
+
+    ignored.clear();
+    static_cast<void>(std::filesystem::remove(path, ignored));
 }
 
 struct MemorySettingsStorage final : SettingsByteStorage {
@@ -1227,6 +1313,9 @@ int main() {
         {"settings file", testUserSettingsFileLoadsStrictConfiguration},
         {"settings file strict keys", testUserSettingsFileRejectsUnknownAndDuplicateKeys},
         {"settings file safety bounds", testUserSettingsFileRejectsUnsafeDurations},
+        {"settings file writer round trip", testUserSettingsFileWriterRoundTripsEverySetting},
+        {"settings file writer precision", testUserSettingsFileWriterRejectsPrecisionLoss},
+        {"settings file safe replacement", testUserSettingsFileSaveReplacesOnlyWithValidatedContent},
         {"empty settings storage", testEmptySettingsStorageDisablesRemoteStart},
         {"settings journal round trip", testJournaledSettingsRoundTripUsesLatestGeneration},
         {"settings corruption fallback", testCorruptedNewestSettingsFallBackToPreviousSlot},
