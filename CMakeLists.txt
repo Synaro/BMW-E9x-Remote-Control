@@ -12,6 +12,7 @@ add_library(bmw_remote_core
     src/domain/vehicle_profile.cpp
     src/domain/vehicle_signal.cpp
     src/infrastructure/can_trace_replay.cpp
+    src/infrastructure/diagnostic_journal.cpp
     src/infrastructure/replay_vehicle_gateway.cpp
     src/infrastructure/runtime.cpp
     src/infrastructure/settings_identity.cpp

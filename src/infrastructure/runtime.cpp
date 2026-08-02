@@ -7,27 +7,44 @@ Runtime::Runtime(
     VehicleGateway& vehicleGateway,
     ActuatorPort& actuators,
     TimerPort& timer,
-    NotificationSink& notifications) noexcept
+    NotificationSink& notifications,
+    DiagnosticJournal* const diagnosticJournal) noexcept
     : controller_(controller),
       vehicleGateway_(vehicleGateway),
       actuators_(actuators),
       timer_(timer),
-      notifications_(notifications) {}
+      notifications_(notifications),
+      diagnosticJournal_(diagnosticJournal) {}
 
 application::Decision Runtime::dispatch(
     const application::Event event,
-    const domain::VehicleState& vehicle) noexcept {
+    const domain::VehicleState& vehicle,
+    const std::uint32_t timestampMs) noexcept {
     application::Decision decision = controller_.handle(event, vehicle);
+    if (diagnosticJournal_ != nullptr) {
+        diagnosticJournal_->observe(event, decision, timestampMs);
+    }
     const application::FaultCode executionFault = execute(decision);
 
     if (executionFault == application::FaultCode::None) {
         return decision;
     }
 
-    application::Decision faultDecision = controller_.handle(
-        application::Event::infrastructureFailure(executionFault),
-        vehicle);
-    executeSafing(faultDecision);
+    if (diagnosticJournal_ != nullptr) {
+        diagnosticJournal_->recordInfrastructureFailure(
+            event.type,
+            decision.state,
+            executionFault,
+            timestampMs);
+    }
+    const application::Event failureEvent =
+        application::Event::infrastructureFailure(executionFault);
+    application::Decision faultDecision =
+        controller_.handle(failureEvent, vehicle);
+    if (diagnosticJournal_ != nullptr) {
+        diagnosticJournal_->observe(failureEvent, faultDecision, timestampMs);
+    }
+    executeSafing(faultDecision, timestampMs);
     return faultDecision;
 }
 
@@ -115,23 +132,43 @@ application::FaultCode Runtime::executeAction(
     return FaultCode::InternalError;
 }
 
-void Runtime::executeSafing(const application::Decision& decision) noexcept {
+void Runtime::executeSafing(
+    const application::Decision& decision,
+    const std::uint32_t timestampMs) noexcept {
     using application::ActionType;
+    using application::FaultCode;
 
     for (std::size_t index = 0U; index < decision.actionCount; ++index) {
         const application::Action& action = decision.actions[index];
 
         switch (action.type) {
             case ActionType::CancelTimer:
-                static_cast<void>(timer_.cancel());
+                if (!timer_.cancel() && diagnosticJournal_ != nullptr) {
+                    diagnosticJournal_->recordSafingFailure(
+                        decision.state,
+                        FaultCode::TimerFailure,
+                        timestampMs);
+                }
                 break;
 
             case ActionType::DisengageStarter:
-                static_cast<void>(actuators_.disengageStarter());
+                if (!actuators_.disengageStarter() &&
+                    diagnosticJournal_ != nullptr) {
+                    diagnosticJournal_->recordSafingFailure(
+                        decision.state,
+                        FaultCode::ActuatorFailure,
+                        timestampMs);
+                }
                 break;
 
             case ActionType::SecureOutputs:
-                static_cast<void>(actuators_.secureOutputs());
+                if (!actuators_.secureOutputs() &&
+                    diagnosticJournal_ != nullptr) {
+                    diagnosticJournal_->recordSafingFailure(
+                        decision.state,
+                        FaultCode::ActuatorFailure,
+                        timestampMs);
+                }
                 break;
 
             case ActionType::NotifyFault:

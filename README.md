@@ -44,7 +44,8 @@ Le premier jalon logiciel est opérationnel :
 - endpoint USB ESP32-S3 raccordé au journal de configuration en flash ;
 - configurateur Windows relié au port COM avec écriture et relecture vérifiée ;
 - identification du produit, de la cible, de la version et des capacités avant écriture ;
-- 87 tests C++, 8 scénarios du simulateur, 3 contrôles du configurateur et
+- journal de diagnostic circulaire, borné et dépourvu de données véhicule brutes ;
+- 91 tests C++, 8 scénarios du simulateur, 3 contrôles du configurateur et
   21 tests Python automatisés en intégration continue.
 
 L'adaptateur BMW qui observera réellement le verrouillage, qualifiera la reprise
@@ -94,6 +95,8 @@ Le configurateur PC est décrit dans
 [docs/configurator.md](docs/configurator.md).
 Le protocole entre configurateur et boîtier est spécifié dans
 [docs/settings-protocol.md](docs/settings-protocol.md).
+Le journal sémantique borné est décrit dans
+[docs/diagnostic-journal.md](docs/diagnostic-journal.md).
 La cible matérielle de banc, les achats autorisés et les limites avant connexion
 au véhicule sont détaillés dans
 [docs/hardware-v1-reference.md](docs/hardware-v1-reference.md).
@@ -215,8 +218,10 @@ peut aussi être compilé et exécuté avec :
 .\scripts\simulate.ps1 -Scenario settings-link
 ```
 
-Le résultat attendu est affiché sous la forme `scenario_result: PASS` et le code
-de sortie reste non nul si le comportement diverge.
+Chaque parcours affiche aussi le journal chronologique des commandes,
+transitions, refus et défauts. Le résultat attendu est affiché sous la forme
+`scenario_result: PASS` et le code de sortie reste non nul si le comportement
+diverge.
 
 Voir [docs/simulator.md](docs/simulator.md) pour la CLI et
 [docs/can-replay.md](docs/can-replay.md) pour le contrat du moteur de rejeu.

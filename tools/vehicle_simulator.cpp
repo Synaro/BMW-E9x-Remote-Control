@@ -101,6 +101,31 @@ void printDecision(
               << application::toString(decision.state) << '\n';
 }
 
+void printDiagnosticJournal(
+    const infrastructure::DiagnosticJournal& journal) {
+    std::cout << "diagnostic_log: records=" << journal.size()
+              << " overwritten=" << journal.overwrittenCount() << '\n';
+    infrastructure::DiagnosticRecord record{};
+    for (std::size_t index = 0U; index < journal.size(); ++index) {
+        if (!journal.read(index, record)) {
+            continue;
+        }
+        std::cout
+            << "  #" << record.sequence
+            << " time_ms=" << record.timestampMs
+            << " type=" << infrastructure::toString(record.type)
+            << " trigger=" << application::toString(record.trigger)
+            << " state=" << application::toString(record.previousState)
+            << "->" << application::toString(record.state)
+            << " fault=" << application::toString(record.fault)
+            << " reason=" << infrastructure::toString(record.reason)
+            << " safety_mask=" << record.safetyReasons
+            << " profile_mask="
+            << static_cast<unsigned int>(record.profileReasons)
+            << '\n';
+    }
+}
+
 const char* qualityName(const domain::SignalQuality quality) noexcept {
     switch (quality) {
         case domain::SignalQuality::Unavailable: return "unavailable";
@@ -614,12 +639,14 @@ int runScenario(
     ConsoleActuators actuators{};
     ConsoleTimer timer{};
     ConsoleNotifications notifications{};
+    infrastructure::DiagnosticJournal diagnosticJournal{};
     infrastructure::Runtime runtime{
         application::Controller{configuration.controller},
         gateway,
         actuators,
         timer,
-        notifications};
+        notifications,
+        &diagnosticJournal};
 
     std::cout << "scenario: " << scenarioName(scenario) << '\n';
     printUserSettings(settings);
@@ -644,13 +671,16 @@ int runScenario(
     }
 
     auto decision = runtime.dispatch(
-        application::Event{application::EventType::RemoteStartRequested}, vehicle);
+        application::Event{application::EventType::RemoteStartRequested},
+        vehicle,
+        0U);
     printDecision("remote start", decision);
 
     if (scenario == Scenario::UserConfig && !settings.remoteStartEnabled) {
         const bool expectedOutcome =
             decision.state == application::ControllerState::Idle &&
             decision.contains(application::ActionType::NotifyRemoteStartDisabled);
+        printDiagnosticJournal(diagnosticJournal);
         std::cout << "scenario_result: "
                   << (expectedOutcome ? "PASS" : "FAIL") << '\n';
         return expectedOutcome ? 0 : 2;
@@ -658,11 +688,15 @@ int runScenario(
 
     vehicle = gateway.state();
     decision = runtime.dispatch(
-        application::Event{application::EventType::VehicleStateUpdated}, vehicle);
+        application::Event{application::EventType::VehicleStateUpdated},
+        vehicle,
+        0U);
     printDecision("safe snapshot", decision);
 
     decision = runtime.dispatch(
-        application::Event{application::EventType::TimerElapsed}, vehicle);
+        application::Event{application::EventType::TimerElapsed},
+        vehicle,
+        configuration.controller.preparationDelayMs);
     printDecision("preparation timer", decision);
 
     if (!gateway.setElapsedTime(1'800U) || !gateway.requestState()) {
@@ -671,7 +705,9 @@ int runScenario(
     }
     vehicle = gateway.state();
     decision = runtime.dispatch(
-        application::Event{application::EventType::VehicleStateUpdated}, vehicle);
+        application::Event{application::EventType::VehicleStateUpdated},
+        vehicle,
+        1'800U);
     printDecision("engine running", decision);
 
     if (!gateway.setElapsedTime(5'000U) || !gateway.requestState()) {
@@ -680,7 +716,9 @@ int runScenario(
     }
     vehicle = gateway.state();
     decision = runtime.dispatch(
-        application::Event{application::EventType::VehicleStateUpdated}, vehicle);
+        application::Event{application::EventType::VehicleStateUpdated},
+        vehicle,
+        5'000U);
     printDecision(
         injectHoodOpening
             ? "hood opened"
@@ -690,7 +728,9 @@ int runScenario(
     bool expectedOutcome = false;
     if (scenario == Scenario::Nominal) {
         decision = runtime.dispatch(
-            application::Event{application::EventType::RemoteStopRequested}, vehicle);
+            application::Event{application::EventType::RemoteStopRequested},
+            vehicle,
+            5'000U);
         printDecision("remote stop", decision);
 
         if (!gateway.setElapsedTime(6'000U) || !gateway.requestState()) {
@@ -699,7 +739,9 @@ int runScenario(
         }
         vehicle = gateway.state();
         decision = runtime.dispatch(
-            application::Event{application::EventType::VehicleStateUpdated}, vehicle);
+            application::Event{application::EventType::VehicleStateUpdated},
+            vehicle,
+            6'000U);
         printDecision("engine stopped", decision);
         expectedOutcome =
             decision.state == application::ControllerState::Idle &&
@@ -716,7 +758,9 @@ int runScenario(
             decision.safety.approved();
     } else if (scenario == Scenario::TakeoverTimeout) {
         decision = runtime.dispatch(
-            application::Event{application::EventType::TimerElapsed}, vehicle);
+            application::Event{application::EventType::TimerElapsed},
+            vehicle,
+            5'000U + configuration.controller.driverTakeoverTimeoutMs);
         printDecision("takeover timer expired", decision);
         expectedOutcome =
             decision.state == application::ControllerState::Stopping &&
@@ -724,7 +768,8 @@ int runScenario(
     } else if (scenario == Scenario::TakeoverConfirmed) {
         decision = runtime.dispatch(
             application::Event{application::EventType::DriverTakeoverConfirmed},
-            vehicle);
+            vehicle,
+            5'000U);
         printDecision("authenticated takeover", decision);
         expectedOutcome =
             decision.state == application::ControllerState::DriverControl &&
@@ -741,6 +786,7 @@ int runScenario(
     }
 
     const infrastructure::AssemblyStatistics stats = gateway.statistics();
+    printDiagnosticJournal(diagnosticJournal);
     std::cout << "replay: " << stats.consumedFrames << " frames, "
               << stats.decodedSignals << " decoded signals\n"
               << "scenario_result: " << (expectedOutcome ? "PASS" : "FAIL") << '\n';

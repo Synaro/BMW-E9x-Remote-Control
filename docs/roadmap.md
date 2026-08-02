@@ -73,7 +73,7 @@
 - [ ] Tester perte, retard et corruption des données
 - [ ] Qualifier la provenance BMW des verrouillages et la résistance au rejeu
 - [ ] Implémenter l'adaptateur réel de confirmation de reprise conducteur
-- [ ] Ajouter une journalisation bornée et non sensible
+- [x] Ajouter une journalisation bornée et non sensible
 - [x] Implémenter `SettingsByteStorage` dans la mémoire flash du prototype
 - [x] Choisir l'USB filaire entre le configurateur et le boîtier V1
 - [x] Implémenter le transport USB sur ESP32-S3

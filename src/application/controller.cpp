@@ -33,6 +33,7 @@ Decision Controller::handle(
     Decision decision{};
     decision.previousState = state_;
     decision.state = state_;
+    decision.previousFault = fault_;
     decision.fault = fault_;
     decision.profileReadiness = profileReadiness_;
 
@@ -400,6 +401,20 @@ const char* toString(const FaultCode fault) noexcept {
         case FaultCode::ActuatorFailure: return "actuator_failure";
         case FaultCode::TimerFailure: return "timer_failure";
         case FaultCode::InternalError: return "internal_error";
+    }
+    return "unknown";
+}
+
+const char* toString(const EventType event) noexcept {
+    switch (event) {
+        case EventType::RemoteStartRequested: return "remote_start_requested";
+        case EventType::RemoteStopRequested: return "remote_stop_requested";
+        case EventType::VehicleStateUpdated: return "vehicle_state_updated";
+        case EventType::TimerElapsed: return "timer_elapsed";
+        case EventType::DriverTakeoverConfirmed:
+            return "driver_takeover_confirmed";
+        case EventType::InfrastructureFailure: return "infrastructure_failure";
+        case EventType::ResetRequested: return "reset_requested";
     }
     return "unknown";
 }

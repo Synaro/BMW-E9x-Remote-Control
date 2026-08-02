@@ -56,6 +56,10 @@ using bmw::remote::domain::VehicleSignal;
 using bmw::remote::domain::VehicleState;
 using bmw::remote::infrastructure::ActuatorPort;
 using bmw::remote::infrastructure::CanFrame;
+using bmw::remote::infrastructure::DiagnosticJournal;
+using bmw::remote::infrastructure::DiagnosticReason;
+using bmw::remote::infrastructure::DiagnosticRecord;
+using bmw::remote::infrastructure::DiagnosticRecordType;
 using bmw::remote::infrastructure::NotificationSink;
 using bmw::remote::infrastructure::ReplayStatus;
 using bmw::remote::infrastructure::ReplayVehicleGateway;
@@ -1683,6 +1687,8 @@ struct FakeVehicleGateway final : VehicleGateway {
 struct FakeActuator final : ActuatorPort {
     bool ignitionSucceeds{true};
     bool releaseSucceeds{true};
+    bool disengageSucceeds{true};
+    bool secureSucceeds{true};
     std::uint32_t secureCalls{0U};
     std::uint32_t starterReleaseCalls{0U};
     std::uint32_t remoteControlReleaseCalls{0U};
@@ -1691,7 +1697,7 @@ struct FakeActuator final : ActuatorPort {
     bool engageStarter() noexcept override { return true; }
     bool disengageStarter() noexcept override {
         ++starterReleaseCalls;
-        return true;
+        return disengageSucceeds;
     }
     bool releaseRemoteControl() noexcept override {
         ++remoteControlReleaseCalls;
@@ -1699,13 +1705,15 @@ struct FakeActuator final : ActuatorPort {
     }
     bool secureOutputs() noexcept override {
         ++secureCalls;
-        return true;
+        return secureSucceeds;
     }
 };
 
 struct FakeTimer final : TimerPort {
+    bool cancelSucceeds{true};
+
     bool arm(std::uint32_t) noexcept override { return true; }
-    bool cancel() noexcept override { return true; }
+    bool cancel() noexcept override { return cancelSucceeds; }
 };
 
 struct FakeNotifications final : NotificationSink {
@@ -1810,6 +1818,140 @@ void testRuntimeSafesOutputsWhenTakeoverReleaseFails() {
     CHECK(actuator.remoteControlReleaseCalls == 1U);
     CHECK(actuator.secureCalls == 1U);
     CHECK(notifications.faultNotifications == 1U);
+}
+
+void testDiagnosticJournalRecordsCommandsTransitionsAndRefusals() {
+    FakeVehicleGateway gateway{};
+    FakeActuator actuator{};
+    FakeTimer timer{};
+    FakeNotifications notifications{};
+    DiagnosticJournal journal{};
+    Runtime runtime{
+        Controller{}, gateway, actuator, timer, notifications, &journal};
+
+    static_cast<void>(runtime.dispatch(
+        Event{EventType::RemoteStartRequested},
+        safeAutomaticVehicle(),
+        42U));
+
+    CHECK(journal.size() == 2U);
+    CHECK(journal.overwrittenCount() == 0U);
+
+    DiagnosticRecord command{};
+    DiagnosticRecord rejection{};
+    CHECK(journal.read(0U, command));
+    CHECK(journal.read(1U, rejection));
+    CHECK(command.sequence == 1U);
+    CHECK(command.timestampMs == 42U);
+    CHECK(command.type == DiagnosticRecordType::CommandReceived);
+    CHECK(command.trigger == EventType::RemoteStartRequested);
+    CHECK(command.state == ControllerState::Idle);
+    CHECK(rejection.sequence == 2U);
+    CHECK(rejection.type == DiagnosticRecordType::RequestRejected);
+    CHECK(rejection.reason == DiagnosticReason::ProfileNotReady);
+    CHECK(
+        (rejection.profileReasons &
+         bmw::remote::application::mask(
+             ProfileReadinessReason::ProfileNotSelected)) != 0U);
+    CHECK(!journal.read(2U, rejection));
+
+    journal.clear();
+    Runtime resetRuntime{
+        qualifiedController(),
+        gateway,
+        actuator,
+        timer,
+        notifications,
+        &journal};
+    const VehicleState safeVehicle = safeAutomaticVehicle();
+    static_cast<void>(resetRuntime.dispatch(
+        Event::infrastructureFailure(FaultCode::ActuatorFailure),
+        safeVehicle,
+        50U));
+    static_cast<void>(resetRuntime.dispatch(
+        Event{EventType::ResetRequested}, safeVehicle, 60U));
+    CHECK(journal.size() == 4U);
+    CHECK(journal.read(2U, command));
+    CHECK(command.type == DiagnosticRecordType::CommandReceived);
+    CHECK(command.previousState == ControllerState::Fault);
+    CHECK(command.state == ControllerState::Fault);
+    CHECK(command.fault == FaultCode::ActuatorFailure);
+}
+
+void testDiagnosticJournalRecordsRuntimeAndSafingFailures() {
+    FakeVehicleGateway gateway{};
+    gateway.succeeds = false;
+    FakeActuator actuator{};
+    actuator.disengageSucceeds = false;
+    actuator.secureSucceeds = false;
+    FakeTimer timer{};
+    timer.cancelSucceeds = false;
+    FakeNotifications notifications{};
+    DiagnosticJournal journal{};
+    Runtime runtime{
+        qualifiedController(),
+        gateway,
+        actuator,
+        timer,
+        notifications,
+        &journal};
+
+    static_cast<void>(runtime.dispatch(
+        Event{EventType::RemoteStartRequested},
+        safeAutomaticVehicle(),
+        100U));
+
+    CHECK(journal.size() == 8U);
+    DiagnosticRecord record{};
+    CHECK(journal.read(2U, record));
+    CHECK(record.type == DiagnosticRecordType::InfrastructureFailure);
+    CHECK(record.trigger == EventType::RemoteStartRequested);
+    CHECK(record.fault == FaultCode::VehicleCommunication);
+    CHECK(journal.read(3U, record));
+    CHECK(record.type == DiagnosticRecordType::StateTransition);
+    CHECK(record.previousState == ControllerState::Authorizing);
+    CHECK(record.state == ControllerState::Fault);
+    CHECK(journal.read(4U, record));
+    CHECK(record.type == DiagnosticRecordType::FaultEntered);
+    for (std::size_t index = 5U; index < journal.size(); ++index) {
+        CHECK(journal.read(index, record));
+        CHECK(record.type == DiagnosticRecordType::SafingFailure);
+        CHECK(record.timestampMs == 100U);
+    }
+}
+
+void testDiagnosticJournalDoesNotStoreUneventfulVehicleUpdates() {
+    DiagnosticJournal journal{};
+    bmw::remote::application::Decision decision{};
+    journal.observe(
+        Event{EventType::VehicleStateUpdated}, decision, 500U);
+    CHECK(journal.size() == 0U);
+}
+
+void testDiagnosticJournalOverwritesOldestRecordsDeterministically() {
+    DiagnosticJournal journal{};
+    for (std::uint32_t index = 0U; index < 40U; ++index) {
+        journal.recordInfrastructureFailure(
+            EventType::TimerElapsed,
+            ControllerState::Running,
+            FaultCode::TimerFailure,
+            index);
+    }
+
+    CHECK(journal.size() == DiagnosticJournal::MaximumRecords);
+    CHECK(journal.overwrittenCount() == 8U);
+    DiagnosticRecord oldest{};
+    DiagnosticRecord newest{};
+    CHECK(journal.read(0U, oldest));
+    CHECK(journal.read(journal.size() - 1U, newest));
+    CHECK(oldest.sequence == 9U);
+    CHECK(oldest.timestampMs == 8U);
+    CHECK(newest.sequence == 40U);
+    CHECK(newest.timestampMs == 39U);
+
+    journal.clear();
+    CHECK(journal.size() == 0U);
+    CHECK(journal.overwrittenCount() == 0U);
 }
 
 void testReplayRejectsNonMonotonicTrace() {
@@ -2194,6 +2336,10 @@ int main() {
         {"gateway failure", testRuntimeConvertsGatewayFailureIntoSafeFault},
         {"actuator failure", testRuntimeConvertsActuatorFailureIntoSafeFault},
         {"takeover release failure", testRuntimeSafesOutputsWhenTakeoverReleaseFails},
+        {"diagnostic journal decisions", testDiagnosticJournalRecordsCommandsTransitionsAndRefusals},
+        {"diagnostic journal failures", testDiagnosticJournalRecordsRuntimeAndSafingFailures},
+        {"diagnostic journal quiet updates", testDiagnosticJournalDoesNotStoreUneventfulVehicleUpdates},
+        {"diagnostic journal rollover", testDiagnosticJournalOverwritesOldestRecordsDeterministically},
         {"non-monotonic trace", testReplayRejectsNonMonotonicTrace},
         {"time-bounded replay", testReplayOnlyEmitsFramesDueAtCurrentTime},
         {"signal freshness", testAssemblerMarksOldSignalsStale},
