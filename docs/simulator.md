@@ -26,7 +26,8 @@ Il peut être lancé directement. Sans argument, il affiche un menu interactif :
 4. portière ouverte sans reprise confirmée, puis arrêt à l'échéance ;
 5. portière ouverte avec reprise conducteur authentifiée ;
 6. chargement et exécution d'un fichier de configuration utilisateur ;
-7. corruption du réglage récent et récupération de la génération précédente.
+7. corruption du réglage récent et récupération de la génération précédente ;
+8. liaison de configuration avec autorisation, état occupé et corruption.
 
 ## Lancer un scénario depuis PowerShell
 
@@ -39,6 +40,7 @@ Il peut être lancé directement. Sans argument, il affiche un menu interactif :
 .\scripts\simulate.ps1 `
   -ConfigPath .\config\user-settings.example.conf
 .\scripts\simulate.ps1 -Scenario settings-recovery
+.\scripts\simulate.ps1 -Scenario settings-link
 ```
 
 Chaque scénario retourne le code `0` uniquement si le résultat final correspond
@@ -51,6 +53,12 @@ de portière. Voir [user-configuration.md](user-configuration.md).
 Le scénario `settings-recovery` utilise le vrai journal binaire, corrompt le CRC
 du second emplacement puis vérifie que le premier est restauré. Voir
 [settings-persistence.md](settings-persistence.md).
+
+Le scénario `settings-link` fait transiter une configuration complète dans les
+vraies trames binaires. Il vérifie successivement le refus sans autorisation, le
+refus d'écriture pendant `Running`, l'enregistrement pendant `Idle`, la lecture
+autorisée et le rejet d'un CRC corrompu. Voir
+[settings-protocol.md](settings-protocol.md).
 
 ## Inspecter une trace
 

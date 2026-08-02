@@ -22,6 +22,7 @@ Le premier jalon logiciel est opérationnel :
 - détection applicative configurable de trois impulsions de verrouillage ;
 - profil utilisateur validé avant application, sans recompilation du noyau ;
 - configurateur Windows interactif avec enregistrement vérifié et remplacement sûr ;
+- protocole binaire de configuration versionné, borné et protégé par CRC ;
 - persistance versionnée sur deux emplacements avec CRC et récupération ;
 - décisions et listes d'actions de taille fixe, sans allocation dynamique ;
 - arrêt fail-safe en cas de défaut d'un adaptateur ;
@@ -38,7 +39,7 @@ Le premier jalon logiciel est opérationnel :
 - capture PC bornée avec refus des interfaces sans mode silencieux documenté ;
 - sélection explicite d'un profil obligatoire dans le contrôleur ;
 - analyse différentielle hors ligne des octets et bits candidats ;
-- 62 tests C++, 7 scénarios du simulateur, 2 contrôles du configurateur et
+- 71 tests C++, 8 scénarios du simulateur, 2 contrôles du configurateur et
   21 tests Python automatisés en intégration continue.
 
 L'adaptateur BMW qui observera réellement le verrouillage, qualifiera la reprise
@@ -86,6 +87,8 @@ Le journal binaire redondant est spécifié dans
 [docs/settings-persistence.md](docs/settings-persistence.md).
 Le configurateur PC est décrit dans
 [docs/configurator.md](docs/configurator.md).
+Le protocole entre configurateur et boîtier est spécifié dans
+[docs/settings-protocol.md](docs/settings-protocol.md).
 
 ## Validation locale
 
@@ -159,9 +162,10 @@ le simulateur :
 .\scripts\simulate.ps1 -ConfigPath .\config\user-settings.conf
 ```
 
-L'exécutable généré se trouve dans `build/bmw_remote_configurator.exe`. À ce
-stade, il prépare la configuration et ne communique ni avec le véhicule ni avec
-un boîtier physique. Voir [docs/configurator.md](docs/configurator.md).
+L'exécutable généré se trouve dans `build/bmw_remote_configurator.exe`. Le codec
+et le service de communication avec le futur boîtier existent, mais aucun
+transport USB, Bluetooth ou réseau n'est encore sélectionné. Voir
+[docs/configurator.md](docs/configurator.md).
 
 ## Simulateur applicatif
 
@@ -172,9 +176,9 @@ Sous Windows, l'exécutable interactif peut être construit avec :
 .\build\bmw_remote_simulator.exe
 ```
 
-Sept scénarios permettent de tester le parcours nominal, le capot obligatoire ou
-facultatif, la reprise conducteur, un profil utilisateur et la récupération du
-stockage. Un scénario précis
+Huit scénarios permettent de tester le parcours nominal, le capot obligatoire ou
+facultatif, la reprise conducteur, un profil utilisateur, la récupération du
+stockage et la future liaison de configuration. Un scénario précis
 peut aussi être compilé et exécuté avec :
 
 ```powershell
@@ -183,6 +187,7 @@ peut aussi être compilé et exécuté avec :
 .\scripts\simulate.ps1 -Scenario takeover-confirmed
 .\scripts\simulate.ps1 -ConfigPath .\config\user-settings.example.conf
 .\scripts\simulate.ps1 -Scenario settings-recovery
+.\scripts\simulate.ps1 -Scenario settings-link
 ```
 
 Le résultat attendu est affiché sous la forme `scenario_result: PASS` et le code

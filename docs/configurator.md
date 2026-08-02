@@ -7,8 +7,9 @@ et modifier les préférences sans connaître la syntaxe du fichier `key=value`.
 Il utilise le même `UserSettings` et le même validateur que le contrôleur.
 
 Il ne communique actuellement ni avec une BMW ni avec un microcontrôleur. Le
-fichier produit sert au simulateur et prépare la future interface de transfert
-vers le boîtier.
+fichier produit sert au simulateur. Le codec et le service de dialogue avec le
+futur boîtier sont maintenant définis, mais l'adaptateur USB, Bluetooth ou réseau
+reste à choisir et à implémenter.
 
 ## Utilisation recommandée sous Windows
 
@@ -66,3 +67,5 @@ nouvelle version, elle reste utilisable.
 
 Les invariants non configurables restent ceux décrits dans
 [user-configuration.md](user-configuration.md) et [safety.md](safety.md).
+Le contrat de transfert futur est décrit dans
+[settings-protocol.md](settings-protocol.md).

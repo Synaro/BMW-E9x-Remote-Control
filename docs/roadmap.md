@@ -12,6 +12,8 @@
 - [x] Journal binaire redondant, versionné et protégé par CRC
 - [x] Récupération après corruption ou écriture interrompue
 - [x] Configurateur PC interactif et écriture de fichier vérifiée
+- [x] Protocole de configuration indépendant du transport avec CRC
+- [x] Autorisation obligatoire et écriture limitée à l'état `Idle`
 - [x] Actions bornées sans allocation dynamique
 - [x] Runtime et ports abstraits
 - [x] Tests hôte et intégration continue
@@ -70,6 +72,7 @@
 - [ ] Ajouter une journalisation bornée et non sensible
 - [ ] Implémenter `SettingsByteStorage` sur la mémoire réelle du boîtier
 - [ ] Choisir le transport entre le configurateur et le boîtier (web, Bluetooth ou USB)
+- [ ] Implémenter l'authentification et l'anti-rejeu propres au transport choisi
 - [ ] Valider la consommation au repos
 
 ## Jalon 4 — Actionneurs sur banc

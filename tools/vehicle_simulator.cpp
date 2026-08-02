@@ -12,6 +12,8 @@
 #include "bmw_remote/application/user_settings.hpp"
 #include "bmw_remote/infrastructure/replay_vehicle_gateway.hpp"
 #include "bmw_remote/infrastructure/runtime.hpp"
+#include "bmw_remote/infrastructure/settings_payload.hpp"
+#include "bmw_remote/infrastructure/settings_protocol.hpp"
 #include "bmw_remote/infrastructure/settings_storage.hpp"
 #include "bmw_remote/simulation/synthetic_can.hpp"
 #include "tools/can_trace_csv.hpp"
@@ -29,6 +31,7 @@ enum class Scenario : std::uint8_t {
     TakeoverConfirmed,
     UserConfig,
     SettingsRecovery,
+    SettingsLink,
 };
 
 class ConsoleActuators final : public infrastructure::ActuatorPort {
@@ -115,6 +118,7 @@ const char* scenarioName(const Scenario scenario) noexcept {
         case Scenario::TakeoverConfirmed: return "takeover-confirmed";
         case Scenario::UserConfig: return "user-config";
         case Scenario::SettingsRecovery: return "settings-recovery";
+        case Scenario::SettingsLink: return "settings-link";
     }
     return "unknown";
 }
@@ -148,6 +152,10 @@ bool parseScenario(const std::string_view text, Scenario& scenario) noexcept {
         scenario = Scenario::SettingsRecovery;
         return true;
     }
+    if (text == "settings-link") {
+        scenario = Scenario::SettingsLink;
+        return true;
+    }
     return false;
 }
 
@@ -173,7 +181,8 @@ void printScenarioList() {
         << "takeover-timeout door opens but takeover is not confirmed, then stop\n"
         << "takeover-confirmed door opens and authenticated takeover succeeds\n"
         << "user-config uses every value from a supplied configuration file\n"
-        << "settings-recovery corrupts the newest slot and restores the previous one\n";
+        << "settings-recovery corrupts the newest slot and restores the previous one\n"
+        << "settings-link exercises framed, authorized and idle-only configuration\n";
 }
 
 void printUsage(const char* const executable) {
@@ -344,11 +353,152 @@ int runSettingsRecoveryScenario() {
     return expectedOutcome ? 0 : 2;
 }
 
+bool exchangeSettingsFrame(
+    infrastructure::SettingsProtocolService& service,
+    const infrastructure::SettingsProtocolFrame& request,
+    const infrastructure::SettingsProtocolAccess access,
+    infrastructure::SettingsProtocolFrame& response) noexcept {
+    infrastructure::SettingsProtocolCodec::EncodedFrame requestBytes{};
+    std::size_t requestSize = 0U;
+    if (!infrastructure::SettingsProtocolCodec::encode(
+            request, requestBytes, requestSize)) {
+        return false;
+    }
+
+    const auto decodedRequest = infrastructure::SettingsProtocolCodec::decode(
+        requestBytes.data(), requestSize);
+    if (!decodedRequest.valid()) {
+        return false;
+    }
+
+    const infrastructure::SettingsProtocolFrame rawResponse =
+        service.handle(decodedRequest.frame, access);
+    infrastructure::SettingsProtocolCodec::EncodedFrame responseBytes{};
+    std::size_t responseSize = 0U;
+    if (!infrastructure::SettingsProtocolCodec::encode(
+            rawResponse, responseBytes, responseSize)) {
+        return false;
+    }
+
+    const auto decodedResponse = infrastructure::SettingsProtocolCodec::decode(
+        responseBytes.data(), responseSize);
+    if (!decodedResponse.valid()) {
+        return false;
+    }
+    response = decodedResponse.frame;
+    return true;
+}
+
+int runSettingsLinkScenario() {
+    SimulatorSettingsStorage storage{};
+    infrastructure::JournaledUserSettingsStore store{storage};
+    infrastructure::SettingsProtocolService service{store};
+
+    application::UserSettings requestedSettings{};
+    requestedSettings.hoodMonitoring =
+        application::HoodMonitoringMode::Disabled;
+    requestedSettings.maximumRemoteRunTimeMs = 20U * 60U * 1'000U;
+    requestedSettings.driverTakeoverTimeoutMs = 90'000U;
+
+    infrastructure::SettingsProtocolFrame writeRequest{};
+    writeRequest.type = infrastructure::SettingsMessageType::WriteRequest;
+    writeRequest.requestId = 100U;
+    writeRequest.payloadSize = static_cast<std::uint16_t>(
+        infrastructure::UserSettingsPayloadSize);
+    const bool payloadEncoded = infrastructure::encodeUserSettingsPayload(
+        requestedSettings, writeRequest.payload);
+
+    infrastructure::SettingsProtocolFrame unauthorizedResponse{};
+    const bool unauthorizedExchanged = exchangeSettingsFrame(
+        service,
+        writeRequest,
+        infrastructure::SettingsProtocolAccess{
+            false,
+            application::ControllerState::Idle},
+        unauthorizedResponse);
+
+    infrastructure::SettingsProtocolFrame busyResponse{};
+    const bool busyExchanged = exchangeSettingsFrame(
+        service,
+        writeRequest,
+        infrastructure::SettingsProtocolAccess{
+            true,
+            application::ControllerState::Running},
+        busyResponse);
+
+    infrastructure::SettingsProtocolFrame writeResponse{};
+    const bool writeExchanged = exchangeSettingsFrame(
+        service,
+        writeRequest,
+        infrastructure::SettingsProtocolAccess{
+            true,
+            application::ControllerState::Idle},
+        writeResponse);
+
+    infrastructure::SettingsProtocolFrame readRequest{};
+    readRequest.type = infrastructure::SettingsMessageType::ReadRequest;
+    readRequest.requestId = 101U;
+    infrastructure::SettingsProtocolFrame readResponse{};
+    const bool readExchanged = exchangeSettingsFrame(
+        service,
+        readRequest,
+        infrastructure::SettingsProtocolAccess{
+            true,
+            application::ControllerState::Running},
+        readResponse);
+
+    application::UserSettings readBack{};
+    const bool settingsDecoded =
+        readResponse.payloadSize == infrastructure::UserSettingsPayloadSize &&
+        infrastructure::decodeUserSettingsPayload(
+            readResponse.payload, readBack);
+
+    infrastructure::SettingsProtocolCodec::EncodedFrame corruptedBytes{};
+    std::size_t corruptedSize = 0U;
+    const bool corruptedEncoded = infrastructure::SettingsProtocolCodec::encode(
+        writeRequest, corruptedBytes, corruptedSize);
+    if (corruptedEncoded) {
+        corruptedBytes[8U] ^= 0x01U;
+    }
+    const auto corrupted = infrastructure::SettingsProtocolCodec::decode(
+        corruptedBytes.data(), corruptedSize);
+
+    const bool expectedOutcome =
+        payloadEncoded && unauthorizedExchanged && busyExchanged &&
+        writeExchanged && readExchanged && settingsDecoded &&
+        unauthorizedResponse.status ==
+            infrastructure::SettingsProtocolStatus::Unauthorized &&
+        busyResponse.status == infrastructure::SettingsProtocolStatus::Busy &&
+        writeResponse.status == infrastructure::SettingsProtocolStatus::Ok &&
+        readResponse.status == infrastructure::SettingsProtocolStatus::Ok &&
+        infrastructure::userSettingsEqual(requestedSettings, readBack) &&
+        corrupted.status ==
+            infrastructure::SettingsFrameDecodeStatus::ChecksumMismatch;
+
+    std::cout
+        << "scenario: settings-link\n"
+        << "unauthorized_write: "
+        << infrastructure::toString(unauthorizedResponse.status) << '\n'
+        << "active_controller_write: "
+        << infrastructure::toString(busyResponse.status) << '\n'
+        << "idle_write: " << infrastructure::toString(writeResponse.status) << '\n'
+        << "read_while_running: "
+        << infrastructure::toString(readResponse.status) << '\n'
+        << "stored_remote_run_ms: " << readBack.maximumRemoteRunTimeMs << '\n'
+        << "corrupted_frame: " << infrastructure::toString(corrupted.status) << '\n'
+        << "activation: next_boot\n"
+        << "scenario_result: " << (expectedOutcome ? "PASS" : "FAIL") << '\n';
+    return expectedOutcome ? 0 : 2;
+}
+
 int runScenario(
     const Scenario scenario,
     const application::UserSettings* const suppliedSettings = nullptr) {
     if (scenario == Scenario::SettingsRecovery) {
         return runSettingsRecoveryScenario();
+    }
+    if (scenario == Scenario::SettingsLink) {
+        return runSettingsLinkScenario();
     }
 
     application::UserSettings settings =
@@ -560,7 +710,8 @@ int runInteractive() {
         << "5. Portiere ouverte avec reprise conducteur validee\n"
         << "6. Tester un fichier de configuration utilisateur\n"
         << "7. Recuperation d'une configuration persistante corrompue\n"
-        << "8. Quitter\n\n"
+        << "8. Liaison de configuration securisee simulee\n"
+        << "9. Quitter\n\n"
         << "Choix: ";
 
     unsigned selection = 0U;
@@ -587,7 +738,8 @@ int runInteractive() {
             break;
         }
         case 7U: result = runScenario(Scenario::SettingsRecovery); break;
-        case 8U: return 0;
+        case 8U: result = runScenario(Scenario::SettingsLink); break;
+        case 9U: return 0;
         default:
             std::cerr << "Invalid selection\n";
             result = 64;

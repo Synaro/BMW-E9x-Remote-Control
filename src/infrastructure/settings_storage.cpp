@@ -5,6 +5,7 @@
 #include <cstdint>
 
 #include "bmw_remote/application/user_settings.hpp"
+#include "bmw_remote/infrastructure/settings_payload.hpp"
 
 namespace bmw::remote::infrastructure {
 namespace {
@@ -14,7 +15,7 @@ constexpr std::size_t VersionOffset = 4U;
 constexpr std::size_t PayloadSizeOffset = 6U;
 constexpr std::size_t GenerationOffset = 8U;
 constexpr std::size_t PayloadOffset = 12U;
-constexpr std::size_t PayloadSize = 24U;
+constexpr std::size_t PayloadSize = UserSettingsPayloadSize;
 constexpr std::size_t CrcOffset = PayloadOffset + PayloadSize;
 
 struct DecodedRecord final {
@@ -70,21 +71,7 @@ void writeU32(
     return crc ^ 0xFFFFFFFFU;
 }
 
-[[nodiscard]] bool settingsEqual(
-    const application::UserSettings& left,
-    const application::UserSettings& right) noexcept {
-    return left.remoteStartEnabled == right.remoteStartEnabled &&
-           left.hoodMonitoring == right.hoodMonitoring &&
-           left.driverEntryMode == right.driverEntryMode &&
-           left.maximumRemoteRunTimeMs == right.maximumRemoteRunTimeMs &&
-           left.driverTakeoverTimeoutMs == right.driverTakeoverTimeoutMs &&
-           left.lockPressCount == right.lockPressCount &&
-           left.lockMinimumGapMs == right.lockMinimumGapMs &&
-           left.lockMaximumGapMs == right.lockMaximumGapMs &&
-           left.lockMaximumSequenceMs == right.lockMaximumSequenceMs;
-}
-
-void encodeRecord(
+[[nodiscard]] bool encodeRecord(
     const application::UserSettings& settings,
     const std::uint32_t generation,
     std::array<std::uint8_t, JournaledUserSettingsStore::RecordSize>& record) noexcept {
@@ -96,17 +83,15 @@ void encodeRecord(
     writeU16(record.data() + PayloadSizeOffset, static_cast<std::uint16_t>(PayloadSize));
     writeU32(record.data() + GenerationOffset, generation);
 
-    std::uint8_t* const payload = record.data() + PayloadOffset;
-    payload[0] = settings.remoteStartEnabled ? 1U : 0U;
-    payload[1] = static_cast<std::uint8_t>(settings.hoodMonitoring);
-    payload[2] = static_cast<std::uint8_t>(settings.driverEntryMode);
-    payload[3] = settings.lockPressCount;
-    writeU32(payload + 4U, settings.maximumRemoteRunTimeMs);
-    writeU32(payload + 8U, settings.driverTakeoverTimeoutMs);
-    writeU32(payload + 12U, settings.lockMinimumGapMs);
-    writeU32(payload + 16U, settings.lockMaximumGapMs);
-    writeU32(payload + 20U, settings.lockMaximumSequenceMs);
+    UserSettingsPayload payload{};
+    if (!encodeUserSettingsPayload(settings, payload)) {
+        return false;
+    }
+    for (std::size_t index = 0U; index < payload.size(); ++index) {
+        record[PayloadOffset + index] = payload[index];
+    }
     writeU32(record.data() + CrcOffset, crc32(record.data(), CrcOffset));
+    return true;
 }
 
 [[nodiscard]] DecodedRecord decodeRecord(
@@ -125,24 +110,11 @@ void encodeRecord(
         return decoded;
     }
 
-    const std::uint8_t* const payload = record.data() + PayloadOffset;
-    if (payload[0] > 1U) {
-        return decoded;
+    UserSettingsPayload payload{};
+    for (std::size_t index = 0U; index < payload.size(); ++index) {
+        payload[index] = record[PayloadOffset + index];
     }
-
-    decoded.settings.remoteStartEnabled = payload[0] == 1U;
-    decoded.settings.hoodMonitoring =
-        static_cast<application::HoodMonitoringMode>(payload[1]);
-    decoded.settings.driverEntryMode =
-        static_cast<application::DriverEntryMode>(payload[2]);
-    decoded.settings.lockPressCount = payload[3];
-    decoded.settings.maximumRemoteRunTimeMs = readU32(payload + 4U);
-    decoded.settings.driverTakeoverTimeoutMs = readU32(payload + 8U);
-    decoded.settings.lockMinimumGapMs = readU32(payload + 12U);
-    decoded.settings.lockMaximumGapMs = readU32(payload + 16U);
-    decoded.settings.lockMaximumSequenceMs = readU32(payload + 20U);
-
-    if (!application::validateUserSettings(decoded.settings).valid()) {
+    if (!decodeUserSettingsPayload(payload, decoded.settings)) {
         return DecodedRecord{};
     }
 
@@ -227,7 +199,9 @@ bool JournaledUserSettingsStore::save(
     }
 
     std::array<std::uint8_t, RecordSize> record{};
-    encodeRecord(settings, nextGeneration, record);
+    if (!encodeRecord(settings, nextGeneration, record)) {
+        return false;
+    }
     if (!storage_.write(targetSlot * SlotSize, record.data(), record.size()) ||
         !storage_.commit()) {
         return false;
@@ -237,7 +211,7 @@ bool JournaledUserSettingsStore::save(
     return readRecord(storage_, targetSlot, verified) &&
            verified.valid &&
            verified.generation == nextGeneration &&
-           settingsEqual(verified.settings, settings);
+           userSettingsEqual(verified.settings, settings);
 }
 
 bool loadUserSettingsFailSafe(
