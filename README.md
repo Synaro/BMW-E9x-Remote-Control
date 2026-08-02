@@ -157,6 +157,23 @@ Une comparaison synthétique capot fermé / ouvert peut être lancée avec :
 Le protocole destiné aux premières observations réelles est décrit dans
 [docs/read-only-discovery.md](docs/read-only-discovery.md).
 
+Une session privée d'inventaire K+DCAN peut être préparée sans enregistrer le
+VIN :
+
+```powershell
+.\scripts\new-diagnostic-session.ps1 -SessionName e90-reference-01
+```
+
+Voir [docs/diagnostic-inventory.md](docs/diagnostic-inventory.md) avant d'ouvrir
+une fonction dans ISTA, INPA ou Tool32.
+
+Pour VS Code, PlatformIO génère localement `.vscode/c_cpp_properties.json` avec
+les paramètres de l'environnement actif ; ce fichier reste hors Git car il
+contient des chemins propres à la machine. `compile_flags.txt` configure le mode
+de repli de `clangd`. Si d'anciens diagnostics restent affichés après une mise à
+jour, exécuter `PlatformIO: Rebuild IntelliSense Index`, puis
+`C/C++: Reset IntelliSense Database` et recharger la fenêtre.
+
 ## Capture CAN passive
 
 Un outil PC peut produire directement une trace canonique depuis une interface

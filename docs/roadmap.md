@@ -39,6 +39,7 @@
 - [x] Scénario synthétique capot fermé / ouvert
 - [x] Protocole de collecte répétable en lecture seule
 - [x] Outil de capture bornée pour pilotes au mode silencieux documenté
+- [x] Fiche privée reproductible pour l'inventaire diagnostic K+DCAN
 - [ ] Qualifier une interface de capture brute compatible E9x
 - [ ] Collecter les premières paires privées sur le véhicule de référence
 

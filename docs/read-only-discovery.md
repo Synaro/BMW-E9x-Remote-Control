@@ -24,6 +24,15 @@ donc pas une écoute passive du bus.
 
 ## Phase A — Inventaire diagnostic
 
+Créer d'abord une fiche privée reproductible :
+
+```powershell
+.\scripts\new-diagnostic-session.ps1 -SessionName e90-reference-01
+```
+
+La procédure détaillée et les opérations explicitement interdites sont décrites
+dans [diagnostic-inventory.md](diagnostic-inventory.md).
+
 Pour le véhicule de référence, noter sans publier le VIN :
 
 - profil attendu : `bmw-e90-2009-n47d20c-automatic` ;
