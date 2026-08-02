@@ -17,6 +17,7 @@ add_library(bmw_remote_core
     src/infrastructure/settings_payload.cpp
     src/infrastructure/settings_protocol.cpp
     src/infrastructure/settings_storage.cpp
+    src/infrastructure/settings_stream.cpp
     src/infrastructure/vehicle_state_assembler.cpp
 )
 

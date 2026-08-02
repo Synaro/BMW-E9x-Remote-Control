@@ -15,6 +15,7 @@
 #include "bmw_remote/infrastructure/settings_payload.hpp"
 #include "bmw_remote/infrastructure/settings_protocol.hpp"
 #include "bmw_remote/infrastructure/settings_storage.hpp"
+#include "bmw_remote/infrastructure/settings_stream.hpp"
 #include "bmw_remote/simulation/synthetic_can.hpp"
 #include "tools/can_trace_csv.hpp"
 #include "tools/user_settings_file.hpp"
@@ -353,11 +354,50 @@ int runSettingsRecoveryScenario() {
     return expectedOutcome ? 0 : 2;
 }
 
+class SimulatorSettingsTransport final
+    : public infrastructure::SettingsTransportPort {
+public:
+    bool send(
+        const std::uint8_t* const data,
+        const std::size_t size) noexcept override {
+        if (data == nullptr || size > bytes_.size()) {
+            return false;
+        }
+        bytes_.fill(0U);
+        for (std::size_t index = 0U; index < size; ++index) {
+            bytes_[index] = data[index];
+        }
+        size_ = size;
+        ++sendCount_;
+        return true;
+    }
+
+    [[nodiscard]] const infrastructure::SettingsProtocolCodec::EncodedFrame&
+    bytes() const noexcept {
+        return bytes_;
+    }
+
+    [[nodiscard]] std::size_t size() const noexcept {
+        return size_;
+    }
+
+    [[nodiscard]] std::uint32_t sendCount() const noexcept {
+        return sendCount_;
+    }
+
+private:
+    infrastructure::SettingsProtocolCodec::EncodedFrame bytes_{};
+    std::size_t size_{0U};
+    std::uint32_t sendCount_{0U};
+};
+
 bool exchangeSettingsFrame(
-    infrastructure::SettingsProtocolService& service,
+    infrastructure::SettingsProtocolEndpoint& endpoint,
+    SimulatorSettingsTransport& transport,
     const infrastructure::SettingsProtocolFrame& request,
     const infrastructure::SettingsProtocolAccess access,
-    infrastructure::SettingsProtocolFrame& response) noexcept {
+    infrastructure::SettingsProtocolFrame& response,
+    std::uint32_t& nowMs) noexcept {
     infrastructure::SettingsProtocolCodec::EncodedFrame requestBytes{};
     std::size_t requestSize = 0U;
     if (!infrastructure::SettingsProtocolCodec::encode(
@@ -365,23 +405,17 @@ bool exchangeSettingsFrame(
         return false;
     }
 
-    const auto decodedRequest = infrastructure::SettingsProtocolCodec::decode(
-        requestBytes.data(), requestSize);
-    if (!decodedRequest.valid()) {
-        return false;
+    infrastructure::SettingsEndpointResult endpointResult{};
+    for (std::size_t index = 0U; index < requestSize; ++index) {
+        endpointResult = endpoint.consume(requestBytes[index], nowMs++, access);
     }
-
-    const infrastructure::SettingsProtocolFrame rawResponse =
-        service.handle(decodedRequest.frame, access);
-    infrastructure::SettingsProtocolCodec::EncodedFrame responseBytes{};
-    std::size_t responseSize = 0U;
-    if (!infrastructure::SettingsProtocolCodec::encode(
-            rawResponse, responseBytes, responseSize)) {
+    if (endpointResult.status !=
+        infrastructure::SettingsEndpointStatus::ResponseSent) {
         return false;
     }
 
     const auto decodedResponse = infrastructure::SettingsProtocolCodec::decode(
-        responseBytes.data(), responseSize);
+        transport.bytes().data(), transport.size());
     if (!decodedResponse.valid()) {
         return false;
     }
@@ -392,7 +426,9 @@ bool exchangeSettingsFrame(
 int runSettingsLinkScenario() {
     SimulatorSettingsStorage storage{};
     infrastructure::JournaledUserSettingsStore store{storage};
-    infrastructure::SettingsProtocolService service{store};
+    SimulatorSettingsTransport transport{};
+    infrastructure::SettingsProtocolEndpoint endpoint{store, transport};
+    std::uint32_t nowMs = 0U;
 
     application::UserSettings requestedSettings{};
     requestedSettings.hoodMonitoring =
@@ -410,42 +446,50 @@ int runSettingsLinkScenario() {
 
     infrastructure::SettingsProtocolFrame unauthorizedResponse{};
     const bool unauthorizedExchanged = exchangeSettingsFrame(
-        service,
+        endpoint,
+        transport,
         writeRequest,
         infrastructure::SettingsProtocolAccess{
             false,
             application::ControllerState::Idle},
-        unauthorizedResponse);
+        unauthorizedResponse,
+        nowMs);
 
     infrastructure::SettingsProtocolFrame busyResponse{};
     const bool busyExchanged = exchangeSettingsFrame(
-        service,
+        endpoint,
+        transport,
         writeRequest,
         infrastructure::SettingsProtocolAccess{
             true,
             application::ControllerState::Running},
-        busyResponse);
+        busyResponse,
+        nowMs);
 
     infrastructure::SettingsProtocolFrame writeResponse{};
     const bool writeExchanged = exchangeSettingsFrame(
-        service,
+        endpoint,
+        transport,
         writeRequest,
         infrastructure::SettingsProtocolAccess{
             true,
             application::ControllerState::Idle},
-        writeResponse);
+        writeResponse,
+        nowMs);
 
     infrastructure::SettingsProtocolFrame readRequest{};
     readRequest.type = infrastructure::SettingsMessageType::ReadRequest;
     readRequest.requestId = 101U;
     infrastructure::SettingsProtocolFrame readResponse{};
     const bool readExchanged = exchangeSettingsFrame(
-        service,
+        endpoint,
+        transport,
         readRequest,
         infrastructure::SettingsProtocolAccess{
             true,
             application::ControllerState::Running},
-        readResponse);
+        readResponse,
+        nowMs);
 
     application::UserSettings readBack{};
     const bool settingsDecoded =
@@ -460,8 +504,16 @@ int runSettingsLinkScenario() {
     if (corruptedEncoded) {
         corruptedBytes[8U] ^= 0x01U;
     }
-    const auto corrupted = infrastructure::SettingsProtocolCodec::decode(
-        corruptedBytes.data(), corruptedSize);
+    const std::uint32_t sendsBeforeCorruption = transport.sendCount();
+    infrastructure::SettingsEndpointResult corrupted{};
+    for (std::size_t index = 0U; index < corruptedSize; ++index) {
+        corrupted = endpoint.consume(
+            corruptedBytes[index],
+            nowMs++,
+            infrastructure::SettingsProtocolAccess{
+                true,
+                application::ControllerState::Idle});
+    }
 
     const bool expectedOutcome =
         payloadEncoded && unauthorizedExchanged && busyExchanged &&
@@ -472,8 +524,10 @@ int runSettingsLinkScenario() {
         writeResponse.status == infrastructure::SettingsProtocolStatus::Ok &&
         readResponse.status == infrastructure::SettingsProtocolStatus::Ok &&
         infrastructure::userSettingsEqual(requestedSettings, readBack) &&
-        corrupted.status ==
-            infrastructure::SettingsFrameDecodeStatus::ChecksumMismatch;
+        corrupted.status == infrastructure::SettingsEndpointStatus::FrameRejected &&
+        corrupted.decodeStatus ==
+            infrastructure::SettingsFrameDecodeStatus::ChecksumMismatch &&
+        transport.sendCount() == sendsBeforeCorruption;
 
     std::cout
         << "scenario: settings-link\n"
@@ -485,7 +539,8 @@ int runSettingsLinkScenario() {
         << "read_while_running: "
         << infrastructure::toString(readResponse.status) << '\n'
         << "stored_remote_run_ms: " << readBack.maximumRemoteRunTimeMs << '\n'
-        << "corrupted_frame: " << infrastructure::toString(corrupted.status) << '\n'
+        << "corrupted_frame: "
+        << infrastructure::toString(corrupted.decodeStatus) << '\n'
         << "activation: next_boot\n"
         << "scenario_result: " << (expectedOutcome ? "PASS" : "FAIL") << '\n';
     return expectedOutcome ? 0 : 2;

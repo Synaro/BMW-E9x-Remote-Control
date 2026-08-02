@@ -17,7 +17,8 @@ flowchart LR
     Bytes["SettingsByteStorage"] --> Journal["Journal redondant + CRC"]
     Journal --> Settings["UserSettingsStore"]
     Configurator["Configurateur PC"] --> Transport["Transport authentifié futur"]
-    Transport --> Protocol["SettingsProtocol"]
+    Transport --> Stream["SettingsStreamReceiver"]
+    Stream --> Protocol["SettingsProtocolEndpoint"]
     Protocol --> Settings
     Settings --> Validation["Validation bornée"]
     Validation --> Controller
@@ -70,6 +71,13 @@ exige une session déclarée authentifiée et refuse toute écriture lorsque le
 contrôleur n'est pas en `Idle`. L'établissement de cette session appartient au
 futur adaptateur USB, Bluetooth ou réseau. Voir
 [settings-protocol.md](settings-protocol.md).
+
+`SettingsStreamReceiver` transforme un flux d'octets en trames complètes sans
+allocation dynamique. Il recherche la magie, borne la longueur dès le header,
+interrompt une réception incomplète après un délai inter-octets et se remet en
+attente après tout rejet. `SettingsProtocolEndpoint` transmet uniquement les
+trames validées au service puis écrit la réponse au travers de
+`SettingsTransportPort`.
 
 `ControllerConfig` exige un pointeur vers le profil sélectionné. Sans profil ou
 avec un profil non qualifié, `RemoteStartRequested` reste en `Idle`, demande la

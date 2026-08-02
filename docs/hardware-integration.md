@@ -71,9 +71,16 @@ ne rend pas les valeurs sûres.
 ## Transport de configuration
 
 L'adaptateur physique doit accumuler une trame complète et bornée avant d'appeler
-`SettingsProtocolCodec`. Il doit abandonner une trame incomplète à l'échéance,
-ne jamais allouer selon une longueur non validée et ne transmettre au service que
-les trames dont le CRC, la version et les tailles sont corrects.
+`SettingsProtocolCodec`. Le noyau fournit pour cela `SettingsStreamReceiver` et
+`SettingsProtocolEndpoint`. L'adaptateur alimente l'endpoint octet par octet,
+appelle régulièrement `poll()` même lorsqu'aucun octet n'arrive, puis implémente
+uniquement l'envoi borné de `SettingsTransportPort`.
+
+Une trame incomplète doit être abandonnée à l'échéance. L'adaptateur ne doit
+jamais allouer selon une longueur non validée ni transmettre au service une trame
+dont le CRC, la version ou les tailles sont incorrects. Une panne de l'envoi de
+réponse est remontée comme `transport_failure` et ne provoque aucune nouvelle
+tentative illimitée.
 
 Le booléen `SettingsProtocolAccess::authorized` est une preuve fournie par
 l'adaptateur, pas une préférence utilisateur. Il reste faux tant qu'une session

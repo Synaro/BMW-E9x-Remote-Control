@@ -94,3 +94,21 @@ requête applicative.
 Le choix USB, Bluetooth ou réseau reste volontairement ouvert. Aucun adaptateur
 ne doit positionner `authorized=true` par défaut ou déduire cette autorisation du
 seul CRC.
+
+## Réception en flux
+
+`SettingsStreamReceiver` accepte les octets un par un. Avant synchronisation, il
+ignore le bruit et recherche la séquence `BMCF`. Après le header, il refuse
+immédiatement un payload supérieur à 24 octets. Une trame complète passe ensuite
+par toutes les vérifications du codec.
+
+Le délai inter-octets est de 250 ms par défaut et reste configurable par
+`SettingsStreamConfig`. `poll()` doit être appelé même lorsque le transport est
+silencieux afin de libérer une trame partielle. Le calcul d'échéance reste valide
+lors du retour à zéro d'un compteur monotone 32 bits.
+
+`SettingsProtocolEndpoint` assemble le récepteur, le service et
+`SettingsTransportPort`. Une trame invalide ou expirée ne produit aucune réponse.
+Une requête valide produit au plus une réponse de 40 octets. Une panne d'envoi
+est signalée à l'adaptateur et ne déclenche aucune boucle de réessai dans le
+noyau.

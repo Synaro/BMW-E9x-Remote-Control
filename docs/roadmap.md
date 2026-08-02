@@ -14,6 +14,8 @@
 - [x] Configurateur PC interactif et écriture de fichier vérifiée
 - [x] Protocole de configuration indépendant du transport avec CRC
 - [x] Autorisation obligatoire et écriture limitée à l'état `Idle`
+- [x] Récepteur de flux borné avec délai inter-octets et resynchronisation
+- [x] Endpoint de configuration raccordable à un transport abstrait
 - [x] Actions bornées sans allocation dynamique
 - [x] Runtime et ports abstraits
 - [x] Tests hôte et intégration continue
