@@ -23,6 +23,7 @@ Le premier jalon logiciel est opérationnel :
 - profil utilisateur validé avant application, sans recompilation du noyau ;
 - configurateur Windows interactif avec enregistrement vérifié et remplacement sûr ;
 - protocole binaire de configuration versionné, borné et protégé par CRC ;
+- réception progressive des trames avec resynchronisation et délai inter-octets ;
 - persistance versionnée sur deux emplacements avec CRC et récupération ;
 - décisions et listes d'actions de taille fixe, sans allocation dynamique ;
 - arrêt fail-safe en cas de défaut d'un adaptateur ;
@@ -39,7 +40,7 @@ Le premier jalon logiciel est opérationnel :
 - capture PC bornée avec refus des interfaces sans mode silencieux documenté ;
 - sélection explicite d'un profil obligatoire dans le contrôleur ;
 - analyse différentielle hors ligne des octets et bits candidats ;
-- 71 tests C++, 8 scénarios du simulateur, 2 contrôles du configurateur et
+- 80 tests C++, 8 scénarios du simulateur, 2 contrôles du configurateur et
   21 tests Python automatisés en intégration continue.
 
 L'adaptateur BMW qui observera réellement le verrouillage, qualifiera la reprise

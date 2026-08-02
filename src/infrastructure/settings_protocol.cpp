@@ -3,7 +3,6 @@
 namespace bmw::remote::infrastructure {
 namespace {
 
-constexpr std::array<std::uint8_t, 4U> Magic = {'B', 'M', 'C', 'F'};
 constexpr std::size_t VersionOffset = 4U;
 constexpr std::size_t TypeOffset = 5U;
 constexpr std::size_t StatusOffset = 6U;
@@ -82,8 +81,8 @@ bool SettingsProtocolCodec::encode(
         return false;
     }
 
-    for (std::size_t index = 0U; index < Magic.size(); ++index) {
-        encoded[index] = Magic[index];
+    for (std::size_t index = 0U; index < SettingsProtocolCodec::Magic.size(); ++index) {
+        encoded[index] = SettingsProtocolCodec::Magic[index];
     }
     encoded[VersionOffset] = Version;
     encoded[TypeOffset] = static_cast<std::uint8_t>(frame.type);
@@ -113,8 +112,8 @@ SettingsFrameDecodeResult SettingsProtocolCodec::decode(
         result.status = SettingsFrameDecodeStatus::TooLong;
         return result;
     }
-    for (std::size_t index = 0U; index < Magic.size(); ++index) {
-        if (encoded[index] != Magic[index]) {
+    for (std::size_t index = 0U; index < SettingsProtocolCodec::Magic.size(); ++index) {
+        if (encoded[index] != SettingsProtocolCodec::Magic[index]) {
             result.status = SettingsFrameDecodeStatus::InvalidMagic;
             return result;
         }

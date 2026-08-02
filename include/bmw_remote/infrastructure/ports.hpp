@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstddef>
 #include <cstdint>
 
 #include "bmw_remote/application/controller.hpp"
@@ -35,6 +36,14 @@ public:
     virtual ~UserSettingsStore() = default;
     virtual bool load(application::UserSettings& settings) noexcept = 0;
     virtual bool save(const application::UserSettings& settings) noexcept = 0;
+};
+
+class SettingsTransportPort {
+public:
+    virtual ~SettingsTransportPort() = default;
+    virtual bool send(
+        const std::uint8_t* data,
+        std::size_t size) noexcept = 0;
 };
 
 class NotificationSink {

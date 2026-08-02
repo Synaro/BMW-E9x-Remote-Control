@@ -29,6 +29,7 @@ New-Item -ItemType Directory -Path $buildDirectory -Force | Out-Null
     (Join-Path $projectRoot 'src/infrastructure/settings_payload.cpp') `
     (Join-Path $projectRoot 'src/infrastructure/settings_protocol.cpp') `
     (Join-Path $projectRoot 'src/infrastructure/settings_storage.cpp') `
+    (Join-Path $projectRoot 'src/infrastructure/settings_stream.cpp') `
     (Join-Path $projectRoot 'src/infrastructure/vehicle_state_assembler.cpp') `
     (Join-Path $projectRoot 'src/simulation/synthetic_can.cpp') `
     (Join-Path $projectRoot 'tools/can_trace_csv.cpp') `

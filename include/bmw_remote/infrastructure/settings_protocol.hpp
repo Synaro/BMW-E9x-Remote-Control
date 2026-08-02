@@ -60,6 +60,7 @@ struct SettingsFrameDecodeResult final {
 
 class SettingsProtocolCodec final {
 public:
+    static constexpr std::array<std::uint8_t, 4U> Magic = {'B', 'M', 'C', 'F'};
     static constexpr std::uint8_t Version = 1U;
     static constexpr std::size_t HeaderSize = 12U;
     static constexpr std::size_t ChecksumSize = 4U;

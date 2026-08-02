@@ -54,10 +54,11 @@ Le scénario `settings-recovery` utilise le vrai journal binaire, corrompt le CR
 du second emplacement puis vérifie que le premier est restauré. Voir
 [settings-persistence.md](settings-persistence.md).
 
-Le scénario `settings-link` fait transiter une configuration complète dans les
-vraies trames binaires. Il vérifie successivement le refus sans autorisation, le
-refus d'écriture pendant `Running`, l'enregistrement pendant `Idle`, la lecture
-autorisée et le rejet d'un CRC corrompu. Voir
+Le scénario `settings-link` fait transiter une configuration complète octet par
+octet dans le vrai récepteur et le vrai endpoint. Il vérifie successivement le
+refus sans autorisation, le refus d'écriture pendant `Running`, l'enregistrement
+pendant `Idle`, la lecture autorisée, l'émission de chaque réponse et le rejet
+d'un CRC corrompu sans réponse. Voir
 [settings-protocol.md](settings-protocol.md).
 
 ## Inspecter une trace

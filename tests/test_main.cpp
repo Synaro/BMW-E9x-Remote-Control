@@ -2,6 +2,7 @@
 #include <cstdint>
 #include <filesystem>
 #include <iostream>
+#include <limits>
 #include <sstream>
 #include <string>
 #include <string_view>
@@ -20,6 +21,7 @@
 #include "bmw_remote/infrastructure/settings_payload.hpp"
 #include "bmw_remote/infrastructure/settings_protocol.hpp"
 #include "bmw_remote/infrastructure/settings_storage.hpp"
+#include "bmw_remote/infrastructure/settings_stream.hpp"
 #include "bmw_remote/infrastructure/vehicle_state_assembler.hpp"
 #include "bmw_remote/simulation/synthetic_can.hpp"
 #include "tools/can_trace_csv.hpp"
@@ -758,6 +760,340 @@ void testSettingsProtocolReportsInvalidRequestsAndStorageFailures() {
     bmw::remote::infrastructure::SettingsProtocolFrame read{};
     read.type = bmw::remote::infrastructure::SettingsMessageType::ReadRequest;
     CHECK(service.handle(read, access).status ==
+          bmw::remote::infrastructure::SettingsProtocolStatus::SettingsUnavailable);
+}
+
+struct MemorySettingsTransport final
+    : bmw::remote::infrastructure::SettingsTransportPort {
+    bmw::remote::infrastructure::SettingsProtocolCodec::EncodedFrame bytes{};
+    std::size_t size{0U};
+    std::uint32_t sendCalls{0U};
+    bool succeeds{true};
+
+    bool send(
+        const std::uint8_t* const data,
+        const std::size_t dataSize) noexcept override {
+        ++sendCalls;
+        if (!succeeds || data == nullptr || dataSize > bytes.size()) {
+            return false;
+        }
+        bytes.fill(0U);
+        for (std::size_t index = 0U; index < dataSize; ++index) {
+            bytes[index] = data[index];
+        }
+        size = dataSize;
+        return true;
+    }
+};
+
+bmw::remote::infrastructure::SettingsProtocolCodec::EncodedFrame
+encodeSettingsFrame(
+    const bmw::remote::infrastructure::SettingsProtocolFrame& frame,
+    std::size_t& encodedSize) {
+    bmw::remote::infrastructure::SettingsProtocolCodec::EncodedFrame encoded{};
+    CHECK(bmw::remote::infrastructure::SettingsProtocolCodec::encode(
+        frame, encoded, encodedSize));
+    return encoded;
+}
+
+bmw::remote::infrastructure::SettingsStreamEvent feedSettingsStream(
+    bmw::remote::infrastructure::SettingsStreamReceiver& receiver,
+    const std::uint8_t* const data,
+    const std::size_t size,
+    std::uint32_t& nowMs) {
+    bmw::remote::infrastructure::SettingsStreamEvent event{};
+    for (std::size_t index = 0U; index < size; ++index) {
+        event = receiver.consume(data[index], nowMs++);
+        if (index + 1U < size) {
+            CHECK(event.type ==
+                  bmw::remote::infrastructure::SettingsStreamEventType::None);
+        }
+    }
+    return event;
+}
+
+bmw::remote::infrastructure::SettingsEndpointResult feedSettingsEndpoint(
+    bmw::remote::infrastructure::SettingsProtocolEndpoint& endpoint,
+    const std::uint8_t* const data,
+    const std::size_t size,
+    std::uint32_t& nowMs,
+    const bmw::remote::infrastructure::SettingsProtocolAccess access) {
+    bmw::remote::infrastructure::SettingsEndpointResult result{};
+    for (std::size_t index = 0U; index < size; ++index) {
+        result = endpoint.consume(data[index], nowMs++, access);
+        if (index + 1U < size) {
+            CHECK(result.status ==
+                  bmw::remote::infrastructure::SettingsEndpointStatus::None);
+        }
+    }
+    return result;
+}
+
+void testSettingsStreamFindsFrameAfterNoise() {
+    bmw::remote::infrastructure::SettingsStreamReceiver receiver{};
+    std::uint32_t nowMs = 100U;
+    const std::array<std::uint8_t, 4U> noise = {'X', 'B', 'X', 0x00U};
+    for (const std::uint8_t byte : noise) {
+        CHECK(receiver.consume(byte, nowMs++).type ==
+              bmw::remote::infrastructure::SettingsStreamEventType::None);
+    }
+
+    bmw::remote::infrastructure::SettingsProtocolFrame request{};
+    request.type =
+        bmw::remote::infrastructure::SettingsMessageType::ReadRequest;
+    request.requestId = 99U;
+    std::size_t encodedSize = 0U;
+    const auto encoded = encodeSettingsFrame(request, encodedSize);
+    const auto event = feedSettingsStream(
+        receiver, encoded.data(), encodedSize, nowMs);
+
+    CHECK(event.type ==
+          bmw::remote::infrastructure::SettingsStreamEventType::FrameReady);
+    CHECK(event.frame.type == request.type);
+    CHECK(event.frame.requestId == 99U);
+    CHECK(receiver.bufferedSize() == 0U);
+}
+
+void testSettingsStreamTimesOutPartialFrameAndRecovers() {
+    bmw::remote::infrastructure::SettingsStreamReceiver receiver{
+        bmw::remote::infrastructure::SettingsStreamConfig{50U}};
+    CHECK(receiver.consume('B', 1'000U).type ==
+          bmw::remote::infrastructure::SettingsStreamEventType::None);
+    CHECK(receiver.poll(1'050U).type ==
+          bmw::remote::infrastructure::SettingsStreamEventType::None);
+    CHECK(receiver.poll(1'051U).type ==
+          bmw::remote::infrastructure::SettingsStreamEventType::TimedOut);
+    CHECK(receiver.bufferedSize() == 0U);
+
+    bmw::remote::infrastructure::SettingsProtocolFrame request{};
+    request.type =
+        bmw::remote::infrastructure::SettingsMessageType::ReadRequest;
+    std::size_t encodedSize = 0U;
+    const auto encoded = encodeSettingsFrame(request, encodedSize);
+    std::uint32_t nowMs = 2'000U;
+    CHECK(feedSettingsStream(receiver, encoded.data(), encodedSize, nowMs).type ==
+          bmw::remote::infrastructure::SettingsStreamEventType::FrameReady);
+}
+
+void testSettingsStreamTimeoutHandlesClockWraparound() {
+    bmw::remote::infrastructure::SettingsStreamReceiver receiver{
+        bmw::remote::infrastructure::SettingsStreamConfig{20U}};
+    const std::uint32_t nearWrap =
+        std::numeric_limits<std::uint32_t>::max() - 10U;
+
+    CHECK(receiver.consume('B', nearWrap).type ==
+          bmw::remote::infrastructure::SettingsStreamEventType::None);
+    CHECK(receiver.poll(5U).type ==
+          bmw::remote::infrastructure::SettingsStreamEventType::None);
+    CHECK(receiver.poll(11U).type ==
+          bmw::remote::infrastructure::SettingsStreamEventType::TimedOut);
+}
+
+void testSettingsStreamRejectsCorruptionThenAcceptsNextFrame() {
+    bmw::remote::infrastructure::SettingsProtocolFrame request{};
+    request.type =
+        bmw::remote::infrastructure::SettingsMessageType::ReadRequest;
+    std::size_t encodedSize = 0U;
+    auto encoded = encodeSettingsFrame(request, encodedSize);
+    encoded[8U] ^= 0x01U;
+    bmw::remote::infrastructure::SettingsStreamReceiver receiver{};
+    std::uint32_t nowMs = 0U;
+
+    const auto rejected = feedSettingsStream(
+        receiver, encoded.data(), encodedSize, nowMs);
+    CHECK(rejected.type ==
+          bmw::remote::infrastructure::SettingsStreamEventType::FrameRejected);
+    CHECK(rejected.decodeStatus ==
+          bmw::remote::infrastructure::SettingsFrameDecodeStatus::ChecksumMismatch);
+
+    encoded = encodeSettingsFrame(request, encodedSize);
+    CHECK(feedSettingsStream(receiver, encoded.data(), encodedSize, nowMs).type ==
+          bmw::remote::infrastructure::SettingsStreamEventType::FrameReady);
+}
+
+void testSettingsStreamRejectsOversizedHeaderEarly() {
+    bmw::remote::infrastructure::SettingsProtocolFrame request{};
+    request.type =
+        bmw::remote::infrastructure::SettingsMessageType::ReadRequest;
+    std::size_t encodedSize = 0U;
+    auto encoded = encodeSettingsFrame(request, encodedSize);
+    encoded[10U] = 25U;
+    encoded[11U] = 0U;
+    bmw::remote::infrastructure::SettingsStreamReceiver receiver{};
+    std::uint32_t nowMs = 0U;
+
+    const auto rejected = feedSettingsStream(
+        receiver,
+        encoded.data(),
+        bmw::remote::infrastructure::SettingsProtocolCodec::HeaderSize,
+        nowMs);
+    CHECK(rejected.type ==
+          bmw::remote::infrastructure::SettingsStreamEventType::FrameRejected);
+    CHECK(rejected.decodeStatus ==
+          bmw::remote::infrastructure::SettingsFrameDecodeStatus::PayloadTooLarge);
+}
+
+void testSettingsEndpointReturnsUnauthorizedResponse() {
+    MemorySettingsStorage storage{};
+    JournaledUserSettingsStore store{storage};
+    MemorySettingsTransport transport{};
+    bmw::remote::infrastructure::SettingsProtocolEndpoint endpoint{
+        store, transport};
+    std::size_t requestSize = 0U;
+    const auto request = encodeSettingsFrame(
+        settingsWriteRequest(UserSettings{}, 12U), requestSize);
+    std::uint32_t nowMs = 0U;
+
+    const auto result = feedSettingsEndpoint(
+        endpoint,
+        request.data(),
+        requestSize,
+        nowMs,
+        bmw::remote::infrastructure::SettingsProtocolAccess{
+            false,
+            bmw::remote::application::ControllerState::Idle});
+
+    CHECK(result.status ==
+          bmw::remote::infrastructure::SettingsEndpointStatus::ResponseSent);
+    CHECK(result.responseStatus ==
+          bmw::remote::infrastructure::SettingsProtocolStatus::Unauthorized);
+    const auto response =
+        bmw::remote::infrastructure::SettingsProtocolCodec::decode(
+            transport.bytes.data(), transport.size);
+    CHECK(response.valid());
+    CHECK(response.frame.requestId == 12U);
+    CHECK(response.frame.status ==
+          bmw::remote::infrastructure::SettingsProtocolStatus::Unauthorized);
+    CHECK(storage.writeCalls == 0U);
+}
+
+void testSettingsEndpointPersistsOnlyIdleWritesAndReadsWhileActive() {
+    MemorySettingsStorage storage{};
+    JournaledUserSettingsStore store{storage};
+    MemorySettingsTransport transport{};
+    bmw::remote::infrastructure::SettingsProtocolEndpoint endpoint{
+        store, transport};
+    UserSettings settings{};
+    settings.hoodMonitoring = HoodMonitoringMode::Disabled;
+    settings.maximumRemoteRunTimeMs = 28U * 60U * 1'000U;
+    std::size_t requestSize = 0U;
+    auto request = encodeSettingsFrame(
+        settingsWriteRequest(settings, 20U), requestSize);
+    std::uint32_t nowMs = 0U;
+
+    auto result = feedSettingsEndpoint(
+        endpoint,
+        request.data(),
+        requestSize,
+        nowMs,
+        bmw::remote::infrastructure::SettingsProtocolAccess{
+            true,
+            bmw::remote::application::ControllerState::Running});
+    CHECK(result.responseStatus ==
+          bmw::remote::infrastructure::SettingsProtocolStatus::Busy);
+    CHECK(storage.writeCalls == 0U);
+
+    result = feedSettingsEndpoint(
+        endpoint,
+        request.data(),
+        requestSize,
+        nowMs,
+        bmw::remote::infrastructure::SettingsProtocolAccess{
+            true,
+            bmw::remote::application::ControllerState::Idle});
+    CHECK(result.responseStatus ==
+          bmw::remote::infrastructure::SettingsProtocolStatus::Ok);
+    CHECK(storage.writeCalls == 1U);
+
+    bmw::remote::infrastructure::SettingsProtocolFrame read{};
+    read.type = bmw::remote::infrastructure::SettingsMessageType::ReadRequest;
+    read.requestId = 21U;
+    request = encodeSettingsFrame(read, requestSize);
+    result = feedSettingsEndpoint(
+        endpoint,
+        request.data(),
+        requestSize,
+        nowMs,
+        bmw::remote::infrastructure::SettingsProtocolAccess{
+            true,
+            bmw::remote::application::ControllerState::Running});
+    CHECK(result.responseStatus ==
+          bmw::remote::infrastructure::SettingsProtocolStatus::Ok);
+
+    const auto response =
+        bmw::remote::infrastructure::SettingsProtocolCodec::decode(
+            transport.bytes.data(), transport.size);
+    CHECK(response.valid());
+    UserSettings readBack{};
+    CHECK(bmw::remote::infrastructure::decodeUserSettingsPayload(
+        response.frame.payload, readBack));
+    CHECK(bmw::remote::infrastructure::userSettingsEqual(settings, readBack));
+}
+
+void testSettingsEndpointDoesNotRespondToCorruptFrame() {
+    MemorySettingsStorage storage{};
+    JournaledUserSettingsStore store{storage};
+    MemorySettingsTransport transport{};
+    bmw::remote::infrastructure::SettingsProtocolEndpoint endpoint{
+        store, transport};
+    bmw::remote::infrastructure::SettingsProtocolFrame read{};
+    read.type = bmw::remote::infrastructure::SettingsMessageType::ReadRequest;
+    std::size_t requestSize = 0U;
+    auto request = encodeSettingsFrame(read, requestSize);
+    request[8U] ^= 0x01U;
+    std::uint32_t nowMs = 0U;
+
+    const auto result = feedSettingsEndpoint(
+        endpoint,
+        request.data(),
+        requestSize,
+        nowMs,
+        bmw::remote::infrastructure::SettingsProtocolAccess{
+            true,
+            bmw::remote::application::ControllerState::Idle});
+
+    CHECK(result.status ==
+          bmw::remote::infrastructure::SettingsEndpointStatus::FrameRejected);
+    CHECK(result.decodeStatus ==
+          bmw::remote::infrastructure::SettingsFrameDecodeStatus::ChecksumMismatch);
+    CHECK(transport.sendCalls == 0U);
+}
+
+void testSettingsEndpointReportsTimeoutAndTransportFailure() {
+    MemorySettingsStorage storage{};
+    JournaledUserSettingsStore store{storage};
+    MemorySettingsTransport transport{};
+    bmw::remote::infrastructure::SettingsProtocolEndpoint endpoint{
+        store,
+        transport,
+        bmw::remote::infrastructure::SettingsStreamConfig{25U}};
+
+    CHECK(endpoint.consume(
+              'B',
+              10U,
+              bmw::remote::infrastructure::SettingsProtocolAccess{})
+              .status ==
+          bmw::remote::infrastructure::SettingsEndpointStatus::None);
+    CHECK(endpoint.poll(36U).status ==
+          bmw::remote::infrastructure::SettingsEndpointStatus::FrameTimedOut);
+
+    bmw::remote::infrastructure::SettingsProtocolFrame read{};
+    read.type = bmw::remote::infrastructure::SettingsMessageType::ReadRequest;
+    std::size_t requestSize = 0U;
+    const auto request = encodeSettingsFrame(read, requestSize);
+    transport.succeeds = false;
+    std::uint32_t nowMs = 100U;
+    const auto result = feedSettingsEndpoint(
+        endpoint,
+        request.data(),
+        requestSize,
+        nowMs,
+        bmw::remote::infrastructure::SettingsProtocolAccess{
+            true,
+            bmw::remote::application::ControllerState::Idle});
+    CHECK(result.status ==
+          bmw::remote::infrastructure::SettingsEndpointStatus::TransportFailure);
+    CHECK(result.responseStatus ==
           bmw::remote::infrastructure::SettingsProtocolStatus::SettingsUnavailable);
 }
 
@@ -1569,6 +1905,15 @@ int main() {
         {"settings protocol busy", testSettingsProtocolRejectsWritesWhileControllerIsActive},
         {"settings protocol read write", testSettingsProtocolWritesThenReadsPersistedSettings},
         {"settings protocol failures", testSettingsProtocolReportsInvalidRequestsAndStorageFailures},
+        {"settings stream synchronization", testSettingsStreamFindsFrameAfterNoise},
+        {"settings stream timeout", testSettingsStreamTimesOutPartialFrameAndRecovers},
+        {"settings stream clock wrap", testSettingsStreamTimeoutHandlesClockWraparound},
+        {"settings stream corruption recovery", testSettingsStreamRejectsCorruptionThenAcceptsNextFrame},
+        {"settings stream oversized header", testSettingsStreamRejectsOversizedHeaderEarly},
+        {"settings endpoint authorization", testSettingsEndpointReturnsUnauthorizedResponse},
+        {"settings endpoint idle writes", testSettingsEndpointPersistsOnlyIdleWritesAndReadsWhileActive},
+        {"settings endpoint corrupt frame", testSettingsEndpointDoesNotRespondToCorruptFrame},
+        {"settings endpoint failures", testSettingsEndpointReportsTimeoutAndTransportFailure},
         {"safe automatic vehicle", testSafeAutomaticVehicleIsApproved},
         {"unavailable signal", testUnavailableSignalFailsClosed},
         {"multiple safety reasons", testUnsafeVehicleReportsAllDetectedReasons},
