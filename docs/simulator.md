@@ -25,9 +25,12 @@ Il peut être lancé directement. Sans argument, il affiche un menu interactif :
 3. capot facultatif, ouverture entièrement ignorée ;
 4. portière ouverte sans reprise confirmée, puis arrêt à l'échéance ;
 5. portière ouverte avec reprise conducteur authentifiée ;
-6. chargement et exécution d'un fichier de configuration utilisateur ;
-7. corruption du réglage récent et récupération de la génération précédente ;
-8. liaison de configuration avec autorisation, état occupé et corruption.
+6. perte des mises à jour carrosserie pendant le fonctionnement distant ;
+7. retard des signaux au-delà de leur fraîcheur avant lancement ;
+8. corruption d'une trame reconnue pendant l'autorisation ;
+9. chargement et exécution d'un fichier de configuration utilisateur ;
+10. corruption du réglage récent et récupération de la génération précédente ;
+11. liaison de configuration avec autorisation, état occupé et corruption.
 
 ## Lancer un scénario depuis PowerShell
 
@@ -37,6 +40,9 @@ Il peut être lancé directement. Sans argument, il affiche un menu interactif :
 .\scripts\simulate.ps1 -Scenario hood-optional
 .\scripts\simulate.ps1 -Scenario takeover-timeout
 .\scripts\simulate.ps1 -Scenario takeover-confirmed
+.\scripts\simulate.ps1 -Scenario signal-loss
+.\scripts\simulate.ps1 -Scenario signal-delay
+.\scripts\simulate.ps1 -Scenario frame-corruption
 .\scripts\simulate.ps1 `
   -ConfigPath .\config\user-settings.example.conf
 .\scripts\simulate.ps1 -Scenario settings-recovery
@@ -51,6 +57,26 @@ entrées sont ordonnées de la plus ancienne à la plus récente et montrent le 
 monotone, la commande ou transition, le défaut et le motif du refus. Le compteur
 `overwritten` indique combien d'anciennes entrées auraient été remplacées. Voir
 [diagnostic-journal.md](diagnostic-journal.md).
+
+## Campagnes d'anomalies véhicule
+
+Les trois injections sont déterministes et restent limitées au protocole
+synthétique hors véhicule :
+
+- `signal-loss` supprime la mise à jour carrosserie à 5 secondes. La mise à jour
+  groupe motopropulseur reste fraîche, mais les signaux carrosserie dépassent
+  leur âge maximal. Le contrôleur doit passer de `Running` à `Fault` avec
+  `SafetyInterlock` et sécuriser les sorties ;
+- `signal-delay` avance l'horloge jusqu'à la fin de préparation sans fournir les
+  messages attendus. Le régime et la transmission deviennent périmés, le
+  démarreur ne doit jamais être engagé et le contrôleur doit échouer fermé ;
+- `frame-corruption` altère la signature d'une trame carrosserie reconnue lors de
+  l'autorisation. Le décodeur doit la rejeter, le gateway doit échouer et le
+  runtime doit convertir cet échec en `VehicleCommunication` puis `Fault`.
+
+Chaque scénario vérifie également la présence de `SecureOutputs`. Ces campagnes
+ne prétendent pas représenter les identifiants, périodicités ou protections des
+trames BMW réelles.
 
 Le parcours configuré charge toutes les valeurs, simule le nombre d'appuis choisi,
 affiche la durée moteur réellement armée puis applique la stratégie d'ouverture

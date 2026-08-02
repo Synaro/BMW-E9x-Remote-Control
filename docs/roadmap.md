@@ -70,7 +70,7 @@
 ## Jalon 3 — Communications et commande
 
 - [ ] Implémenter le décodeur véhicule réel en lecture seule
-- [ ] Tester perte, retard et corruption des données
+- [x] Tester perte, retard et corruption des données
 - [ ] Qualifier la provenance BMW des verrouillages et la résistance au rejeu
 - [ ] Implémenter l'adaptateur réel de confirmation de reprise conducteur
 - [x] Ajouter une journalisation bornée et non sensible

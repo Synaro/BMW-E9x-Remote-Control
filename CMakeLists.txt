@@ -106,6 +106,15 @@ if(BMW_REMOTE_BUILD_TESTS)
             NAME bmw_remote_simulator_takeover_confirmed
             COMMAND bmw_remote_simulator --scenario takeover-confirmed)
         add_test(
+            NAME bmw_remote_simulator_signal_loss
+            COMMAND bmw_remote_simulator --scenario signal-loss)
+        add_test(
+            NAME bmw_remote_simulator_signal_delay
+            COMMAND bmw_remote_simulator --scenario signal-delay)
+        add_test(
+            NAME bmw_remote_simulator_frame_corruption
+            COMMAND bmw_remote_simulator --scenario frame-corruption)
+        add_test(
             NAME bmw_remote_simulator_user_config
             COMMAND bmw_remote_simulator
                 --scenario user-config

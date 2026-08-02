@@ -77,6 +77,22 @@ Les scénarios de `tools/vehicle_simulator.cpp` utilisent uniquement ce protocol
 Ils peuvent être exécutés avec `scripts/simulate.ps1` ou depuis l'exécutable
 interactif décrit dans [simulator.md](simulator.md).
 
+## Injection de perte, retard et corruption
+
+Le simulateur contient trois campagnes intégrées :
+
+| Scénario | Injection | Résultat exigé |
+|---|---|---|
+| `signal-loss` | absence prolongée des trames carrosserie | signaux `Stale`, `SafetyInterlock`, sorties sécurisées |
+| `signal-delay` | aucune actualisation avant l'échéance de préparation | lancement interdit, `SafetyInterlock`, sorties sécurisées |
+| `frame-corruption` | signature synthétique altérée sur une trame reconnue | `ConsumerRejected`, `VehicleCommunication`, sorties sécurisées |
+
+La perte et le retard ne sont pas confondus avec une trame invalide : ils sont
+détectés par la fraîcheur du dernier état assemblé. La corruption arrête au
+contraire le rejeu sur la trame fautive et remonte un échec explicite au runtime.
+Les tests vérifient ces chemins sur le vrai contrôleur et les vrais adaptateurs
+de rejeu, sans émission CAN.
+
 ## Import de captures
 
 Le format hôte canonique et le convertisseur `python-can` sont décrits dans
