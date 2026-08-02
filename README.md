@@ -34,6 +34,7 @@ Le premier jalon logiciel est opérationnel :
 - rejeu temporel de traces CAN et assemblage des signaux avec gestion de fraîcheur ;
 - protocole CAN synthétique réservé aux simulations hors véhicule ;
 - simulateur interactif avec parcours nominal et injection d'un défaut de sécurité ;
+- interface graphique Windows locale pour lancer les scénarios, configurations et traces ;
 - session distante limitée à 15 minutes et reprise conducteur bornée à 60 secondes ;
 - profils véhicule extensibles avec qualification fermée par défaut ;
 - profil de découverte pour l'E90 2009 N47D20C boîte automatique ;
@@ -50,7 +51,7 @@ Le premier jalon logiciel est opérationnel :
 - campagnes déterministes de perte, retard et corruption des données véhicule ;
 - superviseur logiciel des actionneurs avec heartbeat, séquencement, retours
   d'état et défauts mémorisés ;
-- 114 tests C++, 14 scénarios du simulateur, 3 contrôles du configurateur et
+- 115 tests C++, 15 scénarios du simulateur, 3 contrôles du configurateur et
   21 tests Python automatisés en intégration continue.
 
 L'adaptateur BMW qui observera réellement le verrouillage, qualifiera la reprise
@@ -208,6 +209,18 @@ configuration de banc où le démarrage distant reste désactivé :
 
 ## Simulateur applicatif
 
+Sous Windows, le moyen le plus simple est l'interface graphique :
+
+```powershell
+.\scripts\simulator-gui.ps1
+```
+
+Le fichier `scripts/start-simulator-gui.cmd` peut aussi être ouvert par double
+clic. L'interface compile le simulateur uniquement lorsque ses sources sont
+plus récentes, permet de choisir un scénario, un fichier de configuration ou
+une trace, puis affiche et copie le rapport. Elle reste entièrement locale et
+ne se connecte à aucun véhicule.
+
 Sous Windows, l'exécutable interactif peut être construit avec :
 
 ```powershell
@@ -215,11 +228,12 @@ Sous Windows, l'exécutable interactif peut être construit avec :
 .\build\bmw_remote_simulator.exe
 ```
 
-Quatorze scénarios permettent de tester le parcours nominal, le capot obligatoire ou
-facultatif, la reprise conducteur, la perte, le retard et la corruption des
+Quinze scénarios permettent de tester le parcours nominal, le capot obligatoire
+ou facultatif, la reprise conducteur, la perte, le retard et la corruption des
 données, un profil utilisateur, la récupération du stockage et la liaison de
 configuration, la garde anti-rejeu et l'adaptateur CAN qualifié sur un vecteur
-fictif, ainsi que le watchdog et les retours d'actionneurs simulés. Un scénario précis
+fictif, le watchdog et les retours d'actionneurs simulés, ainsi que leur
+propagation complète dans le runtime. Un scénario précis
 peut aussi être compilé et exécuté avec :
 
 ```powershell
@@ -235,6 +249,7 @@ peut aussi être compilé et exécuté avec :
 .\scripts\simulate.ps1 -Scenario lock-replay-guard
 .\scripts\simulate.ps1 -Scenario qualified-lock-adapter
 .\scripts\simulate.ps1 -Scenario actuator-supervisor
+.\scripts\simulate.ps1 -Scenario supervised-runtime
 ```
 
 Chaque parcours affiche aussi le journal chronologique des commandes,

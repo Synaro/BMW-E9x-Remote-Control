@@ -88,3 +88,7 @@ Ce superviseur est une défense logicielle supplémentaire. Il ne remplace pas :
 En particulier, si tout le logiciel cesse de s'exécuter, `poll()` ne peut plus
 constater l'absence de heartbeat. Le matériel devra donc retomber seul à l'état
 sûr.
+
+Le scénario `supervised-runtime` du simulateur montre l'intégration attendue :
+le superviseur sert de port au runtime, sécurise son pilote simulé puis son
+défaut est injecté dans le contrôleur et son journal.

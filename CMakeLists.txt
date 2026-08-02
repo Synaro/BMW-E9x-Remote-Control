@@ -137,6 +137,9 @@ if(BMW_REMOTE_BUILD_TESTS)
         add_test(
             NAME bmw_remote_simulator_actuator_supervisor
             COMMAND bmw_remote_simulator --scenario actuator-supervisor)
+        add_test(
+            NAME bmw_remote_simulator_supervised_runtime
+            COMMAND bmw_remote_simulator --scenario supervised-runtime)
     endif()
 
     if(BMW_REMOTE_BUILD_CONFIGURATOR)

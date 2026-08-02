@@ -2406,6 +2406,54 @@ struct FakeNotifications final : NotificationSink {
     }
 };
 
+void testRuntimePropagatesActuatorSupervisorFault() {
+    FakeVehicleGateway gateway{};
+    TrackingActuatorDriver driver{};
+    ActuatorSafetySupervisor supervisor{driver};
+    FakeTimer timer{};
+    FakeNotifications notifications{};
+    Runtime runtime{
+        qualifiedController(), gateway, supervisor, timer, notifications};
+    const VehicleState vehicle = safeAutomaticVehicle();
+
+    prepareActuatorSupervisor(supervisor);
+    CHECK(
+        runtime.dispatch(
+            Event{EventType::RemoteStartRequested}, vehicle, 0U)
+            .state == ControllerState::Authorizing);
+    CHECK(
+        runtime.dispatch(
+            Event{EventType::VehicleStateUpdated}, vehicle, 0U)
+            .state == ControllerState::Preparing);
+    CHECK(driver.ignitionActive);
+
+    confirmIgnitionFeedback(supervisor);
+    CHECK(
+        runtime.dispatch(Event{EventType::TimerElapsed}, vehicle, 101U)
+            .state == ControllerState::Cranking);
+    CHECK(driver.starterActive);
+    CHECK(supervisor.heartbeat(200U));
+    CHECK(
+        supervisor.poll(200U, true, actuatorFeedback(true, true)).healthy());
+
+    const auto expired = supervisor.poll(
+        701U, true, actuatorFeedback(true, true));
+    CHECK(expired.fault == ActuatorSupervisorFault::WatchdogExpired);
+    CHECK(!driver.ignitionActive);
+    CHECK(!driver.starterActive);
+
+    const auto fault = runtime.dispatch(
+        Event::infrastructureFailure(FaultCode::ActuatorFailure),
+        vehicle,
+        701U);
+    CHECK(fault.state == ControllerState::Fault);
+    CHECK(fault.fault == FaultCode::ActuatorFailure);
+    CHECK(notifications.faultNotifications == 1U);
+    CHECK(
+        supervisor.status().fault ==
+        ActuatorSupervisorFault::WatchdogExpired);
+}
+
 void testRuntimeRejectsMissingProfileWithoutRequestingVehicle() {
     FakeVehicleGateway gateway{};
     FakeActuator actuator{};
@@ -3156,6 +3204,7 @@ int main() {
         {"actuator supervisor interlocks", testActuatorSupervisorDetectsInterlockAndFeedbackFaults},
         {"actuator supervisor clock reset", testActuatorSupervisorHandlesClockWrapAndGuardedReset},
         {"actuator supervisor driver faults", testActuatorSupervisorLatchesDriverAndSafingFailures},
+        {"runtime actuator supervisor fault", testRuntimePropagatesActuatorSupervisorFault},
         {"runtime missing profile", testRuntimeRejectsMissingProfileWithoutRequestingVehicle},
         {"gateway failure", testRuntimeConvertsGatewayFailureIntoSafeFault},
         {"actuator failure", testRuntimeConvertsActuatorFailureIntoSafeFault},
