@@ -283,7 +283,15 @@ try {
                 $sandboxFault.fault -ne 'actuator_failure' -or
                 $sandboxFault.ignition_active -or
                 $sandboxFault.starter_active) {
-                throw 'Le test du bac à sable persistant a échoué.'
+                $observed = @(
+                    "status=$($sandboxStatus.state)/$($sandboxStatus.ok)",
+                    "start=$($sandboxPreparing.state)/$($sandboxPreparing.fault)",
+                    "timer=$($sandboxCranking.state)/$($sandboxCranking.fault)",
+                    "running=$($sandboxRunning.state)/$($sandboxRunning.fault)",
+                    "watchdog=$($sandboxFault.state)/$($sandboxFault.fault)/$($sandboxFault.supervisor_fault)",
+                    "outputs=$($sandboxFault.ignition_active)/$($sandboxFault.starter_active)"
+                ) -join ', '
+                throw "Le test du bac à sable persistant a échoué : $observed"
             }
         } finally {
             Stop-SandboxProcess $sandboxProcess
