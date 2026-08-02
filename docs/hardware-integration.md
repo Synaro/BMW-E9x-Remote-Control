@@ -38,11 +38,13 @@ mise en sécurité.
 
 ## Source de commande distante
 
-Le futur adaptateur BMW doit publier une impulsion de verrouillage sémantique
-uniquement après validation de sa provenance. Le noyau peut ensuite appliquer
-`LockSequenceDetector` et produire une demande après trois impulsions valides.
-Les identifiants CAN, compteurs, états CAS/JBE et règles anti-rejeu restent
-strictement dans l'infrastructure et devront être qualifiés par variante.
+Le futur adaptateur BMW doit publier une `LockCommandEvidence` uniquement après
+validation de sa provenance. `LockCommandGate` vérifie ensuite la confiance, la
+fraîcheur et l'ordre avant d'alimenter `LockSequenceDetector`, qui peut produire
+une demande après trois impulsions valides. Les identifiants CAN, l'extraction
+des compteurs et les états CAS/JBE restent strictement dans l'infrastructure et
+devront être qualifiés par variante. Voir
+[lock-command-security.md](lock-command-security.md).
 
 De même, l'adaptateur ne produit `DriverTakeoverConfirmed` qu'après satisfaction
 des preuves de reprise retenues. Une portière ouverte, seule, n'est jamais une

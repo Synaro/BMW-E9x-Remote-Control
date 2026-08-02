@@ -7,7 +7,7 @@
 #include <vector>
 
 #include "bmw_remote/application/controller.hpp"
-#include "bmw_remote/application/lock_sequence_detector.hpp"
+#include "bmw_remote/application/lock_command_gate.hpp"
 #include "bmw_remote/application/safety_policy.hpp"
 #include "bmw_remote/application/user_settings.hpp"
 #include "bmw_remote/infrastructure/replay_vehicle_gateway.hpp"
@@ -36,6 +36,7 @@ enum class Scenario : std::uint8_t {
     UserConfig,
     SettingsRecovery,
     SettingsLink,
+    LockReplayGuard,
 };
 
 class ConsoleActuators final : public infrastructure::ActuatorPort {
@@ -165,6 +166,7 @@ const char* scenarioName(const Scenario scenario) noexcept {
         case Scenario::UserConfig: return "user-config";
         case Scenario::SettingsRecovery: return "settings-recovery";
         case Scenario::SettingsLink: return "settings-link";
+        case Scenario::LockReplayGuard: return "lock-replay-guard";
     }
     return "unknown";
 }
@@ -214,6 +216,10 @@ bool parseScenario(const std::string_view text, Scenario& scenario) noexcept {
         scenario = Scenario::SettingsLink;
         return true;
     }
+    if (text == "lock-replay-guard") {
+        scenario = Scenario::LockReplayGuard;
+        return true;
+    }
     return false;
 }
 
@@ -243,7 +249,8 @@ void printScenarioList() {
         << "frame-corruption rejects a recognized frame before authorization\n"
         << "user-config uses every value from a supplied configuration file\n"
         << "settings-recovery corrupts the newest slot and restores the previous one\n"
-        << "settings-link exercises framed, authorized and idle-only configuration\n";
+        << "settings-link exercises framed, authorized and idle-only configuration\n"
+        << "lock-replay-guard rejects untrusted, stale and replayed lock evidence\n";
 }
 
 void printUsage(const char* const executable) {
@@ -606,6 +613,82 @@ int runSettingsLinkScenario() {
     return expectedOutcome ? 0 : 2;
 }
 
+int runLockReplayGuardScenario() {
+    application::LockCommandGate productionGate{};
+    application::LockCommandEvidence syntheticEvidence{
+        application::LockCommandSource::SyntheticTest,
+        application::LockCommandTrust::Verified,
+        1U,
+        1'000U,
+        true};
+    const application::LockCommandDecision syntheticRejected =
+        productionGate.process(syntheticEvidence, 1'000U);
+
+    application::LockCommandGateConfig simulationConfig{};
+    simulationConfig.allowSyntheticSource = true;
+    application::LockCommandGate gate{simulationConfig};
+
+    application::LockCommandEvidence candidateEvidence = syntheticEvidence;
+    candidateEvidence.trust = application::LockCommandTrust::Candidate;
+    const application::LockCommandDecision candidateRejected =
+        gate.process(candidateEvidence, 1'000U);
+
+    syntheticEvidence.observedAtMs = 1'000U;
+    const application::LockCommandDecision staleRejected =
+        gate.process(syntheticEvidence, 1'600U);
+
+    syntheticEvidence.observedAtMs = 2'000U;
+    const application::LockCommandDecision firstAccepted =
+        gate.process(syntheticEvidence, 2'000U);
+
+    syntheticEvidence.observedAtMs = 2'100U;
+    const application::LockCommandDecision duplicateRejected =
+        gate.process(syntheticEvidence, 2'100U);
+
+    syntheticEvidence.sourceSequence = 0U;
+    syntheticEvidence.observedAtMs = 2'200U;
+    const application::LockCommandDecision outOfOrderRejected =
+        gate.process(syntheticEvidence, 2'200U);
+
+    gate.reset();
+    application::LockCommandDecision completed{};
+    for (std::uint32_t press = 0U; press < 3U; ++press) {
+        const std::uint32_t timestampMs = 3'000U + press * 600U;
+        syntheticEvidence.sourceSequence = 10U + press;
+        syntheticEvidence.observedAtMs = timestampMs;
+        completed = gate.process(syntheticEvidence, timestampMs);
+    }
+
+    const bool expectedOutcome =
+        syntheticRejected.status ==
+            application::LockCommandStatus::RejectedSyntheticSource &&
+        candidateRejected.status ==
+            application::LockCommandStatus::RejectedUntrustedSource &&
+        staleRejected.status ==
+            application::LockCommandStatus::RejectedStaleEvidence &&
+        firstAccepted.status == application::LockCommandStatus::PressAccepted &&
+        duplicateRejected.status ==
+            application::LockCommandStatus::RejectedDuplicateSequence &&
+        outOfOrderRejected.status ==
+            application::LockCommandStatus::RejectedOutOfOrderSequence &&
+        completed.remoteStartRequested();
+
+    std::cout
+        << "scenario: lock-replay-guard\n"
+        << "production_synthetic: "
+        << application::toString(syntheticRejected.status) << '\n'
+        << "candidate_source: "
+        << application::toString(candidateRejected.status) << '\n'
+        << "stale_evidence: " << application::toString(staleRejected.status) << '\n'
+        << "duplicate_counter: "
+        << application::toString(duplicateRejected.status) << '\n'
+        << "out_of_order_counter: "
+        << application::toString(outOfOrderRejected.status) << '\n'
+        << "valid_sequence: " << application::toString(completed.status) << '\n'
+        << "scenario_result: " << (expectedOutcome ? "PASS" : "FAIL") << '\n';
+    return expectedOutcome ? 0 : 2;
+}
+
 int runScenario(
     const Scenario scenario,
     const application::UserSettings* const suppliedSettings = nullptr) {
@@ -614,6 +697,9 @@ int runScenario(
     }
     if (scenario == Scenario::SettingsLink) {
         return runSettingsLinkScenario();
+    }
+    if (scenario == Scenario::LockReplayGuard) {
+        return runLockReplayGuardScenario();
     }
 
     application::UserSettings settings =
@@ -707,15 +793,26 @@ int runScenario(
         return 1;
     }
     if (scenario == Scenario::UserConfig) {
-        application::LockSequenceDetector detector{configuration.lockSequence};
+        application::LockCommandGateConfig gateConfig{};
+        gateConfig.sequence = configuration.lockSequence;
+        gateConfig.allowSyntheticSource = true;
+        application::LockCommandGate gate{gateConfig};
         std::uint32_t timestampMs = 1'000U;
-        bool detected = false;
+        application::LockCommandDecision lockDecision{};
         for (std::uint8_t press = 0U; press < settings.lockPressCount; ++press) {
-            detected = detector.observeLockPress(timestampMs);
+            lockDecision = gate.process(
+                application::LockCommandEvidence{
+                    application::LockCommandSource::SyntheticTest,
+                    application::LockCommandTrust::Verified,
+                    static_cast<std::uint32_t>(press) + 1U,
+                    timestampMs,
+                    true},
+                timestampMs);
             timestampMs += settings.lockMinimumGapMs;
         }
-        std::cout << "lock_sequence: " << (detected ? "detected" : "rejected") << '\n';
-        if (!detected) {
+        std::cout << "lock_sequence: "
+                  << application::toString(lockDecision.status) << '\n';
+        if (!lockDecision.remoteStartRequested()) {
             std::cout << "scenario_result: FAIL\n";
             return 2;
         }
@@ -905,7 +1002,8 @@ int runInteractive() {
         << "9. Tester un fichier de configuration utilisateur\n"
         << "10. Recuperation d'une configuration persistante corrompue\n"
         << "11. Liaison de configuration securisee simulee\n"
-        << "12. Quitter\n\n"
+        << "12. Garde anti-rejeu des commandes de verrouillage\n"
+        << "13. Quitter\n\n"
         << "Choix: ";
 
     unsigned selection = 0U;
@@ -936,7 +1034,8 @@ int runInteractive() {
         }
         case 10U: result = runScenario(Scenario::SettingsRecovery); break;
         case 11U: result = runScenario(Scenario::SettingsLink); break;
-        case 12U: return 0;
+        case 12U: result = runScenario(Scenario::LockReplayGuard); break;
+        case 13U: return 0;
         default:
             std::cerr << "Invalid selection\n";
             result = 64;

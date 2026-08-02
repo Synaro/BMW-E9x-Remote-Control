@@ -13,7 +13,10 @@ une topologie électrique.
 
 ```mermaid
 flowchart LR
-    Sources["Commandes, véhicule, timers"] --> Runtime["Runtime"]
+    LockSource["Adaptateur de verrouillage"] --> LockGate["LockCommandGate"]
+    LockGate --> LockSequence["LockSequenceDetector"]
+    LockSequence --> Runtime["Runtime"]
+    Sources["Véhicule, timers, autres commandes"] --> Runtime
     Bytes["SettingsByteStorage"] --> Journal["Journal redondant + CRC"]
     Journal --> Settings["UserSettingsStore"]
     Configurator["Configurateur PC"] --> Transport["Transport authentifié futur"]
@@ -40,6 +43,13 @@ flowchart LR
   inerte.
 
 Le domaine et l'application ne dépendent d'aucun framework embarqué.
+
+La commande de verrouillage traverse une frontière dédiée avant de devenir un
+événement. `LockCommandGate` exige une preuve vérifiée, récente, monotone et
+associée à un véhicule sécurisé ; `LockSequenceDetector` ne voit que les
+impulsions acceptées. Le mécanisme est indépendant du bus, mais la provenance
+BMW reste à qualifier. Voir
+[lock-command-security.md](lock-command-security.md).
 
 Les profils décrivent les variantes de véhicule et le niveau de preuve de chaque
 signal sans contenir de détail CAN. Un garde d'application distinct empêche un

@@ -9,6 +9,7 @@
 #include <vector>
 
 #include "bmw_remote/application/controller.hpp"
+#include "bmw_remote/application/lock_command_gate.hpp"
 #include "bmw_remote/application/lock_sequence_detector.hpp"
 #include "bmw_remote/application/profile_readiness.hpp"
 #include "bmw_remote/application/safety_policy.hpp"
@@ -38,6 +39,13 @@ using bmw::remote::application::Event;
 using bmw::remote::application::EventType;
 using bmw::remote::application::FaultCode;
 using bmw::remote::application::HoodMonitoringMode;
+using bmw::remote::application::LockCommandDecision;
+using bmw::remote::application::LockCommandEvidence;
+using bmw::remote::application::LockCommandGate;
+using bmw::remote::application::LockCommandGateConfig;
+using bmw::remote::application::LockCommandSource;
+using bmw::remote::application::LockCommandStatus;
+using bmw::remote::application::LockCommandTrust;
 using bmw::remote::application::LockSequenceConfig;
 using bmw::remote::application::LockSequenceDetector;
 using bmw::remote::application::ProfileReadinessReason;
@@ -118,6 +126,17 @@ Controller qualifiedController(ControllerConfig config = {}) {
     return Controller{config};
 }
 
+LockCommandEvidence verifiedVehicleLock(
+    const std::uint32_t sequence,
+    const std::uint32_t observedAtMs) {
+    return LockCommandEvidence{
+        LockCommandSource::VehicleAdapter,
+        LockCommandTrust::Verified,
+        sequence,
+        observedAtMs,
+        true};
+}
+
 void advanceToRunning(Controller& controller, VehicleState& vehicle) {
     static_cast<void>(controller.handle(Event{EventType::RemoteStartRequested}, vehicle));
     static_cast<void>(controller.handle(Event{EventType::VehicleStateUpdated}, vehicle));
@@ -154,6 +173,150 @@ void testLockButtonBounceIsIgnored() {
     CHECK(detector.pressCount() == 1U);
     CHECK(!detector.observeLockPress(1'500U));
     CHECK(detector.observeLockPress(2'000U));
+}
+
+void testVerifiedLockEvidenceTriggersOnlyAfterCompleteSequence() {
+    LockCommandGate gate{};
+
+    const LockCommandDecision first =
+        gate.process(verifiedVehicleLock(10U, 1'000U), 1'000U);
+    const LockCommandDecision second =
+        gate.process(verifiedVehicleLock(11U, 1'600U), 1'600U);
+    const LockCommandDecision third =
+        gate.process(verifiedVehicleLock(12U, 2'200U), 2'200U);
+
+    CHECK(first.status == LockCommandStatus::PressAccepted);
+    CHECK(first.accepted());
+    CHECK(!first.remoteStartRequested());
+    CHECK(second.status == LockCommandStatus::PressAccepted);
+    CHECK(third.status == LockCommandStatus::RemoteStartRequested);
+    CHECK(third.accepted());
+    CHECK(third.remoteStartRequested());
+    CHECK(gate.pressCount() == 0U);
+}
+
+void testLockGateRejectsUntrustedSyntheticAndUnsecuredEvidence() {
+    LockCommandGate gate{};
+    LockCommandEvidence evidence = verifiedVehicleLock(1U, 1'000U);
+    evidence.trust = LockCommandTrust::Candidate;
+    CHECK(
+        gate.process(evidence, 1'000U).status ==
+        LockCommandStatus::RejectedUntrustedSource);
+
+    evidence = verifiedVehicleLock(1U, 1'100U);
+    evidence.source = LockCommandSource::SyntheticTest;
+    CHECK(
+        gate.process(evidence, 1'100U).status ==
+        LockCommandStatus::RejectedSyntheticSource);
+
+    evidence = verifiedVehicleLock(1U, 1'200U);
+    evidence.vehicleSecured = false;
+    CHECK(
+        gate.process(evidence, 1'200U).status ==
+        LockCommandStatus::RejectedVehicleNotSecured);
+    CHECK(gate.pressCount() == 0U);
+}
+
+void testLockGateRejectsStaleFutureAndRegressingClocks() {
+    LockCommandGate gate{};
+    CHECK(
+        gate.process(verifiedVehicleLock(1U, 1'000U), 1'501U).status ==
+        LockCommandStatus::RejectedStaleEvidence);
+
+    gate.reset();
+    CHECK(
+        gate.process(verifiedVehicleLock(1U, 2'000U), 1'900U).status ==
+        LockCommandStatus::RejectedFutureEvidence);
+
+    gate.reset();
+    CHECK(gate.process(verifiedVehicleLock(1U, 3'000U), 3'000U).accepted());
+    CHECK(
+        gate.process(verifiedVehicleLock(2U, 3'100U), 2'999U).status ==
+        LockCommandStatus::RejectedClockRegression);
+    CHECK(gate.pressCount() == 0U);
+}
+
+void testLockGateRejectsDuplicateOutOfOrderAndNonMonotonicEvidence() {
+    LockCommandGate gate{};
+    CHECK(gate.process(verifiedVehicleLock(10U, 1'000U), 1'000U).accepted());
+    CHECK(
+        gate.process(verifiedVehicleLock(10U, 1'100U), 1'100U).status ==
+        LockCommandStatus::RejectedDuplicateSequence);
+    CHECK(gate.process(verifiedVehicleLock(11U, 1'200U), 1'200U).accepted());
+    CHECK(
+        gate.process(verifiedVehicleLock(9U, 1'300U), 1'300U).status ==
+        LockCommandStatus::RejectedOutOfOrderSequence);
+    CHECK(gate.process(verifiedVehicleLock(12U, 1'400U), 1'400U).accepted());
+    CHECK(
+        gate.process(verifiedVehicleLock(13U, 1'400U), 1'400U).status ==
+        LockCommandStatus::RejectedNonMonotonicEvidence);
+}
+
+void testLockGateAcceptsCounterAndClockWraparound() {
+    LockCommandGateConfig config{};
+    config.sequence.requiredPresses = 2U;
+    LockCommandGate gate{config};
+    constexpr std::uint32_t BeforeWrap =
+        std::numeric_limits<std::uint32_t>::max() - 100U;
+
+    CHECK(gate.process(
+              verifiedVehicleLock(
+                  std::numeric_limits<std::uint32_t>::max(), BeforeWrap),
+              BeforeWrap)
+              .accepted());
+    const LockCommandDecision completed =
+        gate.process(verifiedVehicleLock(0U, 50U), 50U);
+    CHECK(completed.status == LockCommandStatus::RemoteStartRequested);
+}
+
+void testLockGateResetsPartialGestureAfterRejectedEvidence() {
+    LockCommandGate gate{};
+    CHECK(gate.process(verifiedVehicleLock(1U, 1'000U), 1'000U).accepted());
+
+    LockCommandEvidence rejected = verifiedVehicleLock(2U, 1'600U);
+    rejected.trust = LockCommandTrust::Unverified;
+    CHECK(
+        gate.process(rejected, 1'600U).status ==
+        LockCommandStatus::RejectedUntrustedSource);
+    CHECK(gate.pressCount() == 0U);
+
+    CHECK(gate.process(verifiedVehicleLock(2U, 1'700U), 1'700U).accepted());
+    CHECK(gate.process(verifiedVehicleLock(3U, 2'300U), 2'300U).accepted());
+    CHECK(
+        gate.process(verifiedVehicleLock(4U, 2'900U), 2'900U).status ==
+        LockCommandStatus::RemoteStartRequested);
+}
+
+void testLockGateRejectsInvalidConfigurationAndDebouncedEvidence() {
+    LockCommandGateConfig invalidConfig{};
+    invalidConfig.maximumEvidenceAgeMs = 0U;
+    LockCommandGate invalidGate{invalidConfig};
+    CHECK(
+        invalidGate.process(
+            verifiedVehicleLock(1U, 1'000U), 1'000U).status ==
+        LockCommandStatus::RejectedInvalidConfiguration);
+
+    invalidConfig.maximumEvidenceAgeMs = 500U;
+    invalidConfig.sequence.requiredPresses = 5U;
+    invalidConfig.sequence.minimumGapMs = 1'000U;
+    invalidConfig.sequence.maximumGapMs = 1'000U;
+    invalidConfig.sequence.maximumSequenceMs = 3'000U;
+    LockCommandGate impossibleSequenceGate{invalidConfig};
+    CHECK(
+        impossibleSequenceGate.process(
+            verifiedVehicleLock(1U, 1'000U), 1'000U).status ==
+        LockCommandStatus::RejectedInvalidConfiguration);
+
+    LockCommandGate gate{};
+    CHECK(gate.process(verifiedVehicleLock(1U, 2'000U), 2'000U).accepted());
+    CHECK(
+        gate.process(verifiedVehicleLock(2U, 2'040U), 2'040U).status ==
+        LockCommandStatus::RejectedTiming);
+    CHECK(gate.pressCount() == 1U);
+    CHECK(gate.process(verifiedVehicleLock(3U, 2'600U), 2'600U).accepted());
+    CHECK(
+        gate.process(verifiedVehicleLock(4U, 3'200U), 3'200U).status ==
+        LockCommandStatus::RemoteStartRequested);
 }
 
 void testDefaultUserSettingsAreValidAndPreserved() {
@@ -2405,6 +2568,13 @@ int main() {
         {"three-lock gesture", testThreeLockPressesTriggerRemoteStartGesture},
         {"slow lock sequence", testSlowLockSequenceDoesNotTrigger},
         {"lock button debounce", testLockButtonBounceIsIgnored},
+        {"verified lock evidence", testVerifiedLockEvidenceTriggersOnlyAfterCompleteSequence},
+        {"lock evidence trust", testLockGateRejectsUntrustedSyntheticAndUnsecuredEvidence},
+        {"lock evidence freshness", testLockGateRejectsStaleFutureAndRegressingClocks},
+        {"lock evidence ordering", testLockGateRejectsDuplicateOutOfOrderAndNonMonotonicEvidence},
+        {"lock evidence wraparound", testLockGateAcceptsCounterAndClockWraparound},
+        {"lock evidence reset", testLockGateResetsPartialGestureAfterRejectedEvidence},
+        {"lock evidence configuration", testLockGateRejectsInvalidConfigurationAndDebouncedEvidence},
         {"default user settings", testDefaultUserSettingsAreValidAndPreserved},
         {"custom user settings", testUserSettingsConfigureHoodTimersEntryAndLocks},
         {"invalid user settings", testUnsafeUserSettingsAreRejectedFailClosed},

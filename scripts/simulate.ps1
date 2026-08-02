@@ -14,7 +14,8 @@ param(
         'frame-corruption',
         'user-config',
         'settings-recovery',
-        'settings-link')]
+        'settings-link',
+        'lock-replay-guard')]
     [string]$Scenario = 'hood-required',
 
     [ValidateSet('required', 'optional')]

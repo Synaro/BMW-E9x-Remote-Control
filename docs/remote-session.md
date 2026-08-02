@@ -8,8 +8,10 @@ applicatif ; il n'est pas destiné à rester dans la voiture.
 
 Le déclenchement prévu utilise trois appuis rapprochés sur le bouton de
 verrouillage de la clé d'origine. Le noyau ne connaît ni identifiant CAN BMW ni
-broche : un futur adaptateur véhicule devra transformer chaque commande de
-verrouillage vérifiée en impulsion sémantique.
+broche : un futur adaptateur véhicule devra transformer chaque observation en
+`LockCommandEvidence`. `LockCommandGate` doit en vérifier la source, la
+fraîcheur, l'ordre et l'état sécurisé du véhicule avant qu'elle atteigne le
+détecteur.
 
 ## Détection des trois verrouillages
 
@@ -25,12 +27,15 @@ configurable. Ses valeurs de développement sont :
 
 Un appui trop rapproché est traité comme un rebond. Une séquence trop lente est
 abandonnée et le dernier appui devient le début d'une nouvelle séquence. Quand
-le troisième appui est reconnu, l'adaptateur peut produire
+le troisième appui est reconnu, la garde peut produire
 `RemoteStartRequested`.
 
-Ces paramètres ne sont pas encore qualifiés sur BMW. L'adaptateur réel devra
-prouver que l'impulsion vient bien de la chaîne de verrouillage légitime du
-véhicule et non d'une trame arbitraire ou rejouée.
+Les contrôles applicatifs rejettent déjà les preuves non vérifiées, anciennes,
+futures, dupliquées ou désordonnées. Ces paramètres et la provenance réelle ne
+sont cependant pas encore qualifiés sur BMW. L'adaptateur devra prouver que
+l'impulsion vient bien de la chaîne de verrouillage légitime du véhicule et non
+d'une trame arbitraire ou rejouée. Voir
+[lock-command-security.md](lock-command-security.md).
 
 ## Cycle après démarrage distant
 

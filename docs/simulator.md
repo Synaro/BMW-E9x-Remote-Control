@@ -30,7 +30,8 @@ Il peut être lancé directement. Sans argument, il affiche un menu interactif :
 8. corruption d'une trame reconnue pendant l'autorisation ;
 9. chargement et exécution d'un fichier de configuration utilisateur ;
 10. corruption du réglage récent et récupération de la génération précédente ;
-11. liaison de configuration avec autorisation, état occupé et corruption.
+11. liaison de configuration avec autorisation, état occupé et corruption ;
+12. refus des preuves de verrouillage non fiables, anciennes ou rejouées.
 
 ## Lancer un scénario depuis PowerShell
 
@@ -47,6 +48,7 @@ Il peut être lancé directement. Sans argument, il affiche un menu interactif :
   -ConfigPath .\config\user-settings.example.conf
 .\scripts\simulate.ps1 -Scenario settings-recovery
 .\scripts\simulate.ps1 -Scenario settings-link
+.\scripts\simulate.ps1 -Scenario lock-replay-guard
 ```
 
 Chaque scénario retourne le code `0` uniquement si le résultat final correspond
@@ -92,6 +94,12 @@ refus sans autorisation, le refus d'écriture pendant `Running`, l'enregistremen
 pendant `Idle`, la lecture autorisée, l'émission de chaque réponse et le rejet
 d'un CRC corrompu sans réponse. Voir
 [settings-protocol.md](settings-protocol.md).
+
+Le scénario `lock-replay-guard` vérifie que la source synthétique est refusée
+par défaut, puis injecte une source candidate, une preuve périmée, un compteur
+dupliqué et un compteur désordonné. Il termine par trois preuves synthétiques
+explicitement autorisées et strictement croissantes. Voir
+[lock-command-security.md](lock-command-security.md).
 
 ## Inspecter une trace
 
