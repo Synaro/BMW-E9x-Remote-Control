@@ -2,6 +2,8 @@
 
 Ce document définit les limites à respecter pour les futurs adaptateurs. Il ne
 fournit pas de schéma de câblage et n'autorise pas un essai direct sur véhicule.
+La cible de prototype et les étapes d'achat sont décrites dans
+[hardware-v1-reference.md](hardware-v1-reference.md).
 
 ## VehicleGateway
 

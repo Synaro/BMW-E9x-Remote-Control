@@ -57,7 +57,9 @@
 
 ## Jalon 2 — Spécification matérielle
 
-- [ ] Choisir la carte après étude alimentation, température et E/S
+- [x] Choisir l'ESP32-S3-DevKitC-1-N8 pour le prototype de banc
+- [x] Retenir l'USB filaire comme transport local de configuration V1
+- [ ] Concevoir la carte automobile définitive après qualification des bus
 - [ ] Optionnel : concevoir une entrée indépendante pour les installations qui exigent le capot
 - [ ] Établir la matrice complète des variantes E9x visées
 - [ ] Identifier les signaux nécessaires et leurs sources légitimes
@@ -73,7 +75,8 @@
 - [ ] Implémenter l'adaptateur réel de confirmation de reprise conducteur
 - [ ] Ajouter une journalisation bornée et non sensible
 - [ ] Implémenter `SettingsByteStorage` sur la mémoire réelle du boîtier
-- [ ] Choisir le transport entre le configurateur et le boîtier (web, Bluetooth ou USB)
+- [x] Choisir l'USB filaire entre le configurateur et le boîtier V1
+- [ ] Implémenter le transport USB sur ESP32-S3
 - [ ] Implémenter l'authentification et l'anti-rejeu propres au transport choisi
 - [ ] Valider la consommation au repos
 
