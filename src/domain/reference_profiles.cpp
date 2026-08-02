@@ -3,10 +3,10 @@
 namespace bmw::remote::domain::profiles {
 namespace {
 
-constexpr std::array<SignalSupport, vehicleSignalCount()> CandidateSignals = {
+constexpr std::array<SignalSupport, vehicleSignalCount()> ReferenceSignals = {
     SignalSupport::Candidate,
     SignalSupport::Candidate,
-    SignalSupport::Candidate,
+    SignalSupport::Unavailable,
     SignalSupport::Candidate,
     SignalSupport::Candidate,
     SignalSupport::Candidate,
@@ -28,7 +28,8 @@ constexpr VehicleProfile Profiles[] = {
         FuelType::Diesel,
         Transmission::Automatic,
         QualificationStage::Discovery,
-        CandidateSignals,
+        HoodInterlockSource::ExternalDiscreteInput,
+        ReferenceSignals,
     },
 };
 

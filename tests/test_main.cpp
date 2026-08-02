@@ -569,11 +569,17 @@ void testReferenceProfileDescribesReferenceVehicleWithoutClaimingQualification()
     CHECK(profile.fuel == bmw::remote::domain::FuelType::Diesel);
     CHECK(profile.transmission == Transmission::Automatic);
     CHECK(profile.qualification == bmw::remote::domain::QualificationStage::Discovery);
+    CHECK(profile.hoodInterlockSource ==
+          bmw::remote::domain::HoodInterlockSource::ExternalDiscreteInput);
 
     for (std::size_t index = 0U;
          index < bmw::remote::domain::vehicleSignalCount();
          ++index) {
-        CHECK(profile.support(static_cast<VehicleSignal>(index)) == SignalSupport::Candidate);
+        const VehicleSignal signal = static_cast<VehicleSignal>(index);
+        const SignalSupport expected = signal == VehicleSignal::HoodClosed
+                                           ? SignalSupport::Unavailable
+                                           : SignalSupport::Candidate;
+        CHECK(profile.support(signal) == expected);
     }
 }
 
@@ -590,6 +596,7 @@ void testDiscoveryProfileCannotEnableRemoteStart() {
         bmw::remote::domain::profiles::e90_2009_n47d20c_automatic());
 
     CHECK(!readiness.ready());
+    CHECK(readiness.contains(ProfileReadinessReason::MissingRequiredSignal));
     CHECK(readiness.contains(ProfileReadinessReason::UnverifiedRequiredSignal));
     CHECK(readiness.contains(ProfileReadinessReason::QualificationTooLow));
 }
@@ -615,6 +622,19 @@ void testValidatedProfileStillFailsClosedWhenSignalIsMissing() {
         bmw::remote::application::assessRemoteStartReadiness(profile);
     CHECK(!readiness.ready());
     CHECK(readiness.contains(ProfileReadinessReason::MissingRequiredSignal));
+}
+
+void testValidatedProfileRejectsUnknownHoodInterlockSource() {
+    VehicleProfile profile =
+        bmw::remote::domain::profiles::e90_2009_n47d20c_automatic();
+    profile.signals.fill(SignalSupport::Verified);
+    profile.qualification = bmw::remote::domain::QualificationStage::ReadOnlyValidated;
+    profile.hoodInterlockSource = bmw::remote::domain::HoodInterlockSource::Unspecified;
+
+    const auto readiness =
+        bmw::remote::application::assessRemoteStartReadiness(profile);
+    CHECK(!readiness.ready());
+    CHECK(readiness.contains(ProfileReadinessReason::HoodInterlockSourceUnknown));
 }
 
 void testCanonicalTraceParserLoadsValidClassicFrames() {
@@ -710,6 +730,7 @@ int main() {
         {"discovery profile readiness", testDiscoveryProfileCannotEnableRemoteStart},
         {"validated profile readiness", testValidatedProfileWithVerifiedSignalsIsReady},
         {"missing profile signal", testValidatedProfileStillFailsClosedWhenSignalIsMissing},
+        {"unknown hood interlock source", testValidatedProfileRejectsUnknownHoodInterlockSource},
         {"canonical trace parsing", testCanonicalTraceParserLoadsValidClassicFrames},
         {"canonical trace monotonicity", testCanonicalTraceParserRejectsNonMonotonicInputAtomically},
         {"canonical trace rejection", testCanonicalTraceParserRejectsMalformedAndEmptyTraces},

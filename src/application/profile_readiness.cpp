@@ -54,6 +54,10 @@ ProfileReadinessAssessment assessRemoteStartReadiness(
         assessment.add(ProfileReadinessReason::QualificationTooLow);
     }
 
+    if (profile.hoodInterlockSource == domain::HoodInterlockSource::Unspecified) {
+        assessment.add(ProfileReadinessReason::HoodInterlockSourceUnknown);
+    }
+
     if (profile.transmission == domain::Transmission::Unknown) {
         assessment.add(ProfileReadinessReason::TransmissionUnknown);
     } else if (profile.transmission == domain::Transmission::Manual &&

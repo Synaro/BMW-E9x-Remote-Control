@@ -51,9 +51,12 @@ Conditions minimales :
 6. aucune personne ni objet dans une zone mobile ou dangereuse.
 
 Commencer uniquement par des événements de carrosserie à faible risque, par
-exemple ouvrir puis refermer une porte, le coffre ou le capot moteur arrêté. Ne
-pas commencer par un changement de rapport, un relâchement du frein de
-stationnement ou une commande moteur.
+exemple ouvrir puis refermer une porte ou le coffre moteur arrêté. Le véhicule de
+référence ne possédant pas de capteur de capot exploitable, une capture du bus ne
+pourra pas faire apparaître cette information. Le capot ne pourra être testé
+qu'après ajout et qualification d'une entrée physique indépendante. Ne pas
+commencer par un changement de rapport, un relâchement du frein de stationnement
+ou une commande moteur.
 
 Pour chaque événement :
 
@@ -101,7 +104,8 @@ Tester l'outil sans matériel :
 
 Le résultat synthétique attendu place l'identifiant `0x1FFFFF01`, octet 0, en
 tête avec le masque `0x01`. Cet identifiant appartient exclusivement au
-simulateur et n'est pas une donnée BMW.
+simulateur et n'est pas une donnée BMW. Ce scénario vérifie l'analyseur ; il ne
+suggère pas qu'un signal de capot existe sur le véhicule de référence.
 
 ## Critères avant écriture d'un décodeur
 

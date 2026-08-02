@@ -36,6 +36,11 @@ signal sans contenir de détail CAN. Un garde d'application distinct empêche un
 profil de découverte d'autoriser une fonctionnalité réelle. Voir
 [vehicle-profiles.md](vehicle-profiles.md).
 
+La source du signal de capot est une capacité du profil. Elle peut provenir d'un
+signal véhicule validé ou d'une future entrée discrète indépendante. Le modèle
+reste identique dans les deux cas (`HoodClosed`) ; seul l'adaptateur
+d'infrastructure change. Une source absente ou inconnue échoue de manière sûre.
+
 `ControllerConfig` exige un pointeur vers le profil sélectionné. Sans profil ou
 avec un profil non qualifié, `RemoteStartRequested` reste en `Idle`, demande la
 sécurisation des sorties et n'interroge pas le véhicule. Le profil synthétique

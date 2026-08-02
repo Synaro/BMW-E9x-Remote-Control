@@ -14,6 +14,7 @@ enum class ProfileReadinessReason : std::uint8_t {
     TransmissionUnknown = 1U << 3U,
     ManualTransmissionNotAllowed = 1U << 4U,
     ProfileNotSelected = 1U << 5U,
+    HoodInterlockSourceUnknown = 1U << 6U,
 };
 
 [[nodiscard]] constexpr std::uint8_t mask(const ProfileReadinessReason reason) noexcept {

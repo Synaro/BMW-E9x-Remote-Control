@@ -30,9 +30,25 @@ Chaque signal d'un profil est classé :
 | `Candidate` | source possible, encore non validée ; |
 | `Verified` | source et décodage validés selon le plan de test. |
 
-Le profil E90 de référence place actuellement tous les signaux en `Candidate`.
-Il ne contient aucun identifiant CAN BMW et ne prétend pas que les données sont
-déjà décodées.
+Le profil E90 de référence place actuellement les signaux à découvrir en
+`Candidate`, sauf `HoodClosed`, désormais `Unavailable` puisque le véhicule de
+référence ne possède pas de capteur de capot exploitable. Il ne contient aucun
+identifiant CAN BMW et ne prétend pas que les données sont déjà décodées.
+
+Le profil décrit aussi la source de l'interverrouillage de capot :
+
+| Source | Usage |
+|---|---|
+| `Unspecified` | source inconnue, qualification interdite ; |
+| `VehicleSignal` | information fournie et validée par le véhicule ; |
+| `ExternalDiscreteInput` | capteur physique indépendant à ajouter et qualifier ; |
+| `Synthetic` | simulations hors véhicule exclusivement. |
+
+Pour l'E90 de référence, la source attendue est `ExternalDiscreteInput`. Cela ne
+signifie pas qu'un capteur est déjà installé : tant que l'entrée n'existe pas et
+n'est pas validée, `HoodClosed` reste `Unavailable` et le démarrage est refusé.
+Une autre variante E9x pourra utiliser `VehicleSignal` si cette information y
+est réellement disponible et qualifiée.
 
 ## Niveaux de qualification
 
@@ -42,6 +58,7 @@ Les niveaux progressent de `Discovery` à `ReadOnlyValidated`, puis
 
 - un signal obligatoire manque ou reste candidat ;
 - le niveau lecture seule n'est pas atteint ;
+- la source de l'interverrouillage de capot est inconnue ;
 - la transmission est inconnue ;
 - une boîte manuelle n'a pas reçu une autorisation de politique explicite.
 

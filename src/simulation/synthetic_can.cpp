@@ -29,6 +29,7 @@ constexpr domain::VehicleProfile SyntheticProfile = {
     domain::FuelType::Unknown,
     domain::Transmission::Automatic,
     domain::QualificationStage::BenchValidated,
+    domain::HoodInterlockSource::Synthetic,
     VerifiedSignals,
 };
 

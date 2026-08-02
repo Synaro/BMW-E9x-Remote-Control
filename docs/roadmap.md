@@ -44,6 +44,7 @@
 ## Jalon 2 — Spécification matérielle
 
 - [ ] Choisir la carte après étude alimentation, température et E/S
+- [ ] Concevoir et qualifier l'entrée indépendante du capteur de capot
 - [ ] Établir la matrice complète des variantes E9x visées
 - [ ] Identifier les signaux nécessaires et leurs sources légitimes
 - [ ] Définir les seuils de fraîcheur et les critères de plausibilité

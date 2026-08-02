@@ -55,4 +55,14 @@ const char* toString(const SignalSupport support) noexcept {
     return "unknown";
 }
 
+const char* toString(const HoodInterlockSource source) noexcept {
+    switch (source) {
+        case HoodInterlockSource::Unspecified: return "unspecified";
+        case HoodInterlockSource::VehicleSignal: return "vehicle_signal";
+        case HoodInterlockSource::ExternalDiscreteInput: return "external_discrete_input";
+        case HoodInterlockSource::Synthetic: return "synthetic";
+    }
+    return "unknown";
+}
+
 }  // namespace bmw::remote::domain
