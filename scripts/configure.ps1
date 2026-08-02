@@ -9,6 +9,8 @@ param(
 
     [switch]$ListDevices,
 
+    [string]$ProbeDevice,
+
     [string]$ReadDevice,
 
     [string]$WriteDevice
@@ -28,11 +30,12 @@ $actions = @(
     [bool]$Check,
     [bool]$WriteDefaults,
     [bool]$ListDevices,
+    -not [string]::IsNullOrWhiteSpace($ProbeDevice),
     -not [string]::IsNullOrWhiteSpace($ReadDevice),
     -not [string]::IsNullOrWhiteSpace($WriteDevice)
 ) | Where-Object { $_ }
 if ($actions.Count -gt 1) {
-    throw 'Show, Check, WriteDefaults, ListDevices, ReadDevice and WriteDevice are mutually exclusive'
+    throw 'Show, Check, WriteDefaults, ListDevices, ProbeDevice, ReadDevice and WriteDevice are mutually exclusive'
 }
 
 & (Join-Path $PSScriptRoot 'build-configurator.ps1')
@@ -40,6 +43,8 @@ if ($actions.Count -gt 1) {
 $arguments = @()
 if ($ListDevices) {
     $arguments += '--list-devices'
+} elseif (-not [string]::IsNullOrWhiteSpace($ProbeDevice)) {
+    $arguments += @('--probe-device', $ProbeDevice)
 } elseif (-not [string]::IsNullOrWhiteSpace($ReadDevice)) {
     $arguments += @('--read-device', $ReadDevice)
 } elseif (-not [string]::IsNullOrWhiteSpace($WriteDevice)) {

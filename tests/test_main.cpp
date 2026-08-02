@@ -566,6 +566,34 @@ void testSettingsPayloadRejectsInvalidValues() {
         payload, valid));
 }
 
+void testSettingsDeviceIdentityRoundTripsAndRejectsWrongProduct() {
+    const auto expected =
+        bmw::remote::infrastructure::settingsPrototypeIdentity(
+            bmw::remote::infrastructure::SettingsHardwareTarget::Esp32S3DevKitC1);
+    bmw::remote::infrastructure::UserSettingsPayload payload{};
+    CHECK(bmw::remote::infrastructure::encodeSettingsDeviceIdentity(
+        expected, payload));
+
+    bmw::remote::infrastructure::SettingsDeviceIdentity decoded{};
+    CHECK(bmw::remote::infrastructure::decodeSettingsDeviceIdentity(
+        payload,
+        bmw::remote::infrastructure::SettingsDeviceIdentityPayloadSize,
+        decoded));
+    CHECK(decoded.hardwareTarget == expected.hardwareTarget);
+    CHECK(decoded.firmwareMajor == expected.firmwareMajor);
+    CHECK(decoded.firmwareMinor == expected.firmwareMinor);
+    CHECK(decoded.firmwarePatch == expected.firmwarePatch);
+    CHECK(decoded.capabilities == expected.capabilities);
+
+    payload[0U] ^= 0x01U;
+    CHECK(!bmw::remote::infrastructure::decodeSettingsDeviceIdentity(
+        payload,
+        bmw::remote::infrastructure::SettingsDeviceIdentityPayloadSize,
+        decoded));
+    CHECK(!bmw::remote::infrastructure::decodeSettingsDeviceIdentity(
+        payload, 0U, decoded));
+}
+
 bmw::remote::infrastructure::SettingsProtocolFrame settingsWriteRequest(
     const UserSettings& settings,
     const std::uint16_t requestId = 42U) {
@@ -1102,7 +1130,10 @@ struct LoopbackSettingsDeviceChannel final
     : bmw::remote::host::SettingsDeviceChannel {
     MemorySettingsStorage storage{};
     JournaledUserSettingsStore store{storage};
-    bmw::remote::infrastructure::SettingsProtocolService service{store};
+    bmw::remote::infrastructure::SettingsDeviceIdentity identity{
+        bmw::remote::infrastructure::settingsPrototypeIdentity(
+            bmw::remote::infrastructure::SettingsHardwareTarget::HostSimulation)};
+    bmw::remote::infrastructure::SettingsProtocolService service;
     bmw::remote::infrastructure::SettingsProtocolAccess access{
         true,
         ControllerState::Idle};
@@ -1117,6 +1148,14 @@ struct LoopbackSettingsDeviceChannel final
     bool corruptResponse{false};
     bool mismatchRequestId{false};
     bool dropResponse{false};
+
+    explicit LoopbackSettingsDeviceChannel(
+        const bmw::remote::infrastructure::SettingsDeviceIdentity
+            deviceIdentity =
+                bmw::remote::infrastructure::settingsPrototypeIdentity(
+                    bmw::remote::infrastructure::SettingsHardwareTarget::
+                        HostSimulation))
+        : identity(deviceIdentity), service(store, identity) {}
 
     bool clearInput(std::string& error) override {
         if (!clearSucceeds) {
@@ -1189,6 +1228,25 @@ struct LoopbackSettingsDeviceChannel final
     }
 };
 
+void testSettingsDeviceClientProbesCompatibleIdentity() {
+    LoopbackSettingsDeviceChannel channel{};
+    bmw::remote::host::SettingsDeviceClient client{channel};
+    bmw::remote::infrastructure::SettingsDeviceIdentity identity{};
+    std::string error{};
+
+    CHECK(client.probe(identity, error));
+    CHECK(error.empty());
+    CHECK(identity.hardwareTarget ==
+          bmw::remote::infrastructure::SettingsHardwareTarget::HostSimulation);
+    CHECK(bmw::remote::infrastructure::hasCapability(
+        identity,
+        bmw::remote::infrastructure::SettingsDeviceCapability::SettingsRead));
+    CHECK(bmw::remote::infrastructure::hasCapability(
+        identity,
+        bmw::remote::infrastructure::SettingsDeviceCapability::SettingsWrite));
+    CHECK(channel.requestCount == 1U);
+}
+
 void testSettingsDeviceClientReadsPersistedSettings() {
     LoopbackSettingsDeviceChannel channel{};
     UserSettings expected{};
@@ -1216,11 +1274,27 @@ void testSettingsDeviceClientWritesAndVerifiesByReadingBack() {
 
     CHECK(client.writeAndVerify(expected, error));
     CHECK(error.empty());
-    CHECK(channel.requestCount == 2U);
+    CHECK(channel.requestCount == 3U);
 
     UserSettings persisted{};
     CHECK(channel.store.load(persisted));
     CHECK(bmw::remote::infrastructure::userSettingsEqual(expected, persisted));
+}
+
+void testSettingsDeviceClientRequiresPersistentWriteCapability() {
+    auto identity = bmw::remote::infrastructure::settingsPrototypeIdentity(
+        bmw::remote::infrastructure::SettingsHardwareTarget::HostSimulation);
+    identity.capabilities =
+        bmw::remote::infrastructure::capabilityMask(
+            bmw::remote::infrastructure::SettingsDeviceCapability::SettingsRead);
+    LoopbackSettingsDeviceChannel channel{identity};
+    bmw::remote::host::SettingsDeviceClient client{channel};
+    std::string error{};
+
+    CHECK(!client.writeAndVerify(UserSettings{}, error));
+    CHECK(error.find("ecriture persistante") != std::string::npos);
+    CHECK(channel.requestCount == 1U);
+    CHECK(channel.storage.writeCalls == 0U);
 }
 
 void testSettingsDeviceClientRejectsProtocolFailures() {
@@ -2072,6 +2146,7 @@ int main() {
         {"invalid settings persistence", testInvalidSettingsAreNeverPersisted},
         {"settings payload round trip", testSettingsPayloadRoundTripsEveryField},
         {"settings payload rejection", testSettingsPayloadRejectsInvalidValues},
+        {"settings device identity", testSettingsDeviceIdentityRoundTripsAndRejectsWrongProduct},
         {"settings protocol frame", testSettingsProtocolFrameRoundTrip},
         {"settings protocol corruption", testSettingsProtocolFrameRejectsCorruption},
         {"settings protocol header", testSettingsProtocolFrameRejectsHeaderViolations},
@@ -2088,8 +2163,10 @@ int main() {
         {"settings endpoint idle writes", testSettingsEndpointPersistsOnlyIdleWritesAndReadsWhileActive},
         {"settings endpoint corrupt frame", testSettingsEndpointDoesNotRespondToCorruptFrame},
         {"settings endpoint failures", testSettingsEndpointReportsTimeoutAndTransportFailure},
+        {"settings device probe", testSettingsDeviceClientProbesCompatibleIdentity},
         {"settings device read", testSettingsDeviceClientReadsPersistedSettings},
         {"settings device write verify", testSettingsDeviceClientWritesAndVerifiesByReadingBack},
+        {"settings device write capability", testSettingsDeviceClientRequiresPersistentWriteCapability},
         {"settings device protocol failures", testSettingsDeviceClientRejectsProtocolFailures},
         {"settings device transport failures", testSettingsDeviceClientBoundsTimeoutsAndTransportFailures},
         {"safe automatic vehicle", testSafeAutomaticVehicleIsApproved},

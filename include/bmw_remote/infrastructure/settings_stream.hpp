@@ -74,8 +74,12 @@ public:
     SettingsProtocolEndpoint(
         UserSettingsStore& store,
         SettingsTransportPort& transport,
-        SettingsStreamConfig streamConfig = {}) noexcept
-        : receiver_(streamConfig), service_(store), transport_(transport) {}
+        SettingsStreamConfig streamConfig = {},
+        SettingsDeviceIdentity identity = settingsPrototypeIdentity(
+            SettingsHardwareTarget::HostSimulation)) noexcept
+        : receiver_(streamConfig),
+          service_(store, identity),
+          transport_(transport) {}
 
     [[nodiscard]] SettingsEndpointResult consume(
         std::uint8_t byte,

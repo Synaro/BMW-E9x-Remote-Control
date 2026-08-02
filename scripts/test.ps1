@@ -26,6 +26,7 @@ New-Item -ItemType Directory -Path $buildDirectory -Force | Out-Null
     (Join-Path $projectRoot 'src/infrastructure/can_trace_replay.cpp') `
     (Join-Path $projectRoot 'src/infrastructure/replay_vehicle_gateway.cpp') `
     (Join-Path $projectRoot 'src/infrastructure/runtime.cpp') `
+    (Join-Path $projectRoot 'src/infrastructure/settings_identity.cpp') `
     (Join-Path $projectRoot 'src/infrastructure/settings_payload.cpp') `
     (Join-Path $projectRoot 'src/infrastructure/settings_protocol.cpp') `
     (Join-Path $projectRoot 'src/infrastructure/settings_storage.cpp') `

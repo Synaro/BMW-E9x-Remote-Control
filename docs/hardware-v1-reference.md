@@ -80,11 +80,29 @@ circuits de réveil et mesures de courant nécessaires sur le schéma final.
 3. Vérifier le protocole de configuration déjà raccordé au port USB.
 4. Tester les débranchements, trames partielles et redémarrages.
 
+Lorsque la carte sera disponible, le premier parcours automatisé sera :
+
+```powershell
+.\scripts\configure.ps1 -ListDevices
+.\scripts\first-usb-test.ps1 -Port COM3
+```
+
+Le second script compile, flashe, attend la réapparition du port, vérifie la
+signature `E9RC`, écrit une configuration de banc avec démarrage distant
+désactivé, puis la relit entièrement. Le numéro `COM3` est un exemple et doit
+être remplacé par le port apparu lors du branchement.
+
 Le port USB est réservé au protocole binaire : le firmware n'y mélange aucun
 message de journalisation. Sur la cible de banc, la possession de l'accès
 physique à ce connecteur constitue l'autorisation locale et le contrôleur reste
 figé dans l'état applicatif `Idle`. Ce modèle devra être réévalué lorsque les
 fonctions véhicule seront activées.
+
+Sur une DevKitC-1 qui possède deux connecteurs, utiliser celui identifié
+`ESP32-S3 USB` ou `USB`, relié directement au microcontrôleur, et non le port
+`USB-to-UART`. Le numéro COM peut changer après le premier flashage ; dans ce
+cas, le premier test tente d'adopter automatiquement l'unique nouveau port. En
+utilisation manuelle, relancer `-ListDevices` et reprendre avec ce numéro.
 
 ### Phase B — deux CAN simulés sur table
 
