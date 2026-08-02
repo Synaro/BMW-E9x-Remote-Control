@@ -212,7 +212,9 @@ function Invoke-SandboxCommand {
         throw "Le bac à sable n'a pas répondu. $details"
     }
     try {
-        return $line | ConvertFrom-Json
+        $decoded = $line | ConvertFrom-Json
+        $decoded | Add-Member -NotePropertyName raw_json -NotePropertyValue $line
+        return $decoded
     } catch {
         throw "Réponse invalide du bac à sable : $line"
     }
@@ -284,12 +286,13 @@ try {
                 $sandboxFault.ignition_active -or
                 $sandboxFault.starter_active) {
                 $observed = @(
-                    "status=$($sandboxStatus.state)/$($sandboxStatus.ok)",
+                    "status=$($sandboxStatus.state)/$($sandboxStatus.ok)/$($sandboxStatus.error)",
                     "start=$($sandboxPreparing.state)/$($sandboxPreparing.fault)",
                     "timer=$($sandboxCranking.state)/$($sandboxCranking.fault)",
                     "running=$($sandboxRunning.state)/$($sandboxRunning.fault)",
                     "watchdog=$($sandboxFault.state)/$($sandboxFault.fault)/$($sandboxFault.supervisor_fault)",
-                    "outputs=$($sandboxFault.ignition_active)/$($sandboxFault.starter_active)"
+                    "outputs=$($sandboxFault.ignition_active)/$($sandboxFault.starter_active)",
+                    "raw=$($sandboxStatus.raw_json)"
                 ) -join ', '
                 throw "Le test du bac à sable persistant a échoué : $observed"
             }
