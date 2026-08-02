@@ -19,6 +19,7 @@
 - [x] Gateway de rejeu compatible avec le runtime
 - [x] Protocole synthétique explicitement séparé de BMW
 - [x] Simulateur nominal avec injection d'un interverrouillage
+- [x] Exécutable interactif avec scénarios capot obligatoire et facultatif
 - [x] Format de trace canonique strict et importeur hôte `python-can`
 - [x] Simulateur capable de charger une trace externe
 

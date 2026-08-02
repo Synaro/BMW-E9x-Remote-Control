@@ -73,8 +73,9 @@ projet :
 Chaque trame porte la signature `0xA5` dans le dernier octet. Ces identifiants ne
 sont pas des identifiants BMW et ne doivent jamais être transmis à un véhicule.
 
-Le scénario de `tools/vehicle_simulator.cpp` utilise uniquement ce protocole. Il
-peut être exécuté avec `scripts/simulate.ps1`.
+Les scénarios de `tools/vehicle_simulator.cpp` utilisent uniquement ce protocole.
+Ils peuvent être exécutés avec `scripts/simulate.ps1` ou depuis l'exécutable
+interactif décrit dans [simulator.md](simulator.md).
 
 ## Import de captures
 
