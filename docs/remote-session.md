@@ -56,11 +56,16 @@ sont pas, aucun firmware réel ne doit produire cet événement.
 
 ## Paramètres applicatifs
 
-Les deux échéances se règlent dans `ControllerConfig` :
+Les échéances et la séquence de clé se règlent par `UserSettings`, puis sont
+validées et traduites vers `ControllerConfig` et `LockSequenceConfig` :
 
 - `maximumRemoteRunTimeMs`, 15 minutes par défaut ;
-- `driverTakeoverTimeoutMs`, 60 secondes par défaut.
+- `driverTakeoverTimeoutMs`, 60 secondes par défaut ;
+- `lockPressCount` et les trois fenêtres temporelles de verrouillage.
 
 La configuration de production devra conserver des bornes fixes et être
 qualifiée sur banc. Une ouverture de portière ou une notification ne doit jamais
 permettre un fonctionnement illimité.
+
+Voir [user-configuration.md](user-configuration.md) pour le fichier utilisateur,
+les valeurs acceptées et les invariants qui restent non configurables.

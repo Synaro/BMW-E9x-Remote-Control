@@ -19,6 +19,7 @@ New-Item -ItemType Directory -Path $buildDirectory -Force | Out-Null
     (Join-Path $projectRoot 'src/application/lock_sequence_detector.cpp') `
     (Join-Path $projectRoot 'src/application/profile_readiness.cpp') `
     (Join-Path $projectRoot 'src/application/safety_policy.cpp') `
+    (Join-Path $projectRoot 'src/application/user_settings.cpp') `
     (Join-Path $projectRoot 'src/domain/reference_profiles.cpp') `
     (Join-Path $projectRoot 'src/domain/vehicle_profile.cpp') `
     (Join-Path $projectRoot 'src/domain/vehicle_signal.cpp') `
@@ -28,6 +29,7 @@ New-Item -ItemType Directory -Path $buildDirectory -Force | Out-Null
     (Join-Path $projectRoot 'src/infrastructure/vehicle_state_assembler.cpp') `
     (Join-Path $projectRoot 'src/simulation/synthetic_can.cpp') `
     (Join-Path $projectRoot 'tools/can_trace_csv.cpp') `
+    (Join-Path $projectRoot 'tools/user_settings_file.cpp') `
     (Join-Path $projectRoot 'tests/test_main.cpp') `
     -o $testExecutable
 

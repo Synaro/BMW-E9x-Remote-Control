@@ -24,7 +24,8 @@ Il peut être lancé directement. Sans argument, il affiche un menu interactif :
 2. capot obligatoire, ouverture conduisant au défaut attendu ;
 3. capot facultatif, ouverture entièrement ignorée ;
 4. portière ouverte sans reprise confirmée, puis arrêt à l'échéance ;
-5. portière ouverte avec reprise conducteur authentifiée.
+5. portière ouverte avec reprise conducteur authentifiée ;
+6. chargement et exécution d'un fichier de configuration utilisateur.
 
 ## Lancer un scénario depuis PowerShell
 
@@ -34,10 +35,16 @@ Il peut être lancé directement. Sans argument, il affiche un menu interactif :
 .\scripts\simulate.ps1 -Scenario hood-optional
 .\scripts\simulate.ps1 -Scenario takeover-timeout
 .\scripts\simulate.ps1 -Scenario takeover-confirmed
+.\scripts\simulate.ps1 `
+  -ConfigPath .\config\user-settings.example.conf
 ```
 
 Chaque scénario retourne le code `0` uniquement si le résultat final correspond
 au comportement attendu et affiche `scenario_result: PASS`.
+
+Le parcours configuré charge toutes les valeurs, simule le nombre d'appuis choisi,
+affiche la durée moteur réellement armée puis applique la stratégie d'ouverture
+de portière. Voir [user-configuration.md](user-configuration.md).
 
 ## Inspecter une trace
 

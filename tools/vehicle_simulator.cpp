@@ -7,11 +7,14 @@
 #include <vector>
 
 #include "bmw_remote/application/controller.hpp"
+#include "bmw_remote/application/lock_sequence_detector.hpp"
 #include "bmw_remote/application/safety_policy.hpp"
+#include "bmw_remote/application/user_settings.hpp"
 #include "bmw_remote/infrastructure/replay_vehicle_gateway.hpp"
 #include "bmw_remote/infrastructure/runtime.hpp"
 #include "bmw_remote/simulation/synthetic_can.hpp"
 #include "tools/can_trace_csv.hpp"
+#include "tools/user_settings_file.hpp"
 
 namespace {
 
@@ -23,6 +26,7 @@ enum class Scenario : std::uint8_t {
     HoodOptional,
     TakeoverTimeout,
     TakeoverConfirmed,
+    UserConfig,
 };
 
 class ConsoleActuators final : public infrastructure::ActuatorPort {
@@ -107,6 +111,7 @@ const char* scenarioName(const Scenario scenario) noexcept {
         case Scenario::HoodOptional: return "hood-optional";
         case Scenario::TakeoverTimeout: return "takeover-timeout";
         case Scenario::TakeoverConfirmed: return "takeover-confirmed";
+        case Scenario::UserConfig: return "user-config";
     }
     return "unknown";
 }
@@ -132,6 +137,10 @@ bool parseScenario(const std::string_view text, Scenario& scenario) noexcept {
         scenario = Scenario::TakeoverConfirmed;
         return true;
     }
+    if (text == "user-config") {
+        scenario = Scenario::UserConfig;
+        return true;
+    }
     return false;
 }
 
@@ -155,7 +164,8 @@ void printScenarioList() {
         << "hood-required hood opens while running and causes the expected fault\n"
         << "hood-optional hood opens while running and is explicitly ignored\n"
         << "takeover-timeout door opens but takeover is not confirmed, then stop\n"
-        << "takeover-confirmed door opens and authenticated takeover succeeds\n";
+        << "takeover-confirmed door opens and authenticated takeover succeeds\n"
+        << "user-config uses every value from a supplied configuration file\n";
 }
 
 void printUsage(const char* const executable) {
@@ -163,10 +173,39 @@ void printUsage(const char* const executable) {
         << "Usage:\n"
         << "  " << executable << " --scenario <name>\n"
         << "  " << executable
+        << " --scenario user-config --config <user-settings.conf>\n"
+        << "  " << executable << " --show-config <user-settings.conf>\n"
+        << "  " << executable
         << " --trace <trace.cantrace.csv> [--hood required|optional]\n"
         << "  " << executable << " --list-scenarios\n"
         << "  " << executable << " --help\n"
         << "  " << executable << " <trace.cantrace.csv>  (legacy form)\n";
+}
+
+void printUserSettings(const application::UserSettings& settings) {
+    std::cout
+        << "remote_start_enabled: "
+        << (settings.remoteStartEnabled ? "true" : "false") << '\n'
+        << "hood_monitoring: " << application::toString(settings.hoodMonitoring) << '\n'
+        << "remote_run_ms: " << settings.maximumRemoteRunTimeMs << '\n'
+        << "driver_entry_mode: "
+        << application::toString(settings.driverEntryMode) << '\n'
+        << "takeover_timeout_ms: " << settings.driverTakeoverTimeoutMs << '\n'
+        << "lock_press_count: " << static_cast<unsigned>(settings.lockPressCount) << '\n'
+        << "lock_minimum_gap_ms: " << settings.lockMinimumGapMs << '\n'
+        << "lock_maximum_gap_ms: " << settings.lockMaximumGapMs << '\n'
+        << "lock_sequence_window_ms: " << settings.lockMaximumSequenceMs << '\n';
+}
+
+bool loadUserSettings(
+    const char* const path,
+    application::UserSettings& settings) {
+    std::string error{};
+    if (!host::loadUserSettingsFile(path, settings, error)) {
+        std::cerr << "Unable to load user configuration: " << error << '\n';
+        return false;
+    }
+    return true;
 }
 
 int inspectExternalTrace(
@@ -216,7 +255,31 @@ int inspectExternalTrace(
     return 0;
 }
 
-int runScenario(const Scenario scenario) {
+int runScenario(
+    const Scenario scenario,
+    const application::UserSettings* const suppliedSettings = nullptr) {
+    application::UserSettings settings =
+        suppliedSettings == nullptr ? application::UserSettings{} : *suppliedSettings;
+    if (scenario == Scenario::HoodRequired) {
+        settings.hoodMonitoring = application::HoodMonitoringMode::Required;
+    } else if (scenario == Scenario::HoodOptional) {
+        settings.hoodMonitoring = application::HoodMonitoringMode::Disabled;
+    }
+    if (scenario == Scenario::TakeoverTimeout ||
+        scenario == Scenario::TakeoverConfirmed) {
+        settings.driverEntryMode = application::DriverEntryMode::RequireTakeover;
+    }
+
+    const application::UserConfiguration configuration =
+        application::makeUserConfiguration(
+            settings,
+            &simulation::syntheticVehicleProfile());
+    if (!configuration.validation.valid()) {
+        std::cerr << "Configuration rejected, reasons_mask="
+                  << configuration.validation.reasons << '\n';
+        return 64;
+    }
+
     simulation::SyntheticPowertrainState stopped{};
     simulation::SyntheticPowertrainState running{};
     running.engineRpm = 850U;
@@ -227,7 +290,8 @@ int runScenario(const Scenario scenario) {
         scenario == Scenario::HoodRequired || scenario == Scenario::HoodOptional;
     const bool injectDriverEntry =
         scenario == Scenario::TakeoverTimeout ||
-        scenario == Scenario::TakeoverConfirmed;
+        scenario == Scenario::TakeoverConfirmed ||
+        scenario == Scenario::UserConfig;
     if (injectHoodOpening) {
         finalBody.hoodClosed = false;
     }
@@ -252,29 +316,47 @@ int runScenario(const Scenario scenario) {
     ConsoleActuators actuators{};
     ConsoleTimer timer{};
     ConsoleNotifications notifications{};
-    application::ControllerConfig controllerConfig{};
-    controllerConfig.vehicleProfile = &simulation::syntheticVehicleProfile();
-    controllerConfig.safety.requireHoodClosed =
-        scenario != Scenario::HoodOptional;
     infrastructure::Runtime runtime{
-        application::Controller{controllerConfig},
+        application::Controller{configuration.controller},
         gateway,
         actuators,
         timer,
         notifications};
 
-    std::cout << "scenario: " << scenarioName(scenario) << '\n'
-              << "hood_requirement: "
-              << (controllerConfig.safety.requireHoodClosed ? "required" : "optional")
-              << '\n';
+    std::cout << "scenario: " << scenarioName(scenario) << '\n';
+    printUserSettings(settings);
 
     domain::VehicleState vehicle{};
     if (!gateway.setElapsedTime(0U)) {
         return 1;
     }
+    if (scenario == Scenario::UserConfig) {
+        application::LockSequenceDetector detector{configuration.lockSequence};
+        std::uint32_t timestampMs = 1'000U;
+        bool detected = false;
+        for (std::uint8_t press = 0U; press < settings.lockPressCount; ++press) {
+            detected = detector.observeLockPress(timestampMs);
+            timestampMs += settings.lockMinimumGapMs;
+        }
+        std::cout << "lock_sequence: " << (detected ? "detected" : "rejected") << '\n';
+        if (!detected) {
+            std::cout << "scenario_result: FAIL\n";
+            return 2;
+        }
+    }
+
     auto decision = runtime.dispatch(
         application::Event{application::EventType::RemoteStartRequested}, vehicle);
     printDecision("remote start", decision);
+
+    if (scenario == Scenario::UserConfig && !settings.remoteStartEnabled) {
+        const bool expectedOutcome =
+            decision.state == application::ControllerState::Idle &&
+            decision.contains(application::ActionType::NotifyRemoteStartDisabled);
+        std::cout << "scenario_result: "
+                  << (expectedOutcome ? "PASS" : "FAIL") << '\n';
+        return expectedOutcome ? 0 : 2;
+    }
 
     vehicle = gateway.state();
     decision = runtime.dispatch(
@@ -341,7 +423,7 @@ int runScenario(const Scenario scenario) {
         expectedOutcome =
             decision.state == application::ControllerState::Stopping &&
             decision.fault == application::FaultCode::None;
-    } else {
+    } else if (scenario == Scenario::TakeoverConfirmed) {
         decision = runtime.dispatch(
             application::Event{application::EventType::DriverTakeoverConfirmed},
             vehicle);
@@ -350,6 +432,14 @@ int runScenario(const Scenario scenario) {
             decision.state == application::ControllerState::DriverControl &&
             decision.fault == application::FaultCode::None &&
             decision.contains(application::ActionType::ReleaseRemoteControl);
+    } else {
+        const application::ControllerState expectedState =
+            settings.driverEntryMode == application::DriverEntryMode::StopImmediately
+                ? application::ControllerState::Stopping
+                : application::ControllerState::AwaitingTakeover;
+        expectedOutcome =
+            decision.state == expectedState &&
+            decision.fault == application::FaultCode::None;
     }
 
     const infrastructure::AssemblyStatistics stats = gateway.statistics();
@@ -357,6 +447,14 @@ int runScenario(const Scenario scenario) {
               << stats.decodedSignals << " decoded signals\n"
               << "scenario_result: " << (expectedOutcome ? "PASS" : "FAIL") << '\n';
     return expectedOutcome ? 0 : 2;
+}
+
+int runUserConfiguration(const char* const path) {
+    application::UserSettings settings{};
+    if (!loadUserSettings(path, settings)) {
+        return 64;
+    }
+    return runScenario(Scenario::UserConfig, &settings);
 }
 
 int runInteractive() {
@@ -367,7 +465,8 @@ int runInteractive() {
         << "3. Capot facultatif : ouverture ignoree\n"
         << "4. Portiere ouverte sans reprise : arret apres delai\n"
         << "5. Portiere ouverte avec reprise conducteur validee\n"
-        << "6. Quitter\n\n"
+        << "6. Tester un fichier de configuration utilisateur\n"
+        << "7. Quitter\n\n"
         << "Choix: ";
 
     unsigned selection = 0U;
@@ -377,13 +476,23 @@ int runInteractive() {
     }
 
     int result = 0;
+    bool inputLineConsumed = false;
     switch (selection) {
         case 1U: result = runScenario(Scenario::Nominal); break;
         case 2U: result = runScenario(Scenario::HoodRequired); break;
         case 3U: result = runScenario(Scenario::HoodOptional); break;
         case 4U: result = runScenario(Scenario::TakeoverTimeout); break;
         case 5U: result = runScenario(Scenario::TakeoverConfirmed); break;
-        case 6U: return 0;
+        case 6U: {
+            std::cout << "Configuration path: ";
+            std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+            std::string path{};
+            std::getline(std::cin, path);
+            inputLineConsumed = true;
+            result = runUserConfiguration(path.c_str());
+            break;
+        }
+        case 7U: return 0;
         default:
             std::cerr << "Invalid selection\n";
             result = 64;
@@ -391,7 +500,9 @@ int runInteractive() {
     }
 
     std::cout << "\nPress Enter to close...";
-    std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+    if (!inputLineConsumed) {
+        std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+    }
     static_cast<void>(std::cin.get());
     return result;
 }
@@ -419,7 +530,29 @@ int main(const int argumentCount, char* arguments[]) {
             printScenarioList();
             return 64;
         }
+        if (scenario == Scenario::UserConfig) {
+            std::cerr << "The user-config scenario requires --config <path>\n";
+            return 64;
+        }
         return runScenario(scenario);
+    }
+    if (command == "--scenario" && argumentCount == 5 &&
+        std::string_view{arguments[3]} == "--config") {
+        Scenario scenario{};
+        if (!parseScenario(arguments[2], scenario) ||
+            scenario != Scenario::UserConfig) {
+            std::cerr << "Only --scenario user-config accepts --config\n";
+            return 64;
+        }
+        return runUserConfiguration(arguments[4]);
+    }
+    if (command == "--show-config" && argumentCount == 3) {
+        application::UserSettings settings{};
+        if (!loadUserSettings(arguments[2], settings)) {
+            return 64;
+        }
+        printUserSettings(settings);
+        return 0;
     }
     if (command == "--trace" && (argumentCount == 3 || argumentCount == 5)) {
         bool requireHoodClosed = true;

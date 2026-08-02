@@ -31,6 +31,12 @@ certification fonctionnelle ou automobile.
 14. Sans confirmation de reprise authentifiée, le contrôleur ordonne l'arrêt.
 15. Après une reprise confirmée, les commandes distantes d'arrêt sont ignorées
     afin de ne pas couper un moteur placé sous contrôle du conducteur.
+16. Une configuration utilisateur invalide désactive le démarrage distant au
+    lieu d'appliquer une valeur corrigée implicitement.
+17. Les durées utilisateur restent dans des bornes codées indépendamment du
+    format de stockage ou de l'interface de configuration.
+18. Une nouvelle configuration n'est jamais appliquée au milieu d'une session
+    distante active.
 
 ## Matrice d'autorisation initiale
 

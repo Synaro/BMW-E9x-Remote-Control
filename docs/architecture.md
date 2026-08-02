@@ -14,6 +14,8 @@ une topologie électrique.
 ```mermaid
 flowchart LR
     Sources["Commandes, véhicule, timers"] --> Runtime["Runtime"]
+    Settings["UserSettingsStore"] --> Validation["Validation bornée"]
+    Validation --> Controller
     Runtime --> Controller["Controller"]
     Controller --> Policy["SafetyPolicy"]
     Policy --> Model["VehicleState"]
@@ -43,6 +45,12 @@ modèle reste identique dans tous les cas (`HoodClosed`) ; seul l'adaptateur
 d'infrastructure change. Par défaut une source absente provoque un refus. Une
 installation peut explicitement désactiver ce contrôle avec
 `SafetyPolicyConfig::requireHoodClosed = false`.
+
+`UserSettings` contient uniquement les préférences exposées à l'utilisateur.
+`makeUserConfiguration()` les valide puis produit les configurations effectives
+du contrôleur et du détecteur de verrouillages. Un échec de validation laisse le
+démarrage distant désactivé. Le format de fichier PC et la future mémoire du
+boîtier restent des adaptateurs d'infrastructure.
 
 `ControllerConfig` exige un pointeur vers le profil sélectionné. Sans profil ou
 avec un profil non qualifié, `RemoteStartRequested` reste en `Idle`, demande la

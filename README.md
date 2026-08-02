@@ -20,6 +20,7 @@ Le premier jalon logiciel est opérationnel :
 - politique de sécurité indépendante du matériel ;
 - machine d'état événementielle complète ;
 - détection applicative configurable de trois impulsions de verrouillage ;
+- profil utilisateur validé avant application, sans recompilation du noyau ;
 - décisions et listes d'actions de taille fixe, sans allocation dynamique ;
 - arrêt fail-safe en cas de défaut d'un adaptateur ;
 - ports abstraits pour véhicule, actionneurs, minuterie et notifications ;
@@ -35,7 +36,7 @@ Le premier jalon logiciel est opérationnel :
 - capture PC bornée avec refus des interfaces sans mode silencieux documenté ;
 - sélection explicite d'un profil obligatoire dans le contrôleur ;
 - analyse différentielle hors ligne des octets et bits candidats ;
-- 46 tests C++, 5 parcours CLI et 21 tests Python automatisés en intégration continue.
+- 54 tests C++, 6 parcours CLI et 21 tests Python automatisés en intégration continue.
 
 L'adaptateur BMW qui observera réellement le verrouillage, qualifiera la reprise
 conducteur et pilotera les sorties physiques reste à implémenter lorsque le
@@ -76,6 +77,8 @@ et les invariants dans [docs/safety.md](docs/safety.md). Le système de variante
 est décrit dans [docs/vehicle-profiles.md](docs/vehicle-profiles.md).
 Le déclenchement par trois verrouillages et le cycle de reprise sont spécifiés
 dans [docs/remote-session.md](docs/remote-session.md).
+Les préférences, leurs limites et leur future persistance sont décrites dans
+[docs/user-configuration.md](docs/user-configuration.md).
 
 ## Validation locale
 
@@ -137,14 +140,15 @@ Sous Windows, l'exécutable interactif peut être construit avec :
 .\build\bmw_remote_simulator.exe
 ```
 
-Cinq scénarios permettent de tester le parcours nominal, le capot obligatoire
-ou facultatif et la reprise conducteur confirmée ou expirée. Un scénario précis
+Six scénarios permettent de tester le parcours nominal, le capot obligatoire ou
+facultatif, la reprise conducteur et un profil utilisateur complet. Un scénario précis
 peut aussi être compilé et exécuté avec :
 
 ```powershell
 .\scripts\simulate.ps1 -Scenario hood-optional
 .\scripts\simulate.ps1 -Scenario takeover-timeout
 .\scripts\simulate.ps1 -Scenario takeover-confirmed
+.\scripts\simulate.ps1 -ConfigPath .\config\user-settings.example.conf
 ```
 
 Le résultat attendu est affiché sous la forme `scenario_result: PASS` et le code

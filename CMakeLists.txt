@@ -7,6 +7,7 @@ add_library(bmw_remote_core
     src/application/lock_sequence_detector.cpp
     src/application/profile_readiness.cpp
     src/application/safety_policy.cpp
+    src/application/user_settings.cpp
     src/domain/reference_profiles.cpp
     src/domain/vehicle_profile.cpp
     src/domain/vehicle_signal.cpp
@@ -27,6 +28,7 @@ endif()
 
 add_library(bmw_remote_host_tools
     tools/can_trace_csv.cpp
+    tools/user_settings_file.cpp
 )
 target_link_libraries(bmw_remote_host_tools PUBLIC bmw_remote_core)
 target_include_directories(
@@ -87,5 +89,10 @@ if(BMW_REMOTE_BUILD_TESTS)
         add_test(
             NAME bmw_remote_simulator_takeover_confirmed
             COMMAND bmw_remote_simulator --scenario takeover-confirmed)
+        add_test(
+            NAME bmw_remote_simulator_user_config
+            COMMAND bmw_remote_simulator
+                --scenario user-config
+                --config ${CMAKE_CURRENT_SOURCE_DIR}/config/user-settings.example.conf)
     endif()
 endif()

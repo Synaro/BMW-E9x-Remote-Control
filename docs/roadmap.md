@@ -7,6 +7,8 @@
 - [x] Machine d'état événementielle
 - [x] Détecteur borné de trois impulsions de verrouillage
 - [x] Session distante de 15 minutes et reprise conducteur temporisée
+- [x] Modèle de configuration utilisateur validé et borné
+- [x] Fichier de configuration strict pour le simulateur
 - [x] Actions bornées sans allocation dynamique
 - [x] Runtime et ports abstraits
 - [x] Tests hôte et intégration continue
@@ -63,6 +65,8 @@
 - [ ] Qualifier la provenance BMW des verrouillages et la résistance au rejeu
 - [ ] Implémenter l'adaptateur réel de confirmation de reprise conducteur
 - [ ] Ajouter une journalisation bornée et non sensible
+- [ ] Implémenter la persistance atomique des réglages dans le boîtier
+- [ ] Choisir l'interface utilisateur de configuration (web, Bluetooth ou USB)
 - [ ] Valider la consommation au repos
 
 ## Jalon 4 — Actionneurs sur banc
