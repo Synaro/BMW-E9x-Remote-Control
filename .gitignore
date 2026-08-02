@@ -12,3 +12,5 @@ cmake-build-*/
 Thumbs.db
 captures/private/
 *.blf
+__pycache__/
+*.pyc

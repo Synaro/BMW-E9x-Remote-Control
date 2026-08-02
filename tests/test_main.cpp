@@ -1,14 +1,22 @@
 #include <array>
 #include <cstdint>
 #include <iostream>
+#include <sstream>
+#include <string>
+#include <string_view>
+#include <vector>
 
 #include "bmw_remote/application/controller.hpp"
+#include "bmw_remote/application/profile_readiness.hpp"
 #include "bmw_remote/application/safety_policy.hpp"
+#include "bmw_remote/domain/reference_profiles.hpp"
+#include "bmw_remote/domain/vehicle_profile.hpp"
 #include "bmw_remote/domain/vehicle_state.hpp"
 #include "bmw_remote/infrastructure/replay_vehicle_gateway.hpp"
 #include "bmw_remote/infrastructure/runtime.hpp"
 #include "bmw_remote/infrastructure/vehicle_state_assembler.hpp"
 #include "bmw_remote/simulation/synthetic_can.hpp"
+#include "tools/can_trace_csv.hpp"
 
 namespace {
 
@@ -19,13 +27,17 @@ using bmw::remote::application::ControllerState;
 using bmw::remote::application::Event;
 using bmw::remote::application::EventType;
 using bmw::remote::application::FaultCode;
+using bmw::remote::application::ProfileReadinessReason;
 using bmw::remote::application::SafetyPolicy;
 using bmw::remote::application::SafetyPolicyConfig;
 using bmw::remote::application::SafetyReason;
 using bmw::remote::domain::Gear;
 using bmw::remote::domain::Observed;
 using bmw::remote::domain::SignalQuality;
+using bmw::remote::domain::SignalSupport;
 using bmw::remote::domain::Transmission;
+using bmw::remote::domain::VehicleProfile;
+using bmw::remote::domain::VehicleSignal;
 using bmw::remote::domain::VehicleState;
 using bmw::remote::infrastructure::ActuatorPort;
 using bmw::remote::infrastructure::CanFrame;
@@ -482,6 +494,117 @@ void testReplayedVehicleStateFeedsSafetyPolicy() {
     CHECK(assessment.contains(SafetyReason::HoodOpen));
 }
 
+void testReferenceProfileDescribesReferenceVehicleWithoutClaimingQualification() {
+    const VehicleProfile& profile =
+        bmw::remote::domain::profiles::e90_2009_n47d20c_automatic();
+
+    CHECK(std::string_view{profile.id} == "bmw-e90-2009-n47d20c-automatic");
+    CHECK(profile.body == bmw::remote::domain::BodyVariant::E90);
+    CHECK(profile.firstModelYear == 2009U);
+    CHECK(profile.lastModelYear == 2009U);
+    CHECK(std::string_view{profile.engineCode} == "N47D20C");
+    CHECK(profile.fuel == bmw::remote::domain::FuelType::Diesel);
+    CHECK(profile.transmission == Transmission::Automatic);
+    CHECK(profile.qualification == bmw::remote::domain::QualificationStage::Discovery);
+
+    for (std::size_t index = 0U;
+         index < bmw::remote::domain::vehicleSignalCount();
+         ++index) {
+        CHECK(profile.support(static_cast<VehicleSignal>(index)) == SignalSupport::Candidate);
+    }
+}
+
+void testReferenceProfileRegistryFindsOnlyKnownIdentifiers() {
+    const auto& registry = bmw::remote::domain::profiles::registry();
+    CHECK(registry.size() == 1U);
+    CHECK(registry.find("bmw-e90-2009-n47d20c-automatic") != nullptr);
+    CHECK(registry.find("bmw-e92-other") == nullptr);
+    CHECK(registry.find(nullptr) == nullptr);
+}
+
+void testDiscoveryProfileCannotEnableRemoteStart() {
+    const auto readiness = bmw::remote::application::assessRemoteStartReadiness(
+        bmw::remote::domain::profiles::e90_2009_n47d20c_automatic());
+
+    CHECK(!readiness.ready());
+    CHECK(readiness.contains(ProfileReadinessReason::UnverifiedRequiredSignal));
+    CHECK(readiness.contains(ProfileReadinessReason::QualificationTooLow));
+}
+
+void testValidatedProfileWithVerifiedSignalsIsReady() {
+    VehicleProfile profile =
+        bmw::remote::domain::profiles::e90_2009_n47d20c_automatic();
+    profile.signals.fill(SignalSupport::Verified);
+    profile.qualification = bmw::remote::domain::QualificationStage::ReadOnlyValidated;
+
+    CHECK(bmw::remote::application::assessRemoteStartReadiness(profile).ready());
+}
+
+void testValidatedProfileStillFailsClosedWhenSignalIsMissing() {
+    VehicleProfile profile =
+        bmw::remote::domain::profiles::e90_2009_n47d20c_automatic();
+    profile.signals.fill(SignalSupport::Verified);
+    profile.qualification = bmw::remote::domain::QualificationStage::ReadOnlyValidated;
+    profile.signals[bmw::remote::domain::signalIndex(VehicleSignal::HoodClosed)] =
+        SignalSupport::Unavailable;
+
+    const auto readiness =
+        bmw::remote::application::assessRemoteStartReadiness(profile);
+    CHECK(!readiness.ready());
+    CHECK(readiness.contains(ProfileReadinessReason::MissingRequiredSignal));
+}
+
+void testCanonicalTraceParserLoadsValidClassicFrames() {
+    std::istringstream input{
+        "timestamp_ms,identifier,extended,dlc,data_hex\n"
+        "0,0x123,0,2,0AFF\n"
+        "125,0x1FFFFF00,1,1,A5\n"};
+    std::vector<CanFrame> frames{};
+    std::string error{};
+
+    CHECK(bmw::remote::host::parseCanonicalCanTrace(input, frames, 10U, error));
+    CHECK(error.empty());
+    CHECK(frames.size() == 2U);
+    CHECK(frames[0].timestampMs == 0U);
+    CHECK(frames[0].identifier == 0x123U);
+    CHECK(frames[0].data[0] == 0x0AU);
+    CHECK(frames[0].data[1] == 0xFFU);
+    CHECK(frames[1].timestampMs == 125U);
+    CHECK(frames[1].extended);
+}
+
+void testCanonicalTraceParserRejectsNonMonotonicInputAtomically() {
+    std::istringstream input{
+        "timestamp_ms,identifier,extended,dlc,data_hex\n"
+        "0,0x123,0,1,01\n"
+        "99,0x123,0,1,02\n"
+        "98,0x123,0,1,03\n"};
+    std::vector<CanFrame> frames(1U);
+    frames.front().identifier = 0x456U;
+    std::string error{};
+
+    CHECK(!bmw::remote::host::parseCanonicalCanTrace(input, frames, 10U, error));
+    CHECK(error.find("monotonic") != std::string::npos);
+    CHECK(frames.size() == 1U);
+    CHECK(frames.front().identifier == 0x456U);
+}
+
+void testCanonicalTraceParserRejectsMalformedAndEmptyTraces() {
+    std::istringstream malformed{
+        "timestamp_ms,identifier,extended,dlc,data_hex\n"
+        "0,0x123,0,2,AA\n"};
+    std::istringstream empty{
+        "timestamp_ms,identifier,extended,dlc,data_hex\n"};
+    std::vector<CanFrame> frames{};
+    std::string error{};
+
+    CHECK(!bmw::remote::host::parseCanonicalCanTrace(malformed, frames, 10U, error));
+    CHECK(error.find("invalid CAN frame") != std::string::npos);
+    CHECK(!bmw::remote::host::parseCanonicalCanTrace(empty, frames, 10U, error));
+    CHECK(error.find("no CAN frames") != std::string::npos);
+    CHECK(frames.empty());
+}
+
 using TestFunction = void (*)();
 
 struct TestCase final {
@@ -516,6 +639,14 @@ int main() {
         {"atomic decoded batch", testInvalidDecodedBatchIsAppliedAtomically},
         {"non-monotonic replay clock", testReplayRejectsClockMovingBackwards},
         {"replayed safety state", testReplayedVehicleStateFeedsSafetyPolicy},
+        {"reference profile metadata", testReferenceProfileDescribesReferenceVehicleWithoutClaimingQualification},
+        {"reference profile registry", testReferenceProfileRegistryFindsOnlyKnownIdentifiers},
+        {"discovery profile readiness", testDiscoveryProfileCannotEnableRemoteStart},
+        {"validated profile readiness", testValidatedProfileWithVerifiedSignalsIsReady},
+        {"missing profile signal", testValidatedProfileStillFailsClosedWhenSignalIsMissing},
+        {"canonical trace parsing", testCanonicalTraceParserLoadsValidClassicFrames},
+        {"canonical trace monotonicity", testCanonicalTraceParserRejectsNonMonotonicInputAtomically},
+        {"canonical trace rejection", testCanonicalTraceParserRejectsMalformedAndEmptyTraces},
     };
 
     for (const TestCase& test : tests) {

@@ -4,26 +4,14 @@
 #include <cstddef>
 #include <cstdint>
 
+#include "bmw_remote/domain/vehicle_signal.hpp"
 #include "bmw_remote/domain/vehicle_state.hpp"
 #include "bmw_remote/infrastructure/can_frame.hpp"
 
 namespace bmw::remote::infrastructure {
 
-enum class VehicleSignal : std::uint8_t {
-    BatteryMillivolts,
-    EngineRpm,
-    HoodClosed,
-    DoorsClosed,
-    TrunkClosed,
-    BrakePressed,
-    ParkingBrakeApplied,
-    Transmission,
-    Gear,
-    CriticalFaultPresent,
-};
-
 struct DecodedSignal final {
-    VehicleSignal signal{VehicleSignal::BatteryMillivolts};
+    domain::VehicleSignal signal{domain::VehicleSignal::BatteryMillivolts};
     std::uint32_t value{0U};
 };
 
@@ -33,7 +21,7 @@ struct DecodedSignalBatch final {
     std::array<DecodedSignal, MaximumSignals> signals{};
     std::size_t count{0U};
 
-    [[nodiscard]] bool add(VehicleSignal signal, std::uint32_t value) noexcept;
+    [[nodiscard]] bool add(domain::VehicleSignal signal, std::uint32_t value) noexcept;
 };
 
 enum class DecodeResult : std::uint8_t {

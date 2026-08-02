@@ -26,15 +26,18 @@ Le premier jalon logiciel est opérationnel :
 - rejeu temporel de traces CAN et assemblage des signaux avec gestion de fraîcheur ;
 - protocole CAN synthétique réservé aux simulations hors véhicule ;
 - simulateur de scénario complet avec injection d'un défaut de sécurité ;
-- 23 scénarios hôte automatisés et intégration continue.
+- profils véhicule extensibles avec qualification fermée par défaut ;
+- profil de découverte pour l'E90 2009 N47D20C boîte automatique ;
+- import PC de journaux `python-can` vers un format canonique strict ;
+- 31 scénarios C++ et 5 tests d'importeur automatisés en intégration continue.
 
 Les communications BMW, la commande distante et les sorties physiques restent à
 implémenter lorsque le matériel, les signaux et les critères d'acceptation auront
 été précisément définis.
 
-Le moteur de rejeu accepte déjà des tableaux bornés de trames CAN. Aucun
-identifiant BMW n'est supposé : le format de capture et le décodeur réel seront
-ajoutés à partir de données légitimes et documentées.
+Le moteur de rejeu accepte des tableaux bornés et des fichiers de trace
+canoniques. Aucun identifiant BMW n'est supposé : le profil de référence reste
+au niveau `Discovery` et toutes ses sources de signaux restent `Candidate`.
 
 ## Architecture
 
@@ -61,7 +64,8 @@ La machine d'état utilise les états suivants : `Idle`, `Authorizing`,
 absente ou périmée provoque un refus ou un passage en défaut selon le contexte.
 
 La description détaillée se trouve dans [docs/architecture.md](docs/architecture.md)
-et les invariants dans [docs/safety.md](docs/safety.md).
+et les invariants dans [docs/safety.md](docs/safety.md). Le système de variantes
+est décrit dans [docs/vehicle-profiles.md](docs/vehicle-profiles.md).
 
 ## Validation locale
 
@@ -69,6 +73,12 @@ Prérequis : un compilateur C++17. Sous Windows avec `g++.exe` disponible :
 
 ```powershell
 ./scripts/test.ps1
+```
+
+Les tests de l'importeur Python n'installent aucune dépendance externe :
+
+```powershell
+python -m unittest discover -s tools -p 'test_*.py' -v
 ```
 
 Compilation du firmware natif inerte avec PlatformIO :
@@ -103,7 +113,8 @@ include/bmw_remote/infrastructure/  Contrats des adaptateurs et runtime
 include/bmw_remote/simulation/      Protocole synthétique hors véhicule
 src/                                Implémentations et firmware inerte
 tests/                              Scénarios hôte
-tools/                              Simulateur exécutable
+tools/                              Simulateur et importeur de traces PC
+scenarios/                          Traces synthétiques partageables
 docs/                               Architecture, sécurité et intégration
 ```
 
@@ -120,6 +131,16 @@ puis ouverture du capot pendant la session distante. Le résultat attendu est un
 transition immédiate vers `Fault` et la sécurisation des sorties abstraites.
 
 Voir [docs/can-replay.md](docs/can-replay.md) pour le contrat du moteur de rejeu.
+
+Le simulateur accepte aussi une trace canonique externe :
+
+```powershell
+./scripts/simulate.ps1 ./scenarios/synthetic_idle.cantrace.csv
+```
+
+Pour convertir une capture reconnue par `python-can`, voir
+[docs/trace-import.md](docs/trace-import.md). Les captures privées restent hors
+du dépôt via `captures/private/`.
 
 ## Principes de contribution
 
