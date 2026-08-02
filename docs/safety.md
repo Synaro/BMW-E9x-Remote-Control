@@ -37,6 +37,10 @@ certification fonctionnelle ou automobile.
     format de stockage ou de l'interface de configuration.
 18. Une nouvelle configuration n'est jamais appliquée au milieu d'une session
     distante active.
+19. Une configuration persistante n'est acceptée qu'après validation de la
+    version, du CRC et de toutes les bornes métier.
+20. Si aucun des deux emplacements persistants n'est valide, le démarrage
+    distant reste désactivé.
 
 ## Matrice d'autorisation initiale
 

@@ -16,6 +16,7 @@
 #include "bmw_remote/domain/vehicle_state.hpp"
 #include "bmw_remote/infrastructure/replay_vehicle_gateway.hpp"
 #include "bmw_remote/infrastructure/runtime.hpp"
+#include "bmw_remote/infrastructure/settings_storage.hpp"
 #include "bmw_remote/infrastructure/vehicle_state_assembler.hpp"
 #include "bmw_remote/simulation/synthetic_can.hpp"
 #include "tools/can_trace_csv.hpp"
@@ -53,6 +54,8 @@ using bmw::remote::infrastructure::NotificationSink;
 using bmw::remote::infrastructure::ReplayStatus;
 using bmw::remote::infrastructure::ReplayVehicleGateway;
 using bmw::remote::infrastructure::Runtime;
+using bmw::remote::infrastructure::JournaledUserSettingsStore;
+using bmw::remote::infrastructure::SettingsByteStorage;
 using bmw::remote::infrastructure::VehicleStateAssembler;
 using bmw::remote::infrastructure::TimerPort;
 using bmw::remote::infrastructure::VehicleGateway;
@@ -293,6 +296,144 @@ void testUserSettingsFileRejectsUnsafeDurations() {
 
     CHECK(!bmw::remote::host::parseUserSettings(input, settings, error));
     CHECK(error.find("safety bounds") != std::string::npos);
+}
+
+struct MemorySettingsStorage final : SettingsByteStorage {
+    std::array<std::uint8_t, JournaledUserSettingsStore::RequiredCapacity> bytes{};
+    bool readSucceeds{true};
+    bool writeSucceeds{true};
+    bool commitSucceeds{true};
+    std::size_t partialWriteBytes{0U};
+    std::uint32_t writeCalls{0U};
+    std::uint32_t commitCalls{0U};
+
+    MemorySettingsStorage() {
+        bytes.fill(0xFFU);
+    }
+
+    [[nodiscard]] std::size_t capacity() const noexcept override {
+        return bytes.size();
+    }
+
+    bool read(
+        const std::size_t offset,
+        std::uint8_t* const destination,
+        const std::size_t size) noexcept override {
+        if (!readSucceeds || destination == nullptr ||
+            offset > bytes.size() || size > bytes.size() - offset) {
+            return false;
+        }
+        for (std::size_t index = 0U; index < size; ++index) {
+            destination[index] = bytes[offset + index];
+        }
+        return true;
+    }
+
+    bool write(
+        const std::size_t offset,
+        const std::uint8_t* const source,
+        const std::size_t size) noexcept override {
+        ++writeCalls;
+        if (source == nullptr || offset > bytes.size() ||
+            size > bytes.size() - offset) {
+            return false;
+        }
+
+        const std::size_t copied = writeSucceeds
+                                       ? size
+                                       : (partialWriteBytes < size
+                                              ? partialWriteBytes
+                                              : size);
+        for (std::size_t index = 0U; index < copied; ++index) {
+            bytes[offset + index] = source[index];
+        }
+        return writeSucceeds;
+    }
+
+    bool commit() noexcept override {
+        ++commitCalls;
+        return commitSucceeds;
+    }
+};
+
+void testEmptySettingsStorageDisablesRemoteStart() {
+    MemorySettingsStorage storage{};
+    JournaledUserSettingsStore store{storage};
+    UserSettings settings{};
+
+    CHECK(!bmw::remote::infrastructure::loadUserSettingsFailSafe(store, settings));
+    CHECK(!settings.remoteStartEnabled);
+}
+
+void testJournaledSettingsRoundTripUsesLatestGeneration() {
+    MemorySettingsStorage storage{};
+    JournaledUserSettingsStore store{storage};
+    UserSettings first{};
+    first.hoodMonitoring = HoodMonitoringMode::Disabled;
+    first.maximumRemoteRunTimeMs = 10U * 60U * 1'000U;
+    UserSettings second = first;
+    second.maximumRemoteRunTimeMs = 30U * 60U * 1'000U;
+    second.lockPressCount = 4U;
+
+    CHECK(store.save(first));
+    CHECK(store.save(second));
+
+    UserSettings loaded{};
+    CHECK(store.load(loaded));
+    CHECK(loaded.maximumRemoteRunTimeMs == 30U * 60U * 1'000U);
+    CHECK(loaded.lockPressCount == 4U);
+    CHECK(loaded.hoodMonitoring == HoodMonitoringMode::Disabled);
+    CHECK(storage.writeCalls == 2U);
+    CHECK(storage.commitCalls == 2U);
+}
+
+void testCorruptedNewestSettingsFallBackToPreviousSlot() {
+    MemorySettingsStorage storage{};
+    JournaledUserSettingsStore store{storage};
+    UserSettings first{};
+    first.maximumRemoteRunTimeMs = 10U * 60U * 1'000U;
+    UserSettings second = first;
+    second.maximumRemoteRunTimeMs = 30U * 60U * 1'000U;
+
+    CHECK(store.save(first));
+    CHECK(store.save(second));
+    storage.bytes[JournaledUserSettingsStore::SlotSize + 15U] ^= 0x01U;
+
+    UserSettings loaded{};
+    CHECK(store.load(loaded));
+    CHECK(loaded.maximumRemoteRunTimeMs == 10U * 60U * 1'000U);
+}
+
+void testInterruptedSettingsWritePreservesLastValidSlot() {
+    MemorySettingsStorage storage{};
+    JournaledUserSettingsStore store{storage};
+    UserSettings first{};
+    first.maximumRemoteRunTimeMs = 10U * 60U * 1'000U;
+    UserSettings second = first;
+    second.maximumRemoteRunTimeMs = 20U * 60U * 1'000U;
+    UserSettings interrupted = first;
+    interrupted.maximumRemoteRunTimeMs = 40U * 60U * 1'000U;
+
+    CHECK(store.save(first));
+    CHECK(store.save(second));
+    storage.writeSucceeds = false;
+    storage.partialWriteBytes = 12U;
+    CHECK(!store.save(interrupted));
+
+    UserSettings loaded{};
+    CHECK(store.load(loaded));
+    CHECK(loaded.maximumRemoteRunTimeMs == 20U * 60U * 1'000U);
+}
+
+void testInvalidSettingsAreNeverPersisted() {
+    MemorySettingsStorage storage{};
+    JournaledUserSettingsStore store{storage};
+    UserSettings invalid{};
+    invalid.maximumRemoteRunTimeMs = 0U;
+
+    CHECK(!store.save(invalid));
+    CHECK(storage.writeCalls == 0U);
+    CHECK(storage.commitCalls == 0U);
 }
 
 void testSafeAutomaticVehicleIsApproved() {
@@ -1086,6 +1227,11 @@ int main() {
         {"settings file", testUserSettingsFileLoadsStrictConfiguration},
         {"settings file strict keys", testUserSettingsFileRejectsUnknownAndDuplicateKeys},
         {"settings file safety bounds", testUserSettingsFileRejectsUnsafeDurations},
+        {"empty settings storage", testEmptySettingsStorageDisablesRemoteStart},
+        {"settings journal round trip", testJournaledSettingsRoundTripUsesLatestGeneration},
+        {"settings corruption fallback", testCorruptedNewestSettingsFallBackToPreviousSlot},
+        {"settings interrupted write", testInterruptedSettingsWritePreservesLastValidSlot},
+        {"invalid settings persistence", testInvalidSettingsAreNeverPersisted},
         {"safe automatic vehicle", testSafeAutomaticVehicleIsApproved},
         {"unavailable signal", testUnavailableSignalFailsClosed},
         {"multiple safety reasons", testUnsafeVehicleReportsAllDetectedReasons},

@@ -21,6 +21,7 @@ Le premier jalon logiciel est opérationnel :
 - machine d'état événementielle complète ;
 - détection applicative configurable de trois impulsions de verrouillage ;
 - profil utilisateur validé avant application, sans recompilation du noyau ;
+- persistance versionnée sur deux emplacements avec CRC et récupération ;
 - décisions et listes d'actions de taille fixe, sans allocation dynamique ;
 - arrêt fail-safe en cas de défaut d'un adaptateur ;
 - ports abstraits pour véhicule, actionneurs, minuterie et notifications ;
@@ -36,7 +37,7 @@ Le premier jalon logiciel est opérationnel :
 - capture PC bornée avec refus des interfaces sans mode silencieux documenté ;
 - sélection explicite d'un profil obligatoire dans le contrôleur ;
 - analyse différentielle hors ligne des octets et bits candidats ;
-- 54 tests C++, 6 parcours CLI et 21 tests Python automatisés en intégration continue.
+- 59 tests C++, 7 parcours CLI et 21 tests Python automatisés en intégration continue.
 
 L'adaptateur BMW qui observera réellement le verrouillage, qualifiera la reprise
 conducteur et pilotera les sorties physiques reste à implémenter lorsque le
@@ -79,6 +80,8 @@ Le déclenchement par trois verrouillages et le cycle de reprise sont spécifié
 dans [docs/remote-session.md](docs/remote-session.md).
 Les préférences, leurs limites et leur future persistance sont décrites dans
 [docs/user-configuration.md](docs/user-configuration.md).
+Le journal binaire redondant est spécifié dans
+[docs/settings-persistence.md](docs/settings-persistence.md).
 
 ## Validation locale
 
@@ -140,8 +143,9 @@ Sous Windows, l'exécutable interactif peut être construit avec :
 .\build\bmw_remote_simulator.exe
 ```
 
-Six scénarios permettent de tester le parcours nominal, le capot obligatoire ou
-facultatif, la reprise conducteur et un profil utilisateur complet. Un scénario précis
+Sept scénarios permettent de tester le parcours nominal, le capot obligatoire ou
+facultatif, la reprise conducteur, un profil utilisateur et la récupération du
+stockage. Un scénario précis
 peut aussi être compilé et exécuté avec :
 
 ```powershell
@@ -149,6 +153,7 @@ peut aussi être compilé et exécuté avec :
 .\scripts\simulate.ps1 -Scenario takeover-timeout
 .\scripts\simulate.ps1 -Scenario takeover-confirmed
 .\scripts\simulate.ps1 -ConfigPath .\config\user-settings.example.conf
+.\scripts\simulate.ps1 -Scenario settings-recovery
 ```
 
 Le résultat attendu est affiché sous la forme `scenario_result: PASS` et le code

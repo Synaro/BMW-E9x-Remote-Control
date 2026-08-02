@@ -82,11 +82,15 @@ ne seront pas librement modifiables par l'utilisateur final.
 ## Persistance dans le futur boîtier
 
 `UserSettingsStore` définit les opérations de chargement et d'enregistrement.
-L'adaptateur embarqué devra utiliser une écriture atomique, une version de
-schéma, un contrôle d'intégrité et un retour aux valeurs sûres si la mémoire est
-corrompue. Le contrôleur ne doit être construit qu'après validation réussie des
+Le journal portable fourni utilise deux générations, une version de schéma, un
+CRC-32 et un retour aux valeurs sûres si la mémoire est corrompue. Il reste à
+raccorder son port `SettingsByteStorage` à la mémoire non volatile du matériel
+choisi. Le contrôleur ne doit être construit qu'après validation réussie des
 valeurs chargées.
 
 Une modification ne sera appliquée que moteur arrêté et contrôleur en `Idle`, ou
 au redémarrage suivant du boîtier. Elle ne raccourcit, ne prolonge et ne transforme
 jamais une session distante déjà active.
+
+Le format et la stratégie de récupération sont détaillés dans
+[settings-persistence.md](settings-persistence.md).

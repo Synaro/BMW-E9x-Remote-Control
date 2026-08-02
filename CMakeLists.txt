@@ -14,6 +14,7 @@ add_library(bmw_remote_core
     src/infrastructure/can_trace_replay.cpp
     src/infrastructure/replay_vehicle_gateway.cpp
     src/infrastructure/runtime.cpp
+    src/infrastructure/settings_storage.cpp
     src/infrastructure/vehicle_state_assembler.cpp
 )
 
@@ -94,5 +95,8 @@ if(BMW_REMOTE_BUILD_TESTS)
             COMMAND bmw_remote_simulator
                 --scenario user-config
                 --config ${CMAKE_CURRENT_SOURCE_DIR}/config/user-settings.example.conf)
+        add_test(
+            NAME bmw_remote_simulator_settings_recovery
+            COMMAND bmw_remote_simulator --scenario settings-recovery)
     endif()
 endif()

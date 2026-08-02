@@ -54,14 +54,19 @@ produire exactement un événement `TimerElapsed` par armement valide.
 
 ## UserSettingsStore
 
-L'adaptateur de persistance doit charger et enregistrer `UserSettings` sans
-interpréter les règles métier. Il doit prévoir une version de schéma, un contrôle
-d'intégrité, une écriture atomique et une stratégie de récupération après
-coupure d'alimentation. Après chargement, `validateUserSettings()` reste
-obligatoire ; une lecture techniquement réussie ne rend pas les valeurs sûres.
+`UserSettingsStore` charge et enregistre `UserSettings` sans exposer le support
+physique au reste du logiciel. Une interface utilisateur ne doit écrire que dans
+ce port. Elle ne modifie jamais directement `ControllerConfig`, les sorties ou
+l'état courant du moteur.
 
-Une interface utilisateur ne doit écrire que dans ce port. Elle ne modifie
-jamais directement `ControllerConfig`, les sorties ou l'état courant du moteur.
+Le noyau fournit `JournaledUserSettingsStore` pour la version, le CRC,
+les deux générations et la vérification après écriture. L'adaptateur matériel
+n'implémente que `SettingsByteStorage` sur au moins 128 octets. `commit()` doit
+garantir qu'une écriture déclarée comme échouée ne détruit pas la dernière
+génération durable. Les essais devront couper l'alimentation à chaque octet
+possible de l'opération d'enregistrement. Après chargement,
+`validateUserSettings()` reste obligatoire ; une lecture techniquement réussie
+ne rend pas les valeurs sûres.
 
 ## NotificationSink
 
