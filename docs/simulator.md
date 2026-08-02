@@ -6,7 +6,36 @@ Le simulateur exécute le vrai contrôleur, sa politique de sécurité, le runti
 les adaptateurs de rejeu avec un protocole synthétique réservé au PC. Il ne se
 connecte à aucun câble, bus, GPIO ou véhicule.
 
-## Construire l'exécutable Windows
+## Interface graphique Windows
+
+L'interface locale constitue le chemin recommandé pour découvrir le projet :
+
+```powershell
+.\scripts\simulator-gui.ps1
+```
+
+On peut également ouvrir `scripts/start-simulator-gui.cmd` par double clic.
+Le script reconstruit l'exécutable uniquement si une source est plus récente,
+puis présente :
+
+- les scénarios documentés avec leur description ;
+- le résultat réussi ou échoué et la sortie technique complète ;
+- la sélection d'un fichier de configuration utilisateur ;
+- l'inspection d'une trace canonique avec contrôle du capot requis ou facultatif ;
+- la copie du rapport dans le presse-papiers.
+
+L'interface ne démarre aucun serveur, n'utilise pas le réseau et n'ajoute aucune
+dépendance : elle s'appuie sur Windows PowerShell et WinForms déjà présents sur
+Windows. Son contrat avec la CLI peut être vérifié sans ouvrir de fenêtre :
+
+```powershell
+.\scripts\simulator-gui.ps1 -SelfTest
+```
+
+Les mainteneurs peuvent également produire une prévisualisation déterministe
+sans interaction avec `-PreviewPath .\build\simulator-gui-preview.png`.
+
+## Console et exécutable
 
 ```powershell
 .\scripts\build-simulator.ps1
@@ -33,7 +62,8 @@ Il peut être lancé directement. Sans argument, il affiche un menu interactif :
 11. liaison de configuration avec autorisation, état occupé et corruption ;
 12. refus des preuves de verrouillage non fiables, anciennes ou rejouées ;
 13. décodage de fronts et compteur roulant sur un vecteur CAN fictif ;
-14. séquence d'actionneurs simulés, expiration du heartbeat et retour incohérent.
+14. séquence d'actionneurs simulés, expiration du heartbeat et retour incohérent ;
+15. chaîne complète contrôleur, runtime et superviseur avec propagation du défaut.
 
 ## Lancer un scénario depuis PowerShell
 
@@ -53,6 +83,7 @@ Il peut être lancé directement. Sans argument, il affiche un menu interactif :
 .\scripts\simulate.ps1 -Scenario lock-replay-guard
 .\scripts\simulate.ps1 -Scenario qualified-lock-adapter
 .\scripts\simulate.ps1 -Scenario actuator-supervisor
+.\scripts\simulate.ps1 -Scenario supervised-runtime
 ```
 
 Chaque scénario retourne le code `0` uniquement si le résultat final correspond
@@ -117,6 +148,12 @@ sécurité, effectue un réarmement contrôlé puis simule un retour électrique
 n'a pas suivi la commande. Voir
 [actuator-safety-supervisor.md](actuator-safety-supervisor.md).
 
+Le scénario `supervised-runtime` emploie ce même superviseur comme véritable
+`ActuatorPort` du runtime. Il parcourt l'autorisation, l'allumage, le lancement
+et la confirmation moteur, puis suspend le heartbeat. La mise en sécurité locale
+est ensuite propagée sous forme d'`ActuatorFailure` jusqu'à l'état applicatif
+`Fault` et au journal de diagnostic.
+
 ## Inspecter une trace
 
 La syntaxe historique reste acceptée :
@@ -147,6 +184,7 @@ qu'un décodeur BMW en lecture seule n'a pas été qualifié.
 ## Limites
 
 - les actionneurs affichés sont des objets console ou simulés sans sortie physique ;
+- l'interface graphique est actuellement destinée à Windows ;
 - les identifiants synthétiques ne sont pas des identifiants BMW ;
 - un succès du simulateur ne qualifie ni le matériel ni une installation ;
 - l'exécutable produit localement n'est pas ajouté au dépôt Git.

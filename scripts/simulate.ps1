@@ -17,7 +17,8 @@ param(
         'settings-link',
         'lock-replay-guard',
         'qualified-lock-adapter',
-        'actuator-supervisor')]
+        'actuator-supervisor',
+        'supervised-runtime')]
     [string]$Scenario = 'hood-required',
 
     [ValidateSet('required', 'optional')]

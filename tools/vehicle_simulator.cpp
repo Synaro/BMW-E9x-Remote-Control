@@ -41,6 +41,7 @@ enum class Scenario : std::uint8_t {
     LockReplayGuard,
     QualifiedLockAdapter,
     ActuatorSupervisor,
+    SupervisedRuntime,
 };
 
 class ConsoleActuators final : public infrastructure::ActuatorPort {
@@ -98,6 +99,10 @@ public:
         ignitionActive = false;
         starterActive = false;
         return true;
+    }
+
+    [[nodiscard]] infrastructure::ActuatorFeedback feedback() const noexcept {
+        return {true, ignitionActive, starterActive};
     }
 
     bool ignitionActive{false};
@@ -206,6 +211,7 @@ const char* scenarioName(const Scenario scenario) noexcept {
         case Scenario::LockReplayGuard: return "lock-replay-guard";
         case Scenario::QualifiedLockAdapter: return "qualified-lock-adapter";
         case Scenario::ActuatorSupervisor: return "actuator-supervisor";
+        case Scenario::SupervisedRuntime: return "supervised-runtime";
     }
     return "unknown";
 }
@@ -267,6 +273,10 @@ bool parseScenario(const std::string_view text, Scenario& scenario) noexcept {
         scenario = Scenario::ActuatorSupervisor;
         return true;
     }
+    if (text == "supervised-runtime") {
+        scenario = Scenario::SupervisedRuntime;
+        return true;
+    }
     return false;
 }
 
@@ -299,7 +309,8 @@ void printScenarioList() {
         << "settings-link exercises framed, authorized and idle-only configuration\n"
         << "lock-replay-guard rejects untrusted, stale and replayed lock evidence\n"
         << "qualified-lock-adapter checks edges and a rolling frame counter\n"
-        << "actuator-supervisor injects watchdog and feedback failures\n";
+        << "actuator-supervisor injects watchdog and feedback failures\n"
+        << "supervised-runtime connects controller, runtime and supervisor\n";
 }
 
 void printUsage(const char* const executable) {
@@ -916,6 +927,158 @@ int runActuatorSupervisorScenario() {
     return expectedOutcome ? 0 : 2;
 }
 
+int runSupervisedRuntimeScenario() {
+    const application::UserConfiguration configuration =
+        application::makeUserConfiguration(
+            application::UserSettings{},
+            &simulation::syntheticVehicleProfile());
+
+    simulation::SyntheticPowertrainState stopped{};
+    simulation::SyntheticPowertrainState running{};
+    running.engineRpm = 850U;
+    const simulation::SyntheticBodyState safeBody{};
+    const std::array<infrastructure::CanFrame, 4U> trace = {
+        simulation::makeSyntheticPowertrainFrame(0U, stopped),
+        simulation::makeSyntheticBodyFrame(0U, safeBody),
+        simulation::makeSyntheticPowertrainFrame(1'800U, running),
+        simulation::makeSyntheticBodyFrame(1'800U, safeBody),
+    };
+
+    simulation::SyntheticCanDecoder decoder{};
+    infrastructure::ReplayVehicleGateway gateway{
+        trace.data(), trace.size(), decoder};
+    SimulatedActuatorDriver driver{};
+    infrastructure::ActuatorSafetySupervisor supervisor{driver};
+    ConsoleTimer timer{};
+    ConsoleNotifications notifications{};
+    infrastructure::DiagnosticJournal diagnosticJournal{};
+    infrastructure::Runtime runtime{
+        application::Controller{configuration.controller},
+        gateway,
+        supervisor,
+        timer,
+        notifications,
+        &diagnosticJournal};
+
+    std::cout
+        << "scenario: supervised-runtime\n"
+        << "driver: simulated_no_gpio\n";
+
+    if (!configuration.validation.valid() || !gateway.setElapsedTime(0U) ||
+        !supervisor.heartbeat(0U) ||
+        !supervisor.poll(0U, true, driver.feedback()).healthy()) {
+        std::cout << "scenario_result: FAIL\n";
+        return 2;
+    }
+
+    domain::VehicleState vehicle{};
+    auto decision = runtime.dispatch(
+        application::Event{application::EventType::RemoteStartRequested},
+        vehicle,
+        0U);
+    printDecision("remote start", decision);
+    const bool authorizing =
+        decision.state == application::ControllerState::Authorizing;
+
+    vehicle = gateway.state();
+    decision = runtime.dispatch(
+        application::Event{application::EventType::VehicleStateUpdated},
+        vehicle,
+        0U);
+    printDecision("safe snapshot", decision);
+    const bool ignitionRequested =
+        decision.state == application::ControllerState::Preparing &&
+        driver.ignitionActive && !driver.starterActive;
+
+    const bool ignitionConfirmed =
+        supervisor.heartbeat(101U) &&
+        supervisor.poll(101U, true, driver.feedback())
+            .ignitionFeedbackConfirmed;
+    const std::array<std::uint32_t, 4U> preparationServiceTimes = {
+        500U, 900U, 1'300U, 1'500U};
+    bool supervisionHealthy = true;
+    for (const std::uint32_t nowMs : preparationServiceTimes) {
+        supervisionHealthy =
+            supervisor.heartbeat(nowMs) &&
+            supervisor.poll(nowMs, true, driver.feedback()).healthy() &&
+            supervisionHealthy;
+    }
+    decision = runtime.dispatch(
+        application::Event{application::EventType::TimerElapsed},
+        vehicle,
+        1'500U);
+    printDecision("preparation timer", decision);
+    const bool starterRequested =
+        decision.state == application::ControllerState::Cranking &&
+        driver.ignitionActive && driver.starterActive;
+
+    const bool starterConfirmed =
+        supervisor.heartbeat(1'601U) &&
+        supervisor.poll(1'601U, true, driver.feedback()).healthy();
+    const std::array<std::uint32_t, 2U> crankingServiceTimes = {
+        1'700U, 1'800U};
+    for (const std::uint32_t nowMs : crankingServiceTimes) {
+        supervisionHealthy =
+            supervisor.heartbeat(nowMs) &&
+            supervisor.poll(nowMs, true, driver.feedback()).healthy() &&
+            supervisionHealthy;
+    }
+
+    if (!gateway.setElapsedTime(1'800U) || !gateway.requestState()) {
+        std::cout << "scenario_result: FAIL\n";
+        return 2;
+    }
+    vehicle = gateway.state();
+    decision = runtime.dispatch(
+        application::Event{application::EventType::VehicleStateUpdated},
+        vehicle,
+        1'800U);
+    printDecision("engine running", decision);
+    const bool runningConfirmed =
+        decision.state == application::ControllerState::Running &&
+        driver.ignitionActive && !driver.starterActive;
+
+    const bool runningOutputsConfirmed =
+        supervisor.heartbeat(1'901U) &&
+        supervisor.poll(1'901U, true, driver.feedback()).healthy();
+    const infrastructure::ActuatorSupervisorStatus watchdog = supervisor.poll(
+        2'402U, true, driver.feedback());
+    decision = runtime.dispatch(
+        application::Event::infrastructureFailure(
+            application::FaultCode::ActuatorFailure),
+        vehicle,
+        2'402U);
+    printDecision("supervisor fault", decision);
+
+    const bool faultPropagated =
+        watchdog.fault ==
+            infrastructure::ActuatorSupervisorFault::WatchdogExpired &&
+        decision.state == application::ControllerState::Fault &&
+        decision.fault == application::FaultCode::ActuatorFailure &&
+        !driver.ignitionActive && !driver.starterActive;
+    const bool expectedOutcome =
+        authorizing && ignitionRequested && ignitionConfirmed &&
+        starterRequested && starterConfirmed && supervisionHealthy &&
+        runningConfirmed && runningOutputsConfirmed && faultPropagated;
+
+    std::cout
+        << "ignition_feedback: "
+        << (ignitionConfirmed ? "confirmed" : "missing") << '\n'
+        << "starter_feedback: "
+        << (starterConfirmed ? "confirmed" : "missing") << '\n'
+        << "watchdog_injection: "
+        << infrastructure::toString(watchdog.fault) << '\n'
+        << "controller_fault: "
+        << application::toString(decision.fault) << '\n'
+        << "final_outputs: "
+        << (!driver.ignitionActive && !driver.starterActive
+                ? "safe"
+                : "unsafe")
+        << '\n';
+    return finishRuntimeScenario(
+        expectedOutcome, gateway, diagnosticJournal);
+}
+
 int runScenario(
     const Scenario scenario,
     const application::UserSettings* const suppliedSettings = nullptr) {
@@ -933,6 +1096,9 @@ int runScenario(
     }
     if (scenario == Scenario::ActuatorSupervisor) {
         return runActuatorSupervisorScenario();
+    }
+    if (scenario == Scenario::SupervisedRuntime) {
+        return runSupervisedRuntimeScenario();
     }
 
     application::UserSettings settings =
@@ -1238,7 +1404,8 @@ int runInteractive() {
         << "12. Garde anti-rejeu des commandes de verrouillage\n"
         << "13. Adaptateur CAN qualifie sur vecteur de test\n"
         << "14. Superviseur d'actionneurs et pannes injectees\n"
-        << "15. Quitter\n\n"
+        << "15. Chaine complete runtime et superviseur\n"
+        << "16. Quitter\n\n"
         << "Choix: ";
 
     unsigned selection = 0U;
@@ -1272,7 +1439,8 @@ int runInteractive() {
         case 12U: result = runScenario(Scenario::LockReplayGuard); break;
         case 13U: result = runScenario(Scenario::QualifiedLockAdapter); break;
         case 14U: result = runScenario(Scenario::ActuatorSupervisor); break;
-        case 15U: return 0;
+        case 15U: result = runScenario(Scenario::SupervisedRuntime); break;
+        case 16U: return 0;
         default:
             std::cerr << "Invalid selection\n";
             result = 64;

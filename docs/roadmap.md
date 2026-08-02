@@ -32,6 +32,8 @@
 - [x] Protocole synthétique explicitement séparé de BMW
 - [x] Simulateur nominal avec injection d'un interverrouillage
 - [x] Exécutable interactif avec scénarios capot obligatoire et facultatif
+- [x] Interface graphique Windows locale du simulateur
+- [x] Scénario de bout en bout runtime et superviseur d'actionneurs
 - [x] Format de trace canonique strict et importeur hôte `python-can`
 - [x] Simulateur capable de charger une trace externe
 

@@ -25,3 +25,23 @@ jobs:
 
       - name: Test trace importer
         run: python -m unittest discover -s tools -p 'test_*.py' -v
+
+  windows-simulator-gui:
+    runs-on: windows-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - name: Configure simulator
+        run: cmake -S . -B build -DBMW_REMOTE_BUILD_TESTS=OFF -DBMW_REMOTE_BUILD_CONFIGURATOR=OFF
+
+      - name: Build simulator
+        run: cmake --build build --config Release --target bmw_remote_simulator --parallel
+
+      - name: Prepare GUI executable path
+        shell: pwsh
+        run: Copy-Item build/Release/bmw_remote_simulator.exe build/bmw_remote_simulator.exe
+
+      - name: Verify GUI and simulator contract
+        shell: powershell
+        run: .\scripts\simulator-gui.ps1 -SkipBuild -SelfTest
