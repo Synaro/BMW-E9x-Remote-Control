@@ -47,6 +47,14 @@ certification fonctionnelle ou automobile.
 22. Le décodeur CAN de verrouillage est désactivé sans liaison qualifiée. Une
     liaison active exige un front montant et un compteur roulant indépendant ;
     toute répétition ou régression efface le geste en cours.
+23. Le superviseur d'actionneurs exige un heartbeat récent et une autorisation
+    matérielle observée avant toute activation.
+24. Le démarreur ne peut être engagé sans allumage commandé et, par défaut,
+    confirmé par son retour d'état.
+25. Une perte d'autorisation, une expiration, un retour incohérent ou une panne
+    du pilote mémorise le défaut et commande immédiatement l'état sûr.
+26. Le réarmement du superviseur exige, par défaut, la confirmation électrique
+    que l'allumage et le démarreur sont inactifs.
 
 ## Matrice d'autorisation initiale
 
@@ -98,6 +106,8 @@ Avant toute activation réelle, l'électronique doit au minimum prévoir :
 - journalisation exploitable sans donnée sensible.
 
 Une analyse de risques formelle et des essais HIL doivent compléter ces défenses.
+Le rôle exact et les limites de la défense logicielle sont détaillés dans
+[actuator-safety-supervisor.md](actuator-safety-supervisor.md).
 
 ## Hors périmètre actuel
 

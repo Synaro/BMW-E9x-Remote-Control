@@ -32,7 +32,8 @@ Il peut être lancé directement. Sans argument, il affiche un menu interactif :
 10. corruption du réglage récent et récupération de la génération précédente ;
 11. liaison de configuration avec autorisation, état occupé et corruption ;
 12. refus des preuves de verrouillage non fiables, anciennes ou rejouées ;
-13. décodage de fronts et compteur roulant sur un vecteur CAN fictif.
+13. décodage de fronts et compteur roulant sur un vecteur CAN fictif ;
+14. séquence d'actionneurs simulés, expiration du heartbeat et retour incohérent.
 
 ## Lancer un scénario depuis PowerShell
 
@@ -51,6 +52,7 @@ Il peut être lancé directement. Sans argument, il affiche un menu interactif :
 .\scripts\simulate.ps1 -Scenario settings-link
 .\scripts\simulate.ps1 -Scenario lock-replay-guard
 .\scripts\simulate.ps1 -Scenario qualified-lock-adapter
+.\scripts\simulate.ps1 -Scenario actuator-supervisor
 ```
 
 Chaque scénario retourne le code `0` uniquement si le résultat final correspond
@@ -109,6 +111,12 @@ du front lorsque la commande reste active, le rebouclage du compteur,
 l'annulation du geste après rejeu et l'acceptation de trois nouveaux fronts.
 Voir [can-lock-command-adapter.md](can-lock-command-adapter.md).
 
+Le scénario `actuator-supervisor` utilise un pilote sans GPIO. Il confirme une
+séquence allumage/démarreur, suspend ensuite le heartbeat jusqu'à la mise en
+sécurité, effectue un réarmement contrôlé puis simule un retour électrique qui
+n'a pas suivi la commande. Voir
+[actuator-safety-supervisor.md](actuator-safety-supervisor.md).
+
 ## Inspecter une trace
 
 La syntaxe historique reste acceptée :
@@ -138,7 +146,7 @@ qu'un décodeur BMW en lecture seule n'a pas été qualifié.
 
 ## Limites
 
-- les actionneurs affichés sont des objets console sans sortie physique ;
+- les actionneurs affichés sont des objets console ou simulés sans sortie physique ;
 - les identifiants synthétiques ne sont pas des identifiants BMW ;
 - un succès du simulateur ne qualifie ni le matériel ni une installation ;
 - l'exécutable produit localement n'est pas ajouté au dépôt Git.

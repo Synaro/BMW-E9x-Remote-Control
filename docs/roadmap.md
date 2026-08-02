@@ -18,6 +18,7 @@
 - [x] Endpoint de configuration raccordable à un transport abstrait
 - [x] Actions bornées sans allocation dynamique
 - [x] Runtime et ports abstraits
+- [x] Superviseur logiciel d'actionneurs avec heartbeat et défauts mémorisés
 - [x] Tests hôte et intégration continue
 - [x] Firmware de référence inerte
 

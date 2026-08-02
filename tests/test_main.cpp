@@ -17,6 +17,7 @@
 #include "bmw_remote/domain/reference_profiles.hpp"
 #include "bmw_remote/domain/vehicle_profile.hpp"
 #include "bmw_remote/domain/vehicle_state.hpp"
+#include "bmw_remote/infrastructure/actuator_safety_supervisor.hpp"
 #include "bmw_remote/infrastructure/can_lock_command_adapter.hpp"
 #include "bmw_remote/infrastructure/replay_vehicle_gateway.hpp"
 #include "bmw_remote/infrastructure/runtime.hpp"
@@ -63,7 +64,11 @@ using bmw::remote::domain::Transmission;
 using bmw::remote::domain::VehicleProfile;
 using bmw::remote::domain::VehicleSignal;
 using bmw::remote::domain::VehicleState;
+using bmw::remote::infrastructure::ActuatorFeedback;
 using bmw::remote::infrastructure::ActuatorPort;
+using bmw::remote::infrastructure::ActuatorSafetyConfig;
+using bmw::remote::infrastructure::ActuatorSafetySupervisor;
+using bmw::remote::infrastructure::ActuatorSupervisorFault;
 using bmw::remote::infrastructure::CanBitMatcher;
 using bmw::remote::infrastructure::CanCounterField;
 using bmw::remote::infrastructure::CanFrame;
@@ -2069,6 +2074,310 @@ struct FakeActuator final : ActuatorPort {
     }
 };
 
+struct TrackingActuatorDriver final : ActuatorPort {
+    bool ignitionActive{false};
+    bool starterActive{false};
+    bool enableSucceeds{true};
+    bool engageSucceeds{true};
+    bool disengageSucceeds{true};
+    bool releaseSucceeds{true};
+    bool secureSucceeds{true};
+    std::uint32_t enableCalls{0U};
+    std::uint32_t engageCalls{0U};
+    std::uint32_t disengageCalls{0U};
+    std::uint32_t releaseCalls{0U};
+    std::uint32_t secureCalls{0U};
+
+    bool enableIgnition() noexcept override {
+        ++enableCalls;
+        if (enableSucceeds) {
+            ignitionActive = true;
+        }
+        return enableSucceeds;
+    }
+
+    bool engageStarter() noexcept override {
+        ++engageCalls;
+        if (engageSucceeds) {
+            starterActive = true;
+        }
+        return engageSucceeds;
+    }
+
+    bool disengageStarter() noexcept override {
+        ++disengageCalls;
+        if (disengageSucceeds) {
+            starterActive = false;
+        }
+        return disengageSucceeds;
+    }
+
+    bool releaseRemoteControl() noexcept override {
+        ++releaseCalls;
+        if (releaseSucceeds) {
+            ignitionActive = false;
+            starterActive = false;
+        }
+        return releaseSucceeds;
+    }
+
+    bool secureOutputs() noexcept override {
+        ++secureCalls;
+        if (secureSucceeds) {
+            ignitionActive = false;
+            starterActive = false;
+        }
+        return secureSucceeds;
+    }
+};
+
+constexpr ActuatorFeedback actuatorFeedback(
+    const bool ignitionActive,
+    const bool starterActive) noexcept {
+    return {true, ignitionActive, starterActive};
+}
+
+void prepareActuatorSupervisor(
+    ActuatorSafetySupervisor& supervisor,
+    const std::uint32_t nowMs = 0U) {
+    CHECK(supervisor.heartbeat(nowMs));
+    const auto status = supervisor.poll(
+        nowMs, true, actuatorFeedback(false, false));
+    CHECK(status.healthy());
+}
+
+void confirmIgnitionFeedback(
+    ActuatorSafetySupervisor& supervisor,
+    const std::uint32_t nowMs = 101U) {
+    CHECK(supervisor.heartbeat(nowMs));
+    const auto status = supervisor.poll(
+        nowMs, true, actuatorFeedback(true, false));
+    CHECK(status.healthy());
+    CHECK(status.ignitionFeedbackConfirmed);
+}
+
+void testActuatorSupervisorInitializesSafeAndRejectsInvalidConfig() {
+    TrackingActuatorDriver driver{};
+    driver.ignitionActive = true;
+    driver.starterActive = true;
+    ActuatorSafetySupervisor supervisor{driver};
+
+    CHECK(supervisor.status().healthy());
+    CHECK(!driver.ignitionActive);
+    CHECK(!driver.starterActive);
+    CHECK(driver.disengageCalls == 1U);
+    CHECK(driver.secureCalls == 1U);
+
+    TrackingActuatorDriver invalidDriver{};
+    ActuatorSafetyConfig invalidConfig{};
+    invalidConfig.watchdogTimeoutMs = 0U;
+    ActuatorSafetySupervisor invalid{invalidDriver, invalidConfig};
+    CHECK(!invalid.status().initialized);
+    CHECK(
+        invalid.status().fault ==
+        ActuatorSupervisorFault::InvalidConfiguration);
+    CHECK(!invalid.resetFault(0U, actuatorFeedback(false, false)));
+    CHECK(
+        invalid.status().fault ==
+        ActuatorSupervisorFault::InvalidConfiguration);
+}
+
+void testActuatorSupervisorRejectsUnsafeCommandSequences() {
+    TrackingActuatorDriver missingHeartbeatDriver{};
+    ActuatorSafetySupervisor missingHeartbeat{missingHeartbeatDriver};
+    CHECK(!missingHeartbeat.engageStarter());
+    CHECK(
+        missingHeartbeat.status().fault ==
+        ActuatorSupervisorFault::WatchdogExpired);
+
+    TrackingActuatorDriver interlockDriver{};
+    ActuatorSafetySupervisor interlock{interlockDriver};
+    CHECK(interlock.heartbeat(0U));
+    static_cast<void>(interlock.poll(
+        0U, false, actuatorFeedback(false, false)));
+    CHECK(!interlock.enableIgnition());
+    CHECK(
+        interlock.status().fault ==
+        ActuatorSupervisorFault::HardwareInterlockLost);
+
+    TrackingActuatorDriver sequenceDriver{};
+    ActuatorSafetySupervisor sequence{sequenceDriver};
+    prepareActuatorSupervisor(sequence);
+    CHECK(!sequence.engageStarter());
+    CHECK(
+        sequence.status().fault ==
+        ActuatorSupervisorFault::CommandSequence);
+
+    TrackingActuatorDriver feedbackDriver{};
+    ActuatorSafetySupervisor feedback{feedbackDriver};
+    prepareActuatorSupervisor(feedback);
+    CHECK(feedback.enableIgnition());
+    CHECK(!feedback.engageStarter());
+    CHECK(
+        feedback.status().fault ==
+        ActuatorSupervisorFault::CommandSequence);
+
+    TrackingActuatorDriver optionalFeedbackDriver{};
+    ActuatorSafetyConfig optionalFeedbackConfig{};
+    optionalFeedbackConfig.requireFeedback = false;
+    ActuatorSafetySupervisor optionalFeedback{
+        optionalFeedbackDriver, optionalFeedbackConfig};
+    prepareActuatorSupervisor(optionalFeedback);
+    CHECK(optionalFeedback.enableIgnition());
+    CHECK(optionalFeedback.engageStarter());
+}
+
+void testActuatorSupervisorAllowsNominalSequence() {
+    TrackingActuatorDriver driver{};
+    ActuatorSafetySupervisor supervisor{driver};
+    prepareActuatorSupervisor(supervisor);
+
+    CHECK(supervisor.enableIgnition());
+    confirmIgnitionFeedback(supervisor);
+    CHECK(supervisor.engageStarter());
+    CHECK(supervisor.heartbeat(200U));
+    const auto cranking = supervisor.poll(
+        200U, true, actuatorFeedback(true, true));
+    CHECK(cranking.healthy());
+    CHECK(cranking.starterCommanded);
+
+    CHECK(supervisor.disengageStarter());
+    CHECK(supervisor.heartbeat(302U));
+    const auto running = supervisor.poll(
+        302U, true, actuatorFeedback(true, false));
+    CHECK(running.healthy());
+    CHECK(running.ignitionCommanded);
+    CHECK(!running.starterCommanded);
+
+    CHECK(supervisor.releaseRemoteControl());
+    CHECK(!driver.ignitionActive);
+    CHECK(!driver.starterActive);
+    CHECK(supervisor.status().healthy());
+}
+
+void testActuatorSupervisorWatchdogSafesOutputs() {
+    TrackingActuatorDriver driver{};
+    ActuatorSafetySupervisor supervisor{driver};
+    prepareActuatorSupervisor(supervisor);
+    CHECK(supervisor.enableIgnition());
+    confirmIgnitionFeedback(supervisor);
+    CHECK(supervisor.engageStarter());
+
+    CHECK(!supervisor.heartbeat(602U));
+    CHECK(
+        supervisor.status().fault ==
+        ActuatorSupervisorFault::WatchdogExpired);
+    CHECK(!driver.ignitionActive);
+    CHECK(!driver.starterActive);
+    CHECK(driver.secureCalls == 2U);
+
+    TrackingActuatorDriver polledDriver{};
+    ActuatorSafetySupervisor polled{polledDriver};
+    prepareActuatorSupervisor(polled);
+    CHECK(polled.enableIgnition());
+    confirmIgnitionFeedback(polled);
+    const auto expired = polled.poll(
+        602U, true, actuatorFeedback(true, false));
+    CHECK(expired.fault == ActuatorSupervisorFault::WatchdogExpired);
+    CHECK(!polledDriver.ignitionActive);
+}
+
+void testActuatorSupervisorLimitsStarterDuration() {
+    TrackingActuatorDriver driver{};
+    ActuatorSafetyConfig config{};
+    config.watchdogTimeoutMs = 1'000U;
+    config.maximumStarterActiveMs = 200U;
+    ActuatorSafetySupervisor supervisor{driver, config};
+    prepareActuatorSupervisor(supervisor);
+    CHECK(supervisor.enableIgnition());
+    confirmIgnitionFeedback(supervisor);
+    CHECK(supervisor.engageStarter());
+    CHECK(supervisor.heartbeat(302U));
+
+    const auto expired = supervisor.poll(
+        302U, true, actuatorFeedback(true, true));
+    CHECK(expired.fault == ActuatorSupervisorFault::StarterTimeout);
+    CHECK(!driver.ignitionActive);
+    CHECK(!driver.starterActive);
+}
+
+void testActuatorSupervisorDetectsInterlockAndFeedbackFaults() {
+    TrackingActuatorDriver interlockDriver{};
+    ActuatorSafetySupervisor interlock{interlockDriver};
+    prepareActuatorSupervisor(interlock);
+    CHECK(interlock.enableIgnition());
+    const auto lost = interlock.poll(
+        50U, false, actuatorFeedback(true, false));
+    CHECK(
+        lost.fault == ActuatorSupervisorFault::HardwareInterlockLost);
+
+    TrackingActuatorDriver mismatchDriver{};
+    ActuatorSafetySupervisor mismatch{mismatchDriver};
+    prepareActuatorSupervisor(mismatch);
+    CHECK(mismatch.enableIgnition());
+    CHECK(mismatch.heartbeat(101U));
+    const auto mismatched = mismatch.poll(
+        101U, true, actuatorFeedback(false, false));
+    CHECK(mismatched.fault == ActuatorSupervisorFault::FeedbackMismatch);
+
+    TrackingActuatorDriver unavailableDriver{};
+    ActuatorSafetySupervisor unavailable{unavailableDriver};
+    prepareActuatorSupervisor(unavailable);
+    CHECK(unavailable.enableIgnition());
+    CHECK(unavailable.heartbeat(101U));
+    const auto unavailableStatus = unavailable.poll(101U, true, {});
+    CHECK(
+        unavailableStatus.fault ==
+        ActuatorSupervisorFault::FeedbackUnavailable);
+}
+
+void testActuatorSupervisorHandlesClockWrapAndGuardedReset() {
+    constexpr std::uint32_t NearWrap =
+        std::numeric_limits<std::uint32_t>::max() - 100U;
+    TrackingActuatorDriver driver{};
+    ActuatorSafetySupervisor supervisor{driver};
+    prepareActuatorSupervisor(supervisor, NearWrap);
+    CHECK(supervisor.enableIgnition());
+    CHECK(supervisor.heartbeat(50U));
+    const auto wrapped = supervisor.poll(
+        50U, true, actuatorFeedback(true, false));
+    CHECK(wrapped.healthy());
+    CHECK(wrapped.ignitionFeedbackConfirmed);
+
+    CHECK(!supervisor.heartbeat(49U));
+    CHECK(
+        supervisor.status().fault ==
+        ActuatorSupervisorFault::ClockRegression);
+    CHECK(!driver.ignitionActive);
+
+    CHECK(supervisor.resetFault(100U, actuatorFeedback(false, false)));
+    CHECK(supervisor.status().healthy());
+    CHECK(!supervisor.enableIgnition());
+    CHECK(
+        supervisor.status().fault ==
+        ActuatorSupervisorFault::WatchdogExpired);
+}
+
+void testActuatorSupervisorLatchesDriverAndSafingFailures() {
+    TrackingActuatorDriver driver{};
+    ActuatorSafetySupervisor supervisor{driver};
+    prepareActuatorSupervisor(supervisor);
+    driver.enableSucceeds = false;
+    CHECK(!supervisor.enableIgnition());
+    CHECK(
+        supervisor.status().fault ==
+        ActuatorSupervisorFault::DriverFailure);
+    CHECK(driver.secureCalls == 2U);
+
+    TrackingActuatorDriver unsafeDriver{};
+    ActuatorSafetySupervisor unsafe{unsafeDriver};
+    unsafeDriver.disengageSucceeds = false;
+    unsafeDriver.secureSucceeds = false;
+    CHECK(!unsafe.secureOutputs());
+    CHECK(unsafe.status().fault == ActuatorSupervisorFault::SafingFailure);
+    CHECK(unsafe.status().safingFailed);
+}
+
 struct FakeTimer final : TimerPort {
     bool cancelSucceeds{true};
 
@@ -2839,6 +3148,14 @@ int main() {
         {"confirmed takeover", testConfirmedDriverTakeoverReleasesRemoteControl},
         {"unsafe driver entry", testUnsafeDriverEntryLatchesSafetyFault},
         {"fault reset guards", testFaultResetRequiresStoppedEngineAndNoCriticalFault},
+        {"actuator supervisor initialization", testActuatorSupervisorInitializesSafeAndRejectsInvalidConfig},
+        {"actuator supervisor sequence guards", testActuatorSupervisorRejectsUnsafeCommandSequences},
+        {"actuator supervisor nominal sequence", testActuatorSupervisorAllowsNominalSequence},
+        {"actuator supervisor watchdog", testActuatorSupervisorWatchdogSafesOutputs},
+        {"actuator supervisor starter limit", testActuatorSupervisorLimitsStarterDuration},
+        {"actuator supervisor interlocks", testActuatorSupervisorDetectsInterlockAndFeedbackFaults},
+        {"actuator supervisor clock reset", testActuatorSupervisorHandlesClockWrapAndGuardedReset},
+        {"actuator supervisor driver faults", testActuatorSupervisorLatchesDriverAndSafingFailures},
         {"runtime missing profile", testRuntimeRejectsMissingProfileWithoutRequestingVehicle},
         {"gateway failure", testRuntimeConvertsGatewayFailureIntoSafeFault},
         {"actuator failure", testRuntimeConvertsActuatorFailureIntoSafeFault},

@@ -10,6 +10,7 @@
 #include "bmw_remote/application/lock_command_gate.hpp"
 #include "bmw_remote/application/safety_policy.hpp"
 #include "bmw_remote/application/user_settings.hpp"
+#include "bmw_remote/infrastructure/actuator_safety_supervisor.hpp"
 #include "bmw_remote/infrastructure/can_lock_command_adapter.hpp"
 #include "bmw_remote/infrastructure/replay_vehicle_gateway.hpp"
 #include "bmw_remote/infrastructure/runtime.hpp"
@@ -39,6 +40,7 @@ enum class Scenario : std::uint8_t {
     SettingsLink,
     LockReplayGuard,
     QualifiedLockAdapter,
+    ActuatorSupervisor,
 };
 
 class ConsoleActuators final : public infrastructure::ActuatorPort {
@@ -67,6 +69,39 @@ public:
         std::cout << "  actuator: secure all outputs\n";
         return true;
     }
+};
+
+class SimulatedActuatorDriver final : public infrastructure::ActuatorPort {
+public:
+    bool enableIgnition() noexcept override {
+        ignitionActive = true;
+        return true;
+    }
+
+    bool engageStarter() noexcept override {
+        starterActive = true;
+        return true;
+    }
+
+    bool disengageStarter() noexcept override {
+        starterActive = false;
+        return true;
+    }
+
+    bool releaseRemoteControl() noexcept override {
+        ignitionActive = false;
+        starterActive = false;
+        return true;
+    }
+
+    bool secureOutputs() noexcept override {
+        ignitionActive = false;
+        starterActive = false;
+        return true;
+    }
+
+    bool ignitionActive{false};
+    bool starterActive{false};
 };
 
 class ConsoleTimer final : public infrastructure::TimerPort {
@@ -170,6 +205,7 @@ const char* scenarioName(const Scenario scenario) noexcept {
         case Scenario::SettingsLink: return "settings-link";
         case Scenario::LockReplayGuard: return "lock-replay-guard";
         case Scenario::QualifiedLockAdapter: return "qualified-lock-adapter";
+        case Scenario::ActuatorSupervisor: return "actuator-supervisor";
     }
     return "unknown";
 }
@@ -227,6 +263,10 @@ bool parseScenario(const std::string_view text, Scenario& scenario) noexcept {
         scenario = Scenario::QualifiedLockAdapter;
         return true;
     }
+    if (text == "actuator-supervisor") {
+        scenario = Scenario::ActuatorSupervisor;
+        return true;
+    }
     return false;
 }
 
@@ -258,7 +298,8 @@ void printScenarioList() {
         << "settings-recovery corrupts the newest slot and restores the previous one\n"
         << "settings-link exercises framed, authorized and idle-only configuration\n"
         << "lock-replay-guard rejects untrusted, stale and replayed lock evidence\n"
-        << "qualified-lock-adapter checks edges and a rolling frame counter\n";
+        << "qualified-lock-adapter checks edges and a rolling frame counter\n"
+        << "actuator-supervisor injects watchdog and feedback failures\n";
 }
 
 void printUsage(const char* const executable) {
@@ -790,6 +831,91 @@ int runQualifiedLockAdapterScenario() {
     return expectedOutcome ? 0 : 2;
 }
 
+int runActuatorSupervisorScenario() {
+    SimulatedActuatorDriver driver{};
+    infrastructure::ActuatorSafetySupervisor supervisor{driver};
+
+    const bool initializedSafe =
+        supervisor.status().healthy() && !driver.ignitionActive &&
+        !driver.starterActive;
+    const bool armed =
+        supervisor.heartbeat(0U) &&
+        supervisor.poll(
+            0U,
+            true,
+            infrastructure::ActuatorFeedback{true, false, false})
+            .healthy();
+    const bool ignitionEnabled = supervisor.enableIgnition();
+    const bool ignitionConfirmed =
+        supervisor.heartbeat(101U) &&
+        supervisor.poll(
+            101U,
+            true,
+            infrastructure::ActuatorFeedback{true, true, false})
+            .ignitionFeedbackConfirmed;
+    const bool starterEngaged = supervisor.engageStarter();
+    const bool crankingConfirmed =
+        supervisor.heartbeat(200U) &&
+        supervisor.poll(
+            200U,
+            true,
+            infrastructure::ActuatorFeedback{true, true, true})
+            .healthy();
+
+    const infrastructure::ActuatorSupervisorStatus watchdog = supervisor.poll(
+        701U,
+        true,
+        infrastructure::ActuatorFeedback{true, true, true});
+    const bool watchdogSafed =
+        watchdog.fault ==
+            infrastructure::ActuatorSupervisorFault::WatchdogExpired &&
+        !driver.ignitionActive && !driver.starterActive;
+
+    const bool reset = supervisor.resetFault(
+        800U, infrastructure::ActuatorFeedback{true, false, false});
+    const bool rearmed =
+        supervisor.heartbeat(900U) &&
+        supervisor.poll(
+            900U,
+            true,
+            infrastructure::ActuatorFeedback{true, false, false})
+            .healthy() &&
+        supervisor.enableIgnition();
+    const bool heartbeatBeforeMismatch = supervisor.heartbeat(1'001U);
+    const infrastructure::ActuatorSupervisorStatus mismatch = supervisor.poll(
+        1'001U,
+        true,
+        infrastructure::ActuatorFeedback{true, false, false});
+    const bool mismatchSafed =
+        heartbeatBeforeMismatch &&
+        mismatch.fault ==
+            infrastructure::ActuatorSupervisorFault::FeedbackMismatch &&
+        !driver.ignitionActive && !driver.starterActive;
+
+    const bool expectedOutcome =
+        initializedSafe && armed && ignitionEnabled && ignitionConfirmed &&
+        starterEngaged && crankingConfirmed && watchdogSafed && reset &&
+        rearmed && mismatchSafed;
+
+    std::cout
+        << "scenario: actuator-supervisor\n"
+        << "driver: simulated_no_gpio\n"
+        << "initial_outputs: " << (initializedSafe ? "safe" : "unsafe") << '\n'
+        << "nominal_sequence: "
+        << (crankingConfirmed ? "confirmed" : "rejected") << '\n'
+        << "watchdog_injection: "
+        << infrastructure::toString(watchdog.fault) << '\n'
+        << "watchdog_outputs: "
+        << (watchdogSafed ? "safe" : "unsafe") << '\n'
+        << "guarded_reset: " << (reset ? "accepted" : "rejected") << '\n'
+        << "feedback_injection: "
+        << infrastructure::toString(mismatch.fault) << '\n'
+        << "feedback_outputs: "
+        << (mismatchSafed ? "safe" : "unsafe") << '\n'
+        << "scenario_result: " << (expectedOutcome ? "PASS" : "FAIL") << '\n';
+    return expectedOutcome ? 0 : 2;
+}
+
 int runScenario(
     const Scenario scenario,
     const application::UserSettings* const suppliedSettings = nullptr) {
@@ -804,6 +930,9 @@ int runScenario(
     }
     if (scenario == Scenario::QualifiedLockAdapter) {
         return runQualifiedLockAdapterScenario();
+    }
+    if (scenario == Scenario::ActuatorSupervisor) {
+        return runActuatorSupervisorScenario();
     }
 
     application::UserSettings settings =
@@ -1108,7 +1237,8 @@ int runInteractive() {
         << "11. Liaison de configuration securisee simulee\n"
         << "12. Garde anti-rejeu des commandes de verrouillage\n"
         << "13. Adaptateur CAN qualifie sur vecteur de test\n"
-        << "14. Quitter\n\n"
+        << "14. Superviseur d'actionneurs et pannes injectees\n"
+        << "15. Quitter\n\n"
         << "Choix: ";
 
     unsigned selection = 0U;
@@ -1141,7 +1271,8 @@ int runInteractive() {
         case 11U: result = runScenario(Scenario::SettingsLink); break;
         case 12U: result = runScenario(Scenario::LockReplayGuard); break;
         case 13U: result = runScenario(Scenario::QualifiedLockAdapter); break;
-        case 14U: return 0;
+        case 14U: result = runScenario(Scenario::ActuatorSupervisor); break;
+        case 15U: return 0;
         default:
             std::cerr << "Invalid selection\n";
             result = 64;
