@@ -24,6 +24,7 @@ New-Item -ItemType Directory -Path $buildDirectory -Force | Out-Null
     (Join-Path $projectRoot 'src/domain/reference_profiles.cpp') `
     (Join-Path $projectRoot 'src/domain/vehicle_profile.cpp') `
     (Join-Path $projectRoot 'src/domain/vehicle_signal.cpp') `
+    (Join-Path $projectRoot 'src/infrastructure/can_lock_command_adapter.cpp') `
     (Join-Path $projectRoot 'src/infrastructure/can_trace_replay.cpp') `
     (Join-Path $projectRoot 'src/infrastructure/diagnostic_journal.cpp') `
     (Join-Path $projectRoot 'src/infrastructure/replay_vehicle_gateway.cpp') `

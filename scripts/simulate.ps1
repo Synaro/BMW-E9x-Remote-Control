@@ -15,7 +15,8 @@ param(
         'user-config',
         'settings-recovery',
         'settings-link',
-        'lock-replay-guard')]
+        'lock-replay-guard',
+        'qualified-lock-adapter')]
     [string]$Scenario = 'hood-required',
 
     [ValidateSet('required', 'optional')]

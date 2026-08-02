@@ -10,6 +10,7 @@
 #include "bmw_remote/application/lock_command_gate.hpp"
 #include "bmw_remote/application/safety_policy.hpp"
 #include "bmw_remote/application/user_settings.hpp"
+#include "bmw_remote/infrastructure/can_lock_command_adapter.hpp"
 #include "bmw_remote/infrastructure/replay_vehicle_gateway.hpp"
 #include "bmw_remote/infrastructure/runtime.hpp"
 #include "bmw_remote/infrastructure/settings_payload.hpp"
@@ -37,6 +38,7 @@ enum class Scenario : std::uint8_t {
     SettingsRecovery,
     SettingsLink,
     LockReplayGuard,
+    QualifiedLockAdapter,
 };
 
 class ConsoleActuators final : public infrastructure::ActuatorPort {
@@ -167,6 +169,7 @@ const char* scenarioName(const Scenario scenario) noexcept {
         case Scenario::SettingsRecovery: return "settings-recovery";
         case Scenario::SettingsLink: return "settings-link";
         case Scenario::LockReplayGuard: return "lock-replay-guard";
+        case Scenario::QualifiedLockAdapter: return "qualified-lock-adapter";
     }
     return "unknown";
 }
@@ -220,6 +223,10 @@ bool parseScenario(const std::string_view text, Scenario& scenario) noexcept {
         scenario = Scenario::LockReplayGuard;
         return true;
     }
+    if (text == "qualified-lock-adapter") {
+        scenario = Scenario::QualifiedLockAdapter;
+        return true;
+    }
     return false;
 }
 
@@ -250,7 +257,8 @@ void printScenarioList() {
         << "user-config uses every value from a supplied configuration file\n"
         << "settings-recovery corrupts the newest slot and restores the previous one\n"
         << "settings-link exercises framed, authorized and idle-only configuration\n"
-        << "lock-replay-guard rejects untrusted, stale and replayed lock evidence\n";
+        << "lock-replay-guard rejects untrusted, stale and replayed lock evidence\n"
+        << "qualified-lock-adapter checks edges and a rolling frame counter\n";
 }
 
 void printUsage(const char* const executable) {
@@ -689,6 +697,99 @@ int runLockReplayGuardScenario() {
     return expectedOutcome ? 0 : 2;
 }
 
+infrastructure::CanLockCommandAdapterConfig simulatedLockAdapterConfig(
+    const application::LockCommandTrust trust) noexcept {
+    infrastructure::CanLockCommandAdapterConfig config{};
+    config.enabled = true;
+    config.trust = trust;
+    config.identifier = 0x321U;
+    config.dataLength = 2U;
+    config.lockCommand = infrastructure::CanBitMatcher{0U, 0x01U, 0x01U};
+    config.vehicleSecured =
+        infrastructure::CanBitMatcher{0U, 0x02U, 0x02U};
+    config.rollingCounter = infrastructure::CanCounterField{1U, 0x0FU};
+    return config;
+}
+
+infrastructure::CanFrame simulatedLockFrame(
+    const std::uint32_t timestampMs,
+    const std::uint8_t counter,
+    const bool commandActive) noexcept {
+    infrastructure::CanFrame frame{};
+    frame.timestampMs = timestampMs;
+    frame.identifier = 0x321U;
+    frame.dataLength = 2U;
+    frame.data[0U] = static_cast<std::uint8_t>(
+        0x02U | (commandActive ? 0x01U : 0x00U));
+    frame.data[1U] = static_cast<std::uint8_t>(counter & 0x0FU);
+    return frame;
+}
+
+int runQualifiedLockAdapterScenario() {
+    infrastructure::CanLockCommandPipeline candidate{
+        simulatedLockAdapterConfig(application::LockCommandTrust::Candidate)};
+    static_cast<void>(candidate.process(simulatedLockFrame(0U, 0U, false), 0U));
+    const infrastructure::CanLockPipelineResult candidateResult =
+        candidate.process(simulatedLockFrame(1'000U, 1U, true), 1'000U);
+
+    infrastructure::CanLockCommandPipeline verified{
+        simulatedLockAdapterConfig(application::LockCommandTrust::Verified)};
+    static_cast<void>(verified.process(simulatedLockFrame(0U, 14U, false), 0U));
+    const infrastructure::CanLockPipelineResult first =
+        verified.process(simulatedLockFrame(1'000U, 15U, true), 1'000U);
+    const infrastructure::CanLockPipelineResult held =
+        verified.process(simulatedLockFrame(1'100U, 0U, true), 1'100U);
+    static_cast<void>(
+        verified.process(simulatedLockFrame(1'200U, 1U, false), 1'200U));
+    const infrastructure::CanLockPipelineResult second =
+        verified.process(simulatedLockFrame(1'600U, 2U, true), 1'600U);
+    const infrastructure::CanLockPipelineResult replay =
+        verified.process(simulatedLockFrame(1'700U, 2U, true), 1'700U);
+    const std::uint8_t pressesAfterReplay = verified.pressCount();
+
+    static_cast<void>(
+        verified.process(simulatedLockFrame(2'000U, 3U, false), 2'000U));
+    static_cast<void>(
+        verified.process(simulatedLockFrame(3'000U, 4U, true), 3'000U));
+    static_cast<void>(
+        verified.process(simulatedLockFrame(3'100U, 5U, false), 3'100U));
+    static_cast<void>(
+        verified.process(simulatedLockFrame(3'600U, 6U, true), 3'600U));
+    static_cast<void>(
+        verified.process(simulatedLockFrame(3'700U, 7U, false), 3'700U));
+    const infrastructure::CanLockPipelineResult completed =
+        verified.process(simulatedLockFrame(4'200U, 8U, true), 4'200U);
+
+    const bool expectedOutcome =
+        candidateResult.commandEvaluated &&
+        candidateResult.command.status ==
+            application::LockCommandStatus::RejectedUntrustedSource &&
+        first.command.status == application::LockCommandStatus::PressAccepted &&
+        held.decodeStatus == infrastructure::CanLockDecodeStatus::NoCommand &&
+        !held.commandEvaluated &&
+        second.command.status == application::LockCommandStatus::PressAccepted &&
+        replay.decodeStatus ==
+            infrastructure::CanLockDecodeStatus::RejectedDuplicateCounter &&
+        pressesAfterReplay == 0U && completed.command.remoteStartRequested();
+
+    std::cout
+        << "scenario: qualified-lock-adapter\n"
+        << "binding: simulated_test_vector_not_bmw\n"
+        << "candidate_binding: "
+        << application::toString(candidateResult.command.status) << '\n'
+        << "first_edge: " << application::toString(first.command.status) << '\n'
+        << "held_command: " << infrastructure::toString(held.decodeStatus) << '\n'
+        << "second_edge: " << application::toString(second.command.status) << '\n'
+        << "replayed_counter: " << infrastructure::toString(replay.decodeStatus)
+        << '\n'
+        << "presses_after_replay: "
+        << static_cast<unsigned int>(pressesAfterReplay) << '\n'
+        << "fresh_three_edges: "
+        << application::toString(completed.command.status) << '\n'
+        << "scenario_result: " << (expectedOutcome ? "PASS" : "FAIL") << '\n';
+    return expectedOutcome ? 0 : 2;
+}
+
 int runScenario(
     const Scenario scenario,
     const application::UserSettings* const suppliedSettings = nullptr) {
@@ -700,6 +801,9 @@ int runScenario(
     }
     if (scenario == Scenario::LockReplayGuard) {
         return runLockReplayGuardScenario();
+    }
+    if (scenario == Scenario::QualifiedLockAdapter) {
+        return runQualifiedLockAdapterScenario();
     }
 
     application::UserSettings settings =
@@ -1003,7 +1107,8 @@ int runInteractive() {
         << "10. Recuperation d'une configuration persistante corrompue\n"
         << "11. Liaison de configuration securisee simulee\n"
         << "12. Garde anti-rejeu des commandes de verrouillage\n"
-        << "13. Quitter\n\n"
+        << "13. Adaptateur CAN qualifie sur vecteur de test\n"
+        << "14. Quitter\n\n"
         << "Choix: ";
 
     unsigned selection = 0U;
@@ -1035,7 +1140,8 @@ int runInteractive() {
         case 10U: result = runScenario(Scenario::SettingsRecovery); break;
         case 11U: result = runScenario(Scenario::SettingsLink); break;
         case 12U: result = runScenario(Scenario::LockReplayGuard); break;
-        case 13U: return 0;
+        case 13U: result = runScenario(Scenario::QualifiedLockAdapter); break;
+        case 14U: return 0;
         default:
             std::cerr << "Invalid selection\n";
             result = 64;

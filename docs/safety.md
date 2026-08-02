@@ -44,6 +44,9 @@ certification fonctionnelle ou automobile.
 21. Une impulsion de verrouillage n'alimente la séquence de démarrage que si sa
     source est déclarée vérifiée, sa preuve récente et son ordre strictement
     croissant ; tout refus structurel annule la séquence partielle.
+22. Le décodeur CAN de verrouillage est désactivé sans liaison qualifiée. Une
+    liaison active exige un front montant et un compteur roulant indépendant ;
+    toute répétition ou régression efface le geste en cours.
 
 ## Matrice d'autorisation initiale
 

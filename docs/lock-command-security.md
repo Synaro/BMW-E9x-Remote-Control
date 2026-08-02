@@ -2,9 +2,9 @@
 
 ## Frontière de confiance
 
-Le noyau ne décode pas directement les messages BMW. Un adaptateur véhicule
-futur devra convertir une observation qualifiée en `LockCommandEvidence`, puis
-la transmettre à `LockCommandGate`. Seule la garde peut alimenter
+Le noyau ne contient aucun identifiant BMW. `CanLockCommandAdapter` peut convertir
+une trame dont la liaison a été qualifiée en `LockCommandEvidence`, puis la
+transmettre à `LockCommandGate`. Seule la garde peut alimenter
 `LockSequenceDetector` et produire une demande sémantique de démarrage distant.
 
 Une preuve contient uniquement :
@@ -50,12 +50,14 @@ désordonnés ou injectés depuis une source non autorisée. Elle empêche égal
 le simulateur d'être accepté par une configuration de production.
 
 Elle ne prouve pas encore qu'une trame observée sur le véhicule provient de la
-clé d'origine. Elle ne bloque pas le rejeu d'une trame BMW brute si l'adaptateur
-la transforme naïvement en une nouvelle preuve avec un nouveau compteur local.
-La future qualification BMW devra déterminer si un compteur, une corrélation
-CAS/JBE, une confirmation d'état ou une autre propriété légitime permet de
-construire un numéro de séquence fiable. Jusqu'à cette qualification, aucun
-adaptateur réel ne doit marquer une commande `Verified`.
+clé d'origine. Elle ne bloque pas à elle seule le rejeu d'une trame BMW brute.
+`CanLockCommandAdapter` exige donc un compteur roulant qualifié et rejette les
+répétitions, mais cette protection ne vaut que si le champ retenu est réellement
+lié à la provenance attendue. La future qualification BMW devra déterminer si
+ce compteur, une corrélation CAS/JBE, une confirmation d'état ou une autre
+propriété légitime permet de construire un numéro de séquence fiable. Jusqu'à
+cette qualification, aucun adaptateur réel ne doit marquer une commande
+`Verified`.
 
 Le scénario `lock-replay-guard` utilise volontairement `SyntheticTest` avec une
 autorisation explicite. Il démontre les règles du noyau, pas la sécurité du bus

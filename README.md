@@ -21,6 +21,7 @@ Le premier jalon logiciel est opérationnel :
 - machine d'état événementielle complète ;
 - détection applicative configurable de trois impulsions de verrouillage ;
 - garde fermée par défaut sur leur provenance, fraîcheur et ordre ;
+- adaptateur CAN lecture seule désactivé par défaut, avec fronts et compteur roulant ;
 - profil utilisateur validé avant application, sans recompilation du noyau ;
 - configurateur Windows interactif avec enregistrement vérifié et remplacement sûr ;
 - protocole binaire de configuration versionné, borné et protégé par CRC ;
@@ -47,7 +48,7 @@ Le premier jalon logiciel est opérationnel :
 - identification du produit, de la cible, de la version et des capacités avant écriture ;
 - journal de diagnostic circulaire, borné et dépourvu de données véhicule brutes ;
 - campagnes déterministes de perte, retard et corruption des données véhicule ;
-- 101 tests C++, 12 scénarios du simulateur, 3 contrôles du configurateur et
+- 106 tests C++, 13 scénarios du simulateur, 3 contrôles du configurateur et
   21 tests Python automatisés en intégration continue.
 
 L'adaptateur BMW qui observera réellement le verrouillage, qualifiera la reprise
@@ -91,6 +92,8 @@ Le déclenchement par trois verrouillages et le cycle de reprise sont spécifié
 dans [docs/remote-session.md](docs/remote-session.md).
 La frontière de confiance et les limites anti-rejeu des commandes sont décrites
 dans [docs/lock-command-security.md](docs/lock-command-security.md).
+Le contrat du futur décodeur CAN de verrouillage est défini dans
+[docs/can-lock-command-adapter.md](docs/can-lock-command-adapter.md).
 Les préférences, leurs limites et leur future persistance sont décrites dans
 [docs/user-configuration.md](docs/user-configuration.md).
 Le journal binaire redondant est spécifié dans
@@ -208,10 +211,11 @@ Sous Windows, l'exécutable interactif peut être construit avec :
 .\build\bmw_remote_simulator.exe
 ```
 
-Douze scénarios permettent de tester le parcours nominal, le capot obligatoire ou
+Treize scénarios permettent de tester le parcours nominal, le capot obligatoire ou
 facultatif, la reprise conducteur, la perte, le retard et la corruption des
 données, un profil utilisateur, la récupération du stockage et la liaison de
-configuration, ainsi que la garde anti-rejeu des verrouillages. Un scénario précis
+configuration, la garde anti-rejeu et l'adaptateur CAN qualifié sur un vecteur
+fictif. Un scénario précis
 peut aussi être compilé et exécuté avec :
 
 ```powershell
@@ -225,6 +229,7 @@ peut aussi être compilé et exécuté avec :
 .\scripts\simulate.ps1 -Scenario settings-recovery
 .\scripts\simulate.ps1 -Scenario settings-link
 .\scripts\simulate.ps1 -Scenario lock-replay-guard
+.\scripts\simulate.ps1 -Scenario qualified-lock-adapter
 ```
 
 Chaque parcours affiche aussi le journal chronologique des commandes,
