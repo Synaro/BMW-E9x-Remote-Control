@@ -60,6 +60,8 @@ public:
         const domain::VehicleState& vehicle) const noexcept;
     [[nodiscard]] SafetyAssessment assessRemoteRun(
         const domain::VehicleState& vehicle) const noexcept;
+    [[nodiscard]] SafetyAssessment assessDriverTakeover(
+        const domain::VehicleState& vehicle) const noexcept;
 
     [[nodiscard]] constexpr std::uint16_t runningRpmThreshold() const noexcept {
         return config_.runningRpmThreshold;
@@ -67,7 +69,10 @@ public:
 
 private:
     [[nodiscard]] SafetyAssessment assessCommon(
-        const domain::VehicleState& vehicle) const noexcept;
+        const domain::VehicleState& vehicle,
+        bool requireDoorsClosed,
+        bool requireTrunkClosed,
+        bool prohibitBrake) const noexcept;
 
     SafetyPolicyConfig config_{};
 };

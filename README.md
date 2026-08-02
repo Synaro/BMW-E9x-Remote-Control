@@ -19,6 +19,7 @@ Le premier jalon logiciel est opérationnel :
 - modèle d'état du véhicule avec qualité explicite des signaux ;
 - politique de sécurité indépendante du matériel ;
 - machine d'état événementielle complète ;
+- détection applicative configurable de trois impulsions de verrouillage ;
 - décisions et listes d'actions de taille fixe, sans allocation dynamique ;
 - arrêt fail-safe en cas de défaut d'un adaptateur ;
 - ports abstraits pour véhicule, actionneurs, minuterie et notifications ;
@@ -26,6 +27,7 @@ Le premier jalon logiciel est opérationnel :
 - rejeu temporel de traces CAN et assemblage des signaux avec gestion de fraîcheur ;
 - protocole CAN synthétique réservé aux simulations hors véhicule ;
 - simulateur interactif avec parcours nominal et injection d'un défaut de sécurité ;
+- session distante limitée à 15 minutes et reprise conducteur bornée à 60 secondes ;
 - profils véhicule extensibles avec qualification fermée par défaut ;
 - profil de découverte pour l'E90 2009 N47D20C boîte automatique ;
 - absence de capteur de capot déclarée pour ce véhicule de référence, contrôle activable au choix de l'utilisateur ;
@@ -33,11 +35,12 @@ Le premier jalon logiciel est opérationnel :
 - capture PC bornée avec refus des interfaces sans mode silencieux documenté ;
 - sélection explicite d'un profil obligatoire dans le contrôleur ;
 - analyse différentielle hors ligne des octets et bits candidats ;
-- 37 tests C++, 3 parcours CLI et 21 tests Python automatisés en intégration continue.
+- 46 tests C++, 5 parcours CLI et 21 tests Python automatisés en intégration continue.
 
-Les communications BMW, la commande distante et les sorties physiques restent à
-implémenter lorsque le matériel, les signaux et les critères d'acceptation auront
-été précisément définis.
+L'adaptateur BMW qui observera réellement le verrouillage, qualifiera la reprise
+conducteur et pilotera les sorties physiques reste à implémenter lorsque le
+matériel, les signaux et les critères d'acceptation auront été précisément
+définis.
 
 Le moteur de rejeu accepte des tableaux bornés et des fichiers de trace
 canoniques. Aucun identifiant BMW n'est supposé : le profil de référence reste
@@ -64,12 +67,15 @@ Les dépendances vont vers les abstractions : la couche application connaît le
 modèle du véhicule, mais ne connaît ni Arduino, ni ESP32, ni CAN, ni GPIO.
 
 La machine d'état utilise les états suivants : `Idle`, `Authorizing`,
-`Preparing`, `Cranking`, `Running`, `Stopping` et `Fault`. Une donnée nécessaire
-absente ou périmée provoque un refus ou un passage en défaut selon le contexte.
+`Preparing`, `Cranking`, `Running`, `AwaitingTakeover`, `DriverControl`,
+`Stopping` et `Fault`. Une donnée nécessaire absente ou périmée provoque un
+refus ou un passage en défaut selon le contexte.
 
 La description détaillée se trouve dans [docs/architecture.md](docs/architecture.md)
 et les invariants dans [docs/safety.md](docs/safety.md). Le système de variantes
 est décrit dans [docs/vehicle-profiles.md](docs/vehicle-profiles.md).
+Le déclenchement par trois verrouillages et le cycle de reprise sont spécifiés
+dans [docs/remote-session.md](docs/remote-session.md).
 
 ## Validation locale
 
@@ -131,12 +137,14 @@ Sous Windows, l'exécutable interactif peut être construit avec :
 .\build\bmw_remote_simulator.exe
 ```
 
-Trois scénarios permettent de tester le parcours nominal ainsi que le capot
-obligatoire ou facultatif. Un scénario précis peut aussi être compilé et exécuté
-avec :
+Cinq scénarios permettent de tester le parcours nominal, le capot obligatoire
+ou facultatif et la reprise conducteur confirmée ou expirée. Un scénario précis
+peut aussi être compilé et exécuté avec :
 
 ```powershell
 .\scripts\simulate.ps1 -Scenario hood-optional
+.\scripts\simulate.ps1 -Scenario takeover-timeout
+.\scripts\simulate.ps1 -Scenario takeover-confirmed
 ```
 
 Le résultat attendu est affiché sous la forme `scenario_result: PASS` et le code

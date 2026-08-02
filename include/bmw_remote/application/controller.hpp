@@ -16,6 +16,8 @@ enum class ControllerState : std::uint8_t {
     Preparing,
     Cranking,
     Running,
+    AwaitingTakeover,
+    DriverControl,
     Stopping,
     Fault,
 };
@@ -37,6 +39,7 @@ enum class EventType : std::uint8_t {
     RemoteStopRequested,
     VehicleStateUpdated,
     TimerElapsed,
+    DriverTakeoverConfirmed,
     InfrastructureFailure,
     ResetRequested,
 };
@@ -56,6 +59,7 @@ enum class ActionType : std::uint8_t {
     EnableIgnition,
     EngageStarter,
     DisengageStarter,
+    ReleaseRemoteControl,
     SecureOutputs,
     ArmTimer,
     CancelTimer,
@@ -63,6 +67,8 @@ enum class ActionType : std::uint8_t {
     NotifyStartAccepted,
     NotifyStartRejected,
     NotifyRunning,
+    NotifyTakeoverPending,
+    NotifyTakeoverComplete,
     NotifyStopping,
     NotifyStopped,
     NotifyFault,
@@ -102,6 +108,7 @@ struct ControllerConfig final {
     std::uint32_t preparationDelayMs{1'500U};
     std::uint32_t maximumCrankTimeMs{5'000U};
     std::uint32_t maximumRemoteRunTimeMs{15U * 60U * 1'000U};
+    std::uint32_t driverTakeoverTimeoutMs{60'000U};
     std::uint32_t stopConfirmationTimeoutMs{3'000U};
 };
 
@@ -134,6 +141,9 @@ private:
     void handleTimer(
         Decision& decision,
         const domain::VehicleState& vehicle) noexcept;
+    void handleDriverTakeover(
+        Decision& decision,
+        const domain::VehicleState& vehicle) noexcept;
     void handleReset(
         Decision& decision,
         const domain::VehicleState& vehicle) noexcept;
@@ -141,12 +151,16 @@ private:
     void beginPreparing(Decision& decision) noexcept;
     void beginCranking(Decision& decision) noexcept;
     void beginRunning(Decision& decision) noexcept;
+    void beginAwaitingTakeover(Decision& decision) noexcept;
+    void completeDriverTakeover(Decision& decision) noexcept;
     void beginStopping(Decision& decision) noexcept;
     void completeStop(Decision& decision) noexcept;
     void enterFault(Decision& decision, FaultCode fault) noexcept;
     void transition(Decision& decision, ControllerState next) noexcept;
 
     [[nodiscard]] bool engineIsRunning(
+        const domain::VehicleState& vehicle) const noexcept;
+    [[nodiscard]] bool driverEntryDetected(
         const domain::VehicleState& vehicle) const noexcept;
 
     ControllerConfig config_{};

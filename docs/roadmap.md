@@ -5,6 +5,8 @@
 - [x] Modèle d'état du véhicule et qualité des signaux
 - [x] Politique de sécurité indépendante du matériel
 - [x] Machine d'état événementielle
+- [x] Détecteur borné de trois impulsions de verrouillage
+- [x] Session distante de 15 minutes et reprise conducteur temporisée
 - [x] Actions bornées sans allocation dynamique
 - [x] Runtime et ports abstraits
 - [x] Tests hôte et intégration continue
@@ -58,7 +60,8 @@
 
 - [ ] Implémenter le décodeur véhicule réel en lecture seule
 - [ ] Tester perte, retard et corruption des données
-- [ ] Définir une commande distante authentifiée et résistante au rejeu
+- [ ] Qualifier la provenance BMW des verrouillages et la résistance au rejeu
+- [ ] Implémenter l'adaptateur réel de confirmation de reprise conducteur
 - [ ] Ajouter une journalisation bornée et non sensible
 - [ ] Valider la consommation au repos
 

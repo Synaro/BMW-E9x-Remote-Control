@@ -7,6 +7,7 @@
 #include <vector>
 
 #include "bmw_remote/application/controller.hpp"
+#include "bmw_remote/application/lock_sequence_detector.hpp"
 #include "bmw_remote/application/profile_readiness.hpp"
 #include "bmw_remote/application/safety_policy.hpp"
 #include "bmw_remote/domain/reference_profiles.hpp"
@@ -27,6 +28,8 @@ using bmw::remote::application::ControllerState;
 using bmw::remote::application::Event;
 using bmw::remote::application::EventType;
 using bmw::remote::application::FaultCode;
+using bmw::remote::application::LockSequenceConfig;
+using bmw::remote::application::LockSequenceDetector;
 using bmw::remote::application::ProfileReadinessReason;
 using bmw::remote::application::SafetyPolicy;
 using bmw::remote::application::SafetyPolicyConfig;
@@ -66,6 +69,17 @@ void check(const bool condition, const char* expression, const int line) {
 
 #define CHECK(expression) check((expression), #expression, __LINE__)
 
+const bmw::remote::application::Action* findAction(
+    const bmw::remote::application::Decision& decision,
+    const ActionType type) {
+    for (std::size_t index = 0U; index < decision.actionCount; ++index) {
+        if (decision.actions[index].type == type) {
+            return &decision.actions[index];
+        }
+    }
+    return nullptr;
+}
+
 VehicleState safeAutomaticVehicle() {
     VehicleState vehicle{};
     vehicle.batteryMillivolts = Observed<std::uint16_t>::fresh(12'500U);
@@ -92,6 +106,36 @@ void advanceToRunning(Controller& controller, VehicleState& vehicle) {
     static_cast<void>(controller.handle(Event{EventType::TimerElapsed}, vehicle));
     vehicle.engineRpm = Observed<std::uint16_t>::fresh(800U);
     static_cast<void>(controller.handle(Event{EventType::VehicleStateUpdated}, vehicle));
+}
+
+void testThreeLockPressesTriggerRemoteStartGesture() {
+    LockSequenceDetector detector{};
+
+    CHECK(!detector.observeLockPress(1'000U));
+    CHECK(!detector.observeLockPress(1'600U));
+    CHECK(detector.observeLockPress(2'200U));
+    CHECK(detector.pressCount() == 0U);
+}
+
+void testSlowLockSequenceDoesNotTrigger() {
+    LockSequenceDetector detector{};
+
+    CHECK(!detector.observeLockPress(0U));
+    CHECK(!detector.observeLockPress(2'000U));
+    CHECK(!detector.observeLockPress(2'500U));
+    CHECK(detector.pressCount() == 2U);
+}
+
+void testLockButtonBounceIsIgnored() {
+    LockSequenceConfig config{};
+    config.minimumGapMs = 100U;
+    LockSequenceDetector detector{config};
+
+    CHECK(!detector.observeLockPress(1'000U));
+    CHECK(!detector.observeLockPress(1'020U));
+    CHECK(detector.pressCount() == 1U);
+    CHECK(!detector.observeLockPress(1'500U));
+    CHECK(detector.observeLockPress(2'000U));
 }
 
 void testSafeAutomaticVehicleIsApproved() {
@@ -303,6 +347,105 @@ void testRemoteRunTimerInitiatesStop() {
     CHECK(expired.contains(ActionType::NotifyStopping));
 }
 
+void testRemoteRunIsLimitedToFifteenMinutesByDefault() {
+    Controller controller = qualifiedController();
+    VehicleState vehicle = safeAutomaticVehicle();
+
+    static_cast<void>(controller.handle(Event{EventType::RemoteStartRequested}, vehicle));
+    static_cast<void>(controller.handle(Event{EventType::VehicleStateUpdated}, vehicle));
+    static_cast<void>(controller.handle(Event{EventType::TimerElapsed}, vehicle));
+    vehicle.engineRpm.value = 800U;
+    const auto running = controller.handle(
+        Event{EventType::VehicleStateUpdated}, vehicle);
+
+    const auto* const timer = findAction(running, ActionType::ArmTimer);
+    CHECK(timer != nullptr);
+    if (timer != nullptr) {
+        CHECK(timer->durationMs == 15U * 60U * 1'000U);
+    }
+}
+
+void testDoorOpeningStartsBoundedDriverTakeover() {
+    Controller controller = qualifiedController();
+    VehicleState vehicle = safeAutomaticVehicle();
+    advanceToRunning(controller, vehicle);
+
+    vehicle.doorsClosed.value = false;
+    vehicle.brakePressed.value = true;
+    const auto pending = controller.handle(
+        Event{EventType::VehicleStateUpdated}, vehicle);
+
+    CHECK(pending.state == ControllerState::AwaitingTakeover);
+    CHECK(pending.safety.approved());
+    CHECK(pending.contains(ActionType::NotifyTakeoverPending));
+    const auto* const timer = findAction(pending, ActionType::ArmTimer);
+    CHECK(timer != nullptr);
+    if (timer != nullptr) {
+        CHECK(timer->durationMs == 60'000U);
+    }
+}
+
+void testUnconfirmedDriverTakeoverStopsRemoteEngine() {
+    Controller controller = qualifiedController();
+    VehicleState vehicle = safeAutomaticVehicle();
+    advanceToRunning(controller, vehicle);
+    vehicle.doorsClosed.value = false;
+    static_cast<void>(controller.handle(
+        Event{EventType::VehicleStateUpdated}, vehicle));
+
+    const auto expired = controller.handle(Event{EventType::TimerElapsed}, vehicle);
+
+    CHECK(expired.state == ControllerState::Stopping);
+    CHECK(expired.contains(ActionType::SecureOutputs));
+    CHECK(expired.contains(ActionType::NotifyStopping));
+}
+
+void testConfirmedDriverTakeoverReleasesRemoteControl() {
+    Controller controller = qualifiedController();
+    VehicleState vehicle = safeAutomaticVehicle();
+    advanceToRunning(controller, vehicle);
+    vehicle.doorsClosed.value = false;
+    vehicle.brakePressed.value = true;
+    static_cast<void>(controller.handle(
+        Event{EventType::VehicleStateUpdated}, vehicle));
+
+    const auto takeover = controller.handle(
+        Event{EventType::DriverTakeoverConfirmed}, vehicle);
+
+    CHECK(takeover.state == ControllerState::DriverControl);
+    CHECK(takeover.safety.approved());
+    CHECK(takeover.contains(ActionType::ReleaseRemoteControl));
+    CHECK(takeover.contains(ActionType::NotifyTakeoverComplete));
+
+    const auto remoteStop = controller.handle(
+        Event{EventType::RemoteStopRequested}, vehicle);
+    CHECK(remoteStop.state == ControllerState::DriverControl);
+    CHECK(remoteStop.contains(ActionType::NotifyRequestIgnored));
+
+    vehicle.engineRpm.value = 0U;
+    const auto ready = controller.handle(
+        Event{EventType::VehicleStateUpdated}, vehicle);
+    CHECK(ready.state == ControllerState::Idle);
+    CHECK(ready.contains(ActionType::NotifyReady));
+}
+
+void testUnsafeDriverEntryLatchesSafetyFault() {
+    Controller controller = qualifiedController();
+    VehicleState vehicle = safeAutomaticVehicle();
+    advanceToRunning(controller, vehicle);
+    vehicle.doorsClosed.value = false;
+    vehicle.trunkClosed.value = false;
+    vehicle.parkingBrakeApplied.value = false;
+
+    const auto unsafe = controller.handle(
+        Event{EventType::VehicleStateUpdated}, vehicle);
+
+    CHECK(unsafe.state == ControllerState::Fault);
+    CHECK(unsafe.fault == FaultCode::SafetyInterlock);
+    CHECK(unsafe.safety.contains(SafetyReason::TrunkOpen));
+    CHECK(unsafe.safety.contains(SafetyReason::ParkingBrakeReleased));
+}
+
 void testFaultResetRequiresStoppedEngineAndNoCriticalFault() {
     Controller controller = qualifiedController();
     VehicleState vehicle = safeAutomaticVehicle();
@@ -332,14 +475,20 @@ struct FakeVehicleGateway final : VehicleGateway {
 
 struct FakeActuator final : ActuatorPort {
     bool ignitionSucceeds{true};
+    bool releaseSucceeds{true};
     std::uint32_t secureCalls{0U};
     std::uint32_t starterReleaseCalls{0U};
+    std::uint32_t remoteControlReleaseCalls{0U};
 
     bool enableIgnition() noexcept override { return ignitionSucceeds; }
     bool engageStarter() noexcept override { return true; }
     bool disengageStarter() noexcept override {
         ++starterReleaseCalls;
         return true;
+    }
+    bool releaseRemoteControl() noexcept override {
+        ++remoteControlReleaseCalls;
+        return releaseSucceeds;
     }
     bool secureOutputs() noexcept override {
         ++secureCalls;
@@ -427,6 +576,33 @@ void testRuntimeConvertsActuatorFailureIntoSafeFault() {
     CHECK(result.fault == FaultCode::ActuatorFailure);
     CHECK(actuator.starterReleaseCalls == 1U);
     CHECK(actuator.secureCalls == 1U);
+}
+
+void testRuntimeSafesOutputsWhenTakeoverReleaseFails() {
+    FakeVehicleGateway gateway{};
+    FakeActuator actuator{};
+    actuator.releaseSucceeds = false;
+    FakeTimer timer{};
+    FakeNotifications notifications{};
+    Runtime runtime{qualifiedController(), gateway, actuator, timer, notifications};
+    VehicleState vehicle = safeAutomaticVehicle();
+
+    static_cast<void>(runtime.dispatch(Event{EventType::RemoteStartRequested}, vehicle));
+    static_cast<void>(runtime.dispatch(Event{EventType::VehicleStateUpdated}, vehicle));
+    static_cast<void>(runtime.dispatch(Event{EventType::TimerElapsed}, vehicle));
+    vehicle.engineRpm.value = 800U;
+    static_cast<void>(runtime.dispatch(Event{EventType::VehicleStateUpdated}, vehicle));
+    vehicle.doorsClosed.value = false;
+    static_cast<void>(runtime.dispatch(Event{EventType::VehicleStateUpdated}, vehicle));
+
+    const auto failed = runtime.dispatch(
+        Event{EventType::DriverTakeoverConfirmed}, vehicle);
+
+    CHECK(failed.state == ControllerState::Fault);
+    CHECK(failed.fault == FaultCode::ActuatorFailure);
+    CHECK(actuator.remoteControlReleaseCalls == 1U);
+    CHECK(actuator.secureCalls == 1U);
+    CHECK(notifications.faultNotifications == 1U);
 }
 
 void testReplayRejectsNonMonotonicTrace() {
@@ -742,6 +918,9 @@ struct TestCase final {
 
 int main() {
     const TestCase tests[] = {
+        {"three-lock gesture", testThreeLockPressesTriggerRemoteStartGesture},
+        {"slow lock sequence", testSlowLockSequenceDoesNotTrigger},
+        {"lock button debounce", testLockButtonBounceIsIgnored},
         {"safe automatic vehicle", testSafeAutomaticVehicleIsApproved},
         {"unavailable signal", testUnavailableSignalFailsClosed},
         {"multiple safety reasons", testUnsafeVehicleReportsAllDetectedReasons},
@@ -757,10 +936,16 @@ int main() {
         {"running safety violation", testSafetyViolationWhileRunningLatchesFault},
         {"remote stop confirmation", testRemoteStopRequiresStoppedEngineConfirmation},
         {"remote run timeout", testRemoteRunTimerInitiatesStop},
+        {"fifteen minute remote run", testRemoteRunIsLimitedToFifteenMinutesByDefault},
+        {"driver entry takeover", testDoorOpeningStartsBoundedDriverTakeover},
+        {"takeover timeout", testUnconfirmedDriverTakeoverStopsRemoteEngine},
+        {"confirmed takeover", testConfirmedDriverTakeoverReleasesRemoteControl},
+        {"unsafe driver entry", testUnsafeDriverEntryLatchesSafetyFault},
         {"fault reset guards", testFaultResetRequiresStoppedEngineAndNoCriticalFault},
         {"runtime missing profile", testRuntimeRejectsMissingProfileWithoutRequestingVehicle},
         {"gateway failure", testRuntimeConvertsGatewayFailureIntoSafeFault},
         {"actuator failure", testRuntimeConvertsActuatorFailureIntoSafeFault},
+        {"takeover release failure", testRuntimeSafesOutputsWhenTakeoverReleaseFails},
         {"non-monotonic trace", testReplayRejectsNonMonotonicTrace},
         {"time-bounded replay", testReplayOnlyEmitsFramesDueAtCurrentTime},
         {"signal freshness", testAssemblerMarksOldSignalsStale},

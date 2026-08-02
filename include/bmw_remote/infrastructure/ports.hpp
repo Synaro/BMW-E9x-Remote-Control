@@ -18,6 +18,7 @@ public:
     virtual bool enableIgnition() noexcept = 0;
     virtual bool engageStarter() noexcept = 0;
     virtual bool disengageStarter() noexcept = 0;
+    virtual bool releaseRemoteControl() noexcept = 0;
     virtual bool secureOutputs() noexcept = 0;
 };
 

@@ -15,22 +15,31 @@ void requireFresh(
 }  // namespace
 
 SafetyAssessment SafetyPolicy::assessCommon(
-    const domain::VehicleState& vehicle) const noexcept {
+    const domain::VehicleState& vehicle,
+    const bool requireDoorsClosed,
+    const bool requireTrunkClosed,
+    const bool prohibitBrake) const noexcept {
     SafetyAssessment assessment{};
 
     requireFresh(assessment, vehicle.batteryMillivolts);
-    requireFresh(assessment, vehicle.brakePressed);
     requireFresh(assessment, vehicle.parkingBrakeApplied);
     requireFresh(assessment, vehicle.transmission);
     requireFresh(assessment, vehicle.gear);
     requireFresh(assessment, vehicle.criticalFaultPresent);
 
+    if (prohibitBrake) {
+        requireFresh(assessment, vehicle.brakePressed);
+    }
+
     if (config_.requireHoodClosed) {
         requireFresh(assessment, vehicle.hoodClosed);
     }
 
-    if (config_.requireVehicleSecured) {
+    if (requireDoorsClosed) {
         requireFresh(assessment, vehicle.doorsClosed);
+    }
+
+    if (requireTrunkClosed) {
         requireFresh(assessment, vehicle.trunkClosed);
     }
 
@@ -45,19 +54,21 @@ SafetyAssessment SafetyPolicy::assessCommon(
         assessment.add(SafetyReason::HoodOpen);
     }
 
-    if (config_.requireVehicleSecured &&
+    if (requireDoorsClosed &&
         vehicle.doorsClosed.isFresh() &&
         !vehicle.doorsClosed.value) {
         assessment.add(SafetyReason::DoorOpen);
     }
 
-    if (config_.requireVehicleSecured &&
+    if (requireTrunkClosed &&
         vehicle.trunkClosed.isFresh() &&
         !vehicle.trunkClosed.value) {
         assessment.add(SafetyReason::TrunkOpen);
     }
 
-    if (vehicle.brakePressed.isFresh() && vehicle.brakePressed.value) {
+    if (prohibitBrake &&
+        vehicle.brakePressed.isFresh() &&
+        vehicle.brakePressed.value) {
         assessment.add(SafetyReason::BrakePressed);
     }
 
@@ -98,7 +109,11 @@ SafetyAssessment SafetyPolicy::assessCommon(
 
 SafetyAssessment SafetyPolicy::assessStart(
     const domain::VehicleState& vehicle) const noexcept {
-    SafetyAssessment assessment = assessCommon(vehicle);
+    SafetyAssessment assessment = assessCommon(
+        vehicle,
+        config_.requireVehicleSecured,
+        config_.requireVehicleSecured,
+        true);
     requireFresh(assessment, vehicle.engineRpm);
 
     if (vehicle.engineRpm.isFresh() &&
@@ -111,14 +126,39 @@ SafetyAssessment SafetyPolicy::assessStart(
 
 SafetyAssessment SafetyPolicy::assessCranking(
     const domain::VehicleState& vehicle) const noexcept {
-    SafetyAssessment assessment = assessCommon(vehicle);
+    SafetyAssessment assessment = assessCommon(
+        vehicle,
+        config_.requireVehicleSecured,
+        config_.requireVehicleSecured,
+        true);
     requireFresh(assessment, vehicle.engineRpm);
     return assessment;
 }
 
 SafetyAssessment SafetyPolicy::assessRemoteRun(
     const domain::VehicleState& vehicle) const noexcept {
-    SafetyAssessment assessment = assessCommon(vehicle);
+    SafetyAssessment assessment = assessCommon(
+        vehicle,
+        config_.requireVehicleSecured,
+        config_.requireVehicleSecured,
+        true);
+    requireFresh(assessment, vehicle.engineRpm);
+
+    if (vehicle.engineRpm.isFresh() &&
+        vehicle.engineRpm.value < config_.runningRpmThreshold) {
+        assessment.add(SafetyReason::EngineNotRunning);
+    }
+
+    return assessment;
+}
+
+SafetyAssessment SafetyPolicy::assessDriverTakeover(
+    const domain::VehicleState& vehicle) const noexcept {
+    SafetyAssessment assessment = assessCommon(
+        vehicle,
+        false,
+        config_.requireVehicleSecured,
+        false);
     requireFresh(assessment, vehicle.engineRpm);
 
     if (vehicle.engineRpm.isFresh() &&

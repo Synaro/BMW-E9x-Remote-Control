@@ -28,6 +28,24 @@ L'adaptateur d'actionneurs doit :
 - retourner `false` au moindre doute afin de déclencher `Fault` ;
 - éviter toute logique métier propre à une transition.
 
+`releaseRemoteControl()` représente un transfert atomique vers un conducteur
+déjà authentifié. Il ne doit jamais être assimilé à un simple arrêt des sorties :
+il doit confirmer que le moteur reste sous une chaîne de commande légitime avant
+de retourner `true`. Au moindre doute, il retourne `false`, ce qui déclenche la
+mise en sécurité.
+
+## Source de commande distante
+
+Le futur adaptateur BMW doit publier une impulsion de verrouillage sémantique
+uniquement après validation de sa provenance. Le noyau peut ensuite appliquer
+`LockSequenceDetector` et produire une demande après trois impulsions valides.
+Les identifiants CAN, compteurs, états CAS/JBE et règles anti-rejeu restent
+strictement dans l'infrastructure et devront être qualifiés par variante.
+
+De même, l'adaptateur ne produit `DriverTakeoverConfirmed` qu'après satisfaction
+des preuves de reprise retenues. Une portière ouverte, seule, n'est jamais une
+preuve suffisante.
+
 ## TimerPort
 
 Une seule échéance d'état est active à la fois. L'implémentation doit gérer le
