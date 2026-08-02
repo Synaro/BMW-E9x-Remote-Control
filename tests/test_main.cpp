@@ -17,6 +17,8 @@
 #include "bmw_remote/domain/vehicle_state.hpp"
 #include "bmw_remote/infrastructure/replay_vehicle_gateway.hpp"
 #include "bmw_remote/infrastructure/runtime.hpp"
+#include "bmw_remote/infrastructure/settings_payload.hpp"
+#include "bmw_remote/infrastructure/settings_protocol.hpp"
 #include "bmw_remote/infrastructure/settings_storage.hpp"
 #include "bmw_remote/infrastructure/vehicle_state_assembler.hpp"
 #include "bmw_remote/simulation/synthetic_can.hpp"
@@ -520,6 +522,243 @@ void testInvalidSettingsAreNeverPersisted() {
     CHECK(!store.save(invalid));
     CHECK(storage.writeCalls == 0U);
     CHECK(storage.commitCalls == 0U);
+}
+
+void testSettingsPayloadRoundTripsEveryField() {
+    UserSettings original{};
+    original.remoteStartEnabled = false;
+    original.hoodMonitoring = HoodMonitoringMode::Disabled;
+    original.driverEntryMode =
+        bmw::remote::application::DriverEntryMode::StopImmediately;
+    original.maximumRemoteRunTimeMs = 25U * 60U * 1'000U;
+    original.driverTakeoverTimeoutMs = 75'000U;
+    original.lockPressCount = 4U;
+    original.lockMinimumGapMs = 90U;
+    original.lockMaximumGapMs = 1'800U;
+    original.lockMaximumSequenceMs = 5'000U;
+    bmw::remote::infrastructure::UserSettingsPayload payload{};
+
+    CHECK(bmw::remote::infrastructure::encodeUserSettingsPayload(
+        original, payload));
+
+    UserSettings decoded{};
+    CHECK(bmw::remote::infrastructure::decodeUserSettingsPayload(
+        payload, decoded));
+    CHECK(bmw::remote::infrastructure::userSettingsEqual(original, decoded));
+}
+
+void testSettingsPayloadRejectsInvalidValues() {
+    UserSettings invalid{};
+    invalid.lockPressCount = 1U;
+    bmw::remote::infrastructure::UserSettingsPayload payload{};
+
+    CHECK(!bmw::remote::infrastructure::encodeUserSettingsPayload(
+        invalid, payload));
+
+    UserSettings valid{};
+    CHECK(bmw::remote::infrastructure::encodeUserSettingsPayload(
+        valid, payload));
+    payload[0] = 2U;
+    CHECK(!bmw::remote::infrastructure::decodeUserSettingsPayload(
+        payload, valid));
+}
+
+bmw::remote::infrastructure::SettingsProtocolFrame settingsWriteRequest(
+    const UserSettings& settings,
+    const std::uint16_t requestId = 42U) {
+    bmw::remote::infrastructure::SettingsProtocolFrame request{};
+    request.type =
+        bmw::remote::infrastructure::SettingsMessageType::WriteRequest;
+    request.requestId = requestId;
+    request.payloadSize = static_cast<std::uint16_t>(
+        bmw::remote::infrastructure::UserSettingsPayloadSize);
+    CHECK(bmw::remote::infrastructure::encodeUserSettingsPayload(
+        settings, request.payload));
+    return request;
+}
+
+void testSettingsProtocolFrameRoundTrip() {
+    UserSettings settings{};
+    settings.hoodMonitoring = HoodMonitoringMode::Disabled;
+    settings.maximumRemoteRunTimeMs = 20U * 60U * 1'000U;
+    const auto request = settingsWriteRequest(settings, 321U);
+    bmw::remote::infrastructure::SettingsProtocolCodec::EncodedFrame encoded{};
+    std::size_t encodedSize = 0U;
+
+    CHECK(bmw::remote::infrastructure::SettingsProtocolCodec::encode(
+        request, encoded, encodedSize));
+    CHECK(encodedSize ==
+          bmw::remote::infrastructure::SettingsProtocolCodec::MaximumFrameSize);
+
+    const auto decoded =
+        bmw::remote::infrastructure::SettingsProtocolCodec::decode(
+            encoded.data(), encodedSize);
+    CHECK(decoded.valid());
+    CHECK(decoded.frame.type == request.type);
+    CHECK(decoded.frame.status == request.status);
+    CHECK(decoded.frame.requestId == 321U);
+    CHECK(decoded.frame.payloadSize == request.payloadSize);
+    CHECK(decoded.frame.payload == request.payload);
+}
+
+void testSettingsProtocolFrameRejectsCorruption() {
+    bmw::remote::infrastructure::SettingsProtocolFrame request{};
+    request.type =
+        bmw::remote::infrastructure::SettingsMessageType::ReadRequest;
+    bmw::remote::infrastructure::SettingsProtocolCodec::EncodedFrame encoded{};
+    std::size_t encodedSize = 0U;
+    CHECK(bmw::remote::infrastructure::SettingsProtocolCodec::encode(
+        request, encoded, encodedSize));
+
+    encoded[8] ^= 0x01U;
+    const auto corrupted =
+        bmw::remote::infrastructure::SettingsProtocolCodec::decode(
+            encoded.data(), encodedSize);
+    CHECK(corrupted.status ==
+          bmw::remote::infrastructure::SettingsFrameDecodeStatus::ChecksumMismatch);
+    CHECK(!bmw::remote::infrastructure::SettingsProtocolCodec::decode(
+               encoded.data(), 5U)
+               .valid());
+    CHECK(bmw::remote::infrastructure::SettingsProtocolCodec::decode(
+              encoded.data(), encoded.size() + 1U)
+              .status ==
+          bmw::remote::infrastructure::SettingsFrameDecodeStatus::TooLong);
+}
+
+void testSettingsProtocolFrameRejectsHeaderViolations() {
+    bmw::remote::infrastructure::SettingsProtocolFrame request{};
+    request.type =
+        bmw::remote::infrastructure::SettingsMessageType::ReadRequest;
+    bmw::remote::infrastructure::SettingsProtocolCodec::EncodedFrame encoded{};
+    std::size_t encodedSize = 0U;
+    CHECK(bmw::remote::infrastructure::SettingsProtocolCodec::encode(
+        request, encoded, encodedSize));
+
+    auto modified = encoded;
+    modified[4] = 2U;
+    CHECK(bmw::remote::infrastructure::SettingsProtocolCodec::decode(
+              modified.data(), encodedSize)
+              .status ==
+          bmw::remote::infrastructure::SettingsFrameDecodeStatus::UnsupportedVersion);
+    modified = encoded;
+    modified[7] = 1U;
+    CHECK(bmw::remote::infrastructure::SettingsProtocolCodec::decode(
+              modified.data(), encodedSize)
+              .status ==
+          bmw::remote::infrastructure::SettingsFrameDecodeStatus::ReservedFieldSet);
+    modified = encoded;
+    modified[10] = 25U;
+    CHECK(bmw::remote::infrastructure::SettingsProtocolCodec::decode(
+              modified.data(), encodedSize)
+              .status ==
+          bmw::remote::infrastructure::SettingsFrameDecodeStatus::PayloadTooLarge);
+}
+
+void testSettingsProtocolRequiresAuthorizedSession() {
+    MemorySettingsStorage storage{};
+    JournaledUserSettingsStore store{storage};
+    bmw::remote::infrastructure::SettingsProtocolService service{store};
+    const auto request = settingsWriteRequest(UserSettings{});
+
+    const auto response = service.handle(
+        request,
+        bmw::remote::infrastructure::SettingsProtocolAccess{
+            false,
+            bmw::remote::application::ControllerState::Idle});
+
+    CHECK(response.status ==
+          bmw::remote::infrastructure::SettingsProtocolStatus::Unauthorized);
+    CHECK(storage.writeCalls == 0U);
+}
+
+void testSettingsProtocolRejectsWritesWhileControllerIsActive() {
+    MemorySettingsStorage storage{};
+    JournaledUserSettingsStore store{storage};
+    bmw::remote::infrastructure::SettingsProtocolService service{store};
+    UserSettings settings{};
+    settings.maximumRemoteRunTimeMs = 30U * 60U * 1'000U;
+
+    const auto response = service.handle(
+        settingsWriteRequest(settings),
+        bmw::remote::infrastructure::SettingsProtocolAccess{
+            true,
+            bmw::remote::application::ControllerState::Running});
+
+    CHECK(response.status ==
+          bmw::remote::infrastructure::SettingsProtocolStatus::Busy);
+    CHECK(storage.writeCalls == 0U);
+}
+
+void testSettingsProtocolWritesThenReadsPersistedSettings() {
+    MemorySettingsStorage storage{};
+    JournaledUserSettingsStore store{storage};
+    bmw::remote::infrastructure::SettingsProtocolService service{store};
+    const bmw::remote::infrastructure::SettingsProtocolAccess access{
+        true,
+        bmw::remote::application::ControllerState::Idle};
+    UserSettings settings{};
+    settings.hoodMonitoring = HoodMonitoringMode::Disabled;
+    settings.maximumRemoteRunTimeMs = 22U * 60U * 1'000U;
+
+    const auto writeResponse = service.handle(
+        settingsWriteRequest(settings, 7U), access);
+    CHECK(writeResponse.type ==
+          bmw::remote::infrastructure::SettingsMessageType::WriteResponse);
+    CHECK(writeResponse.status ==
+          bmw::remote::infrastructure::SettingsProtocolStatus::Ok);
+    CHECK(writeResponse.requestId == 7U);
+
+    bmw::remote::infrastructure::SettingsProtocolFrame readRequest{};
+    readRequest.type =
+        bmw::remote::infrastructure::SettingsMessageType::ReadRequest;
+    readRequest.requestId = 8U;
+    const auto readResponse = service.handle(readRequest, access);
+    CHECK(readResponse.type ==
+          bmw::remote::infrastructure::SettingsMessageType::ReadResponse);
+    CHECK(readResponse.status ==
+          bmw::remote::infrastructure::SettingsProtocolStatus::Ok);
+    CHECK(readResponse.requestId == 8U);
+    CHECK(readResponse.payloadSize ==
+          bmw::remote::infrastructure::UserSettingsPayloadSize);
+
+    UserSettings loaded{};
+    CHECK(bmw::remote::infrastructure::decodeUserSettingsPayload(
+        readResponse.payload, loaded));
+    CHECK(bmw::remote::infrastructure::userSettingsEqual(settings, loaded));
+}
+
+void testSettingsProtocolReportsInvalidRequestsAndStorageFailures() {
+    MemorySettingsStorage storage{};
+    JournaledUserSettingsStore store{storage};
+    bmw::remote::infrastructure::SettingsProtocolService service{store};
+    const bmw::remote::infrastructure::SettingsProtocolAccess access{
+        true,
+        bmw::remote::application::ControllerState::Idle};
+
+    auto invalid = settingsWriteRequest(UserSettings{});
+    invalid.payload[3] = 1U;
+    CHECK(service.handle(invalid, access).status ==
+          bmw::remote::infrastructure::SettingsProtocolStatus::InvalidSettings);
+
+    invalid = settingsWriteRequest(UserSettings{});
+    invalid.payloadSize = 0U;
+    CHECK(service.handle(invalid, access).status ==
+          bmw::remote::infrastructure::SettingsProtocolStatus::InvalidPayload);
+
+    bmw::remote::infrastructure::SettingsProtocolFrame unsupported{};
+    unsupported.type = static_cast<
+        bmw::remote::infrastructure::SettingsMessageType>(0x55U);
+    CHECK(service.handle(unsupported, access).status ==
+          bmw::remote::infrastructure::SettingsProtocolStatus::UnsupportedMessage);
+
+    storage.writeSucceeds = false;
+    CHECK(service.handle(settingsWriteRequest(UserSettings{}), access).status ==
+          bmw::remote::infrastructure::SettingsProtocolStatus::StorageFailure);
+
+    bmw::remote::infrastructure::SettingsProtocolFrame read{};
+    read.type = bmw::remote::infrastructure::SettingsMessageType::ReadRequest;
+    CHECK(service.handle(read, access).status ==
+          bmw::remote::infrastructure::SettingsProtocolStatus::SettingsUnavailable);
 }
 
 void testSafeAutomaticVehicleIsApproved() {
@@ -1321,6 +1560,15 @@ int main() {
         {"settings corruption fallback", testCorruptedNewestSettingsFallBackToPreviousSlot},
         {"settings interrupted write", testInterruptedSettingsWritePreservesLastValidSlot},
         {"invalid settings persistence", testInvalidSettingsAreNeverPersisted},
+        {"settings payload round trip", testSettingsPayloadRoundTripsEveryField},
+        {"settings payload rejection", testSettingsPayloadRejectsInvalidValues},
+        {"settings protocol frame", testSettingsProtocolFrameRoundTrip},
+        {"settings protocol corruption", testSettingsProtocolFrameRejectsCorruption},
+        {"settings protocol header", testSettingsProtocolFrameRejectsHeaderViolations},
+        {"settings protocol authorization", testSettingsProtocolRequiresAuthorizedSession},
+        {"settings protocol busy", testSettingsProtocolRejectsWritesWhileControllerIsActive},
+        {"settings protocol read write", testSettingsProtocolWritesThenReadsPersistedSettings},
+        {"settings protocol failures", testSettingsProtocolReportsInvalidRequestsAndStorageFailures},
         {"safe automatic vehicle", testSafeAutomaticVehicleIsApproved},
         {"unavailable signal", testUnavailableSignalFailsClosed},
         {"multiple safety reasons", testUnsafeVehicleReportsAllDetectedReasons},

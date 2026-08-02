@@ -92,6 +92,11 @@ produit aujourd'hui le fichier PC utilisé pour la simulation ; le même modèle
 sera raccordé à la mémoire réelle lorsque la carte et l'interface de transport
 auront été choisies.
 
+Le format de trame indépendant du transport et les conditions d'autorisation
+sont déjà définis dans [settings-protocol.md](settings-protocol.md). Un réglage
+reçu est enregistré uniquement au repos et prend effet au prochain démarrage du
+boîtier ; il ne transforme jamais une session distante en cours.
+
 ## Réglages volontairement non désactivables
 
 La configurabilité ne permet pas de supprimer les invariants structurels :

@@ -16,6 +16,9 @@ flowchart LR
     Sources["Commandes, véhicule, timers"] --> Runtime["Runtime"]
     Bytes["SettingsByteStorage"] --> Journal["Journal redondant + CRC"]
     Journal --> Settings["UserSettingsStore"]
+    Configurator["Configurateur PC"] --> Transport["Transport authentifié futur"]
+    Transport --> Protocol["SettingsProtocol"]
+    Protocol --> Settings
     Settings --> Validation["Validation bornée"]
     Validation --> Controller
     Runtime --> Controller["Controller"]
@@ -59,6 +62,14 @@ abstrait une mémoire adressable et son commit ; `JournaledUserSettingsStore`
 encode deux générations versionnées avec CRC, sélectionne la plus récente valide
 et fournit un retour fail-safe si aucune ne peut être chargée. Voir
 [settings-persistence.md](settings-persistence.md).
+
+Le protocole de configuration transporte le même payload fixe de 24 octets que
+le journal, sans exposer son format de stockage. Le codec vérifie la version, la
+taille et le CRC avant que `SettingsProtocolService` n'accède au port. Le service
+exige une session déclarée authentifiée et refuse toute écriture lorsque le
+contrôleur n'est pas en `Idle`. L'établissement de cette session appartient au
+futur adaptateur USB, Bluetooth ou réseau. Voir
+[settings-protocol.md](settings-protocol.md).
 
 `ControllerConfig` exige un pointeur vers le profil sélectionné. Sans profil ou
 avec un profil non qualifié, `RemoteStartRequested` reste en `Idle`, demande la

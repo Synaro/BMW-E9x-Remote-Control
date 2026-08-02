@@ -68,6 +68,20 @@ possible de l'opération d'enregistrement. Après chargement,
 `validateUserSettings()` reste obligatoire ; une lecture techniquement réussie
 ne rend pas les valeurs sûres.
 
+## Transport de configuration
+
+L'adaptateur physique doit accumuler une trame complète et bornée avant d'appeler
+`SettingsProtocolCodec`. Il doit abandonner une trame incomplète à l'échéance,
+ne jamais allouer selon une longueur non validée et ne transmettre au service que
+les trames dont le CRC, la version et les tailles sont corrects.
+
+Le booléen `SettingsProtocolAccess::authorized` est une preuve fournie par
+l'adaptateur, pas une préférence utilisateur. Il reste faux tant qu'une session
+locale ou cryptographique n'a pas été authentifiée. Le CRC détecte une corruption
+accidentelle ; il ne fournit ni authentification, ni chiffrement, ni protection
+contre le rejeu. Ces propriétés devront être qualifiées avec le transport choisi.
+Voir [settings-protocol.md](settings-protocol.md).
+
 ## NotificationSink
 
 La notification est informative et ne participe jamais à la sécurité. Sa panne

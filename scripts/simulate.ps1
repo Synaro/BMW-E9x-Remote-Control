@@ -10,7 +10,8 @@ param(
         'takeover-timeout',
         'takeover-confirmed',
         'user-config',
-        'settings-recovery')]
+        'settings-recovery',
+        'settings-link')]
     [string]$Scenario = 'hood-required',
 
     [ValidateSet('required', 'optional')]
