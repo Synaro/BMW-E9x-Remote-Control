@@ -40,6 +40,7 @@ Le premier jalon logiciel est opérationnel :
 - capture PC bornée avec refus des interfaces sans mode silencieux documenté ;
 - sélection explicite d'un profil obligatoire dans le contrôleur ;
 - analyse différentielle hors ligne des octets et bits candidats ;
+- ESP32-S3-DevKitC-1-N8 sélectionné pour le prototype de banc avec USB filaire ;
 - 80 tests C++, 8 scénarios du simulateur, 2 contrôles du configurateur et
   21 tests Python automatisés en intégration continue.
 
@@ -90,6 +91,9 @@ Le configurateur PC est décrit dans
 [docs/configurator.md](docs/configurator.md).
 Le protocole entre configurateur et boîtier est spécifié dans
 [docs/settings-protocol.md](docs/settings-protocol.md).
+La cible matérielle de banc, les achats autorisés et les limites avant connexion
+au véhicule sont détaillés dans
+[docs/hardware-v1-reference.md](docs/hardware-v1-reference.md).
 
 ## Validation locale
 
@@ -111,14 +115,14 @@ Compilation du firmware natif inerte avec PlatformIO :
 pio run -e native
 ```
 
-La cible ESP32 de référence peut être vérifiée avec :
+La cible exacte du prototype ESP32-S3 peut être vérifiée avec :
 
 ```powershell
-pio run -e esp32dev
+pio run -e esp32s3dev
 ```
 
-Cette cible ne constitue pas une sélection matérielle définitive et n'active
-aucune sortie.
+Cette carte est la cible du prototype de banc, pas celle de l'installation
+automobile définitive. Le firmware reste inerte et n'active aucune sortie.
 
 Avec CMake :
 
