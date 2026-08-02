@@ -10,6 +10,10 @@
 - Toute nouvelle transition doit être couverte par au moins un scénario nominal
   et un scénario d'échec.
 - Ne pas ajouter de fonctionnalité de contournement d'antidémarrage ou d'antivol.
+- Ne jamais présenter les identifiants du protocole synthétique comme des
+  identifiants BMW ni les transmettre sur un bus réel.
+- Ne pas committer de capture privée contenant un VIN, une position, une clé ou
+  une autre donnée personnelle.
 
 ## Vérification
 
@@ -17,6 +21,7 @@ Sous Windows :
 
 ```powershell
 ./scripts/test.ps1
+./scripts/simulate.ps1
 pio run -e native
 ```
 

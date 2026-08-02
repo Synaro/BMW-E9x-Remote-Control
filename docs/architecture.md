@@ -25,6 +25,7 @@ flowchart LR
 - **Domaine** : valeurs observées, qualité des signaux, transmission et rapport.
 - **Application** : politique de sécurité, machine d'état, événements et actions.
 - **Infrastructure** : exécution des actions au travers de ports abstraits.
+- **Simulation** : décodeur synthétique et génération de scénarios hors véhicule.
 - **Firmware** : assemblage spécifique à la carte. La version actuelle est
   inerte.
 
@@ -102,6 +103,27 @@ Si une opération véhicule, actionneur ou minuterie échoue, le runtime injecte
 l'annulation du timer, le relâchement du démarreur et la sécurisation globale des
 sorties. Le runtime retente ces seules actions de mise en sécurité sans boucle de
 récursion.
+
+## Chaîne de rejeu CAN
+
+```mermaid
+flowchart LR
+    Trace["CanFrame[] monotone"] --> Replay["CanTraceReplay"]
+    Replay --> Decoder["CanFrameDecoder"]
+    Decoder --> Batch["DecodedSignalBatch"]
+    Batch --> Assembler["VehicleStateAssembler"]
+    Assembler --> Snapshot["VehicleState + fraîcheur"]
+    Snapshot --> Controller
+```
+
+Le décodeur produit au maximum dix signaux dans un lot fixe. L'assembleur valide
+le lot complet avant de l'appliquer : une valeur invalide ne peut donc pas laisser
+un instantané partiellement mis à jour. Les trames inconnues sont comptabilisées
+et ignorées ; une trame reconnue mais mal formée interrompt le rejeu.
+
+`ReplayVehicleGateway` adapte cette chaîne au port `VehicleGateway`. Le protocole
+fourni dans `simulation` utilise des identifiants étendus synthétiques et une
+signature dédiée. Il n'encode aucune connaissance BMW.
 
 ## Contraintes temporelles
 
