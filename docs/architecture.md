@@ -36,10 +36,12 @@ signal sans contenir de détail CAN. Un garde d'application distinct empêche un
 profil de découverte d'autoriser une fonctionnalité réelle. Voir
 [vehicle-profiles.md](vehicle-profiles.md).
 
-La source du signal de capot est une capacité du profil. Elle peut provenir d'un
-signal véhicule validé ou d'une future entrée discrète indépendante. Le modèle
-reste identique dans les deux cas (`HoodClosed`) ; seul l'adaptateur
-d'infrastructure change. Une source absente ou inconnue échoue de manière sûre.
+La source du signal de capot est une capacité du profil. Elle peut être absente,
+provenir d'un signal véhicule validé ou d'une entrée discrète indépendante. Le
+modèle reste identique dans tous les cas (`HoodClosed`) ; seul l'adaptateur
+d'infrastructure change. Par défaut une source absente provoque un refus. Une
+installation peut explicitement désactiver ce contrôle avec
+`SafetyPolicyConfig::requireHoodClosed = false`.
 
 `ControllerConfig` exige un pointeur vers le profil sélectionné. Sans profil ou
 avec un profil non qualifié, `RemoteStartRequested` reste en `Idle`, demande la

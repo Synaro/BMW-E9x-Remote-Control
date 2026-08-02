@@ -43,6 +43,7 @@ enum class SignalSupport : std::uint8_t {
 
 enum class HoodInterlockSource : std::uint8_t {
     Unspecified,
+    NotAvailable,
     VehicleSignal,
     ExternalDiscreteInput,
     Synthetic,

@@ -39,16 +39,37 @@ Le profil décrit aussi la source de l'interverrouillage de capot :
 
 | Source | Usage |
 |---|---|
-| `Unspecified` | source inconnue, qualification interdite ; |
+| `Unspecified` | source inconnue, refus lorsque le contrôle du capot est requis ; |
+| `NotAvailable` | véhicule ou installation sans information de capot ; |
 | `VehicleSignal` | information fournie et validée par le véhicule ; |
 | `ExternalDiscreteInput` | capteur physique indépendant à ajouter et qualifier ; |
 | `Synthetic` | simulations hors véhicule exclusivement. |
 
-Pour l'E90 de référence, la source attendue est `ExternalDiscreteInput`. Cela ne
-signifie pas qu'un capteur est déjà installé : tant que l'entrée n'existe pas et
-n'est pas validée, `HoodClosed` reste `Unavailable` et le démarrage est refusé.
-Une autre variante E9x pourra utiliser `VehicleSignal` si cette information y
-est réellement disponible et qualifiée.
+Pour l'E90 de référence, la source est `NotAvailable` et `HoodClosed` reste
+`Unavailable`. Une autre variante E9x pourra utiliser `VehicleSignal` si cette
+information y est réellement disponible et qualifiée, ou une installation pourra
+ajouter une `ExternalDiscreteInput`.
+
+Le choix appartient à la configuration de chaque installation. La valeur par
+défaut exige le signal :
+
+```cpp
+ControllerConfig config{};
+config.vehicleProfile = &profiles::e90_2009_n47d20c_automatic();
+config.safety.requireHoodClosed = true;
+```
+
+Pour une installation sans capteur, l'utilisateur peut explicitement rendre le
+signal facultatif :
+
+```cpp
+config.safety.requireHoodClosed = false;
+```
+
+Dans ce mode, la qualification ne requiert ni `HoodClosed` ni une source de
+capot, et la politique de sécurité ignore sa fraîcheur et sa valeur pendant toute
+la session. Ce réglage est indépendant du profil afin que deux installations du
+même véhicule puissent faire des choix différents.
 
 ## Niveaux de qualification
 
@@ -58,7 +79,7 @@ Les niveaux progressent de `Discovery` à `ReadOnlyValidated`, puis
 
 - un signal obligatoire manque ou reste candidat ;
 - le niveau lecture seule n'est pas atteint ;
-- la source de l'interverrouillage de capot est inconnue ;
+- le capot est requis mais son signal ou sa source manque ;
 - la transmission est inconnue ;
 - une boîte manuelle n'a pas reçu une autorisation de politique explicite.
 

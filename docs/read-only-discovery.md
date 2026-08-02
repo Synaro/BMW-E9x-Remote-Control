@@ -53,10 +53,10 @@ Conditions minimales :
 Commencer uniquement par des événements de carrosserie à faible risque, par
 exemple ouvrir puis refermer une porte ou le coffre moteur arrêté. Le véhicule de
 référence ne possédant pas de capteur de capot exploitable, une capture du bus ne
-pourra pas faire apparaître cette information. Le capot ne pourra être testé
-qu'après ajout et qualification d'une entrée physique indépendante. Ne pas
-commencer par un changement de rapport, un relâchement du frein de stationnement
-ou une commande moteur.
+pourra pas faire apparaître cette information. Cette installation peut laisser
+le signal désactivé avec `requireHoodClosed = false` ; aucune recherche CAN du
+capot n'est alors nécessaire. Ne pas commencer par un changement de rapport, un
+relâchement du frein de stationnement ou une commande moteur.
 
 Pour chaque événement :
 
@@ -76,8 +76,8 @@ python .\tools\import_can_trace.py `
   .\captures\private\session-01\baseline.cantrace.csv
 
 python .\tools\import_can_trace.py `
-  .\captures\private\session-01\hood-open.asc `
-  .\captures\private\session-01\hood-open.cantrace.csv
+  .\captures\private\session-01\door-open.asc `
+  .\captures\private\session-01\door-open.cantrace.csv
 ```
 
 Comparer ensuite les distributions d'octets :
@@ -85,7 +85,7 @@ Comparer ensuite les distributions d'octets :
 ```powershell
 .\scripts\analyze-trace-change.ps1 `
   .\captures\private\session-01\baseline.cantrace.csv `
-  .\captures\private\session-01\hood-open.cantrace.csv
+  .\captures\private\session-01\door-open.cantrace.csv
 ```
 
 Le score combine la distance entre distributions et la stabilité de la valeur

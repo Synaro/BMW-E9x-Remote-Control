@@ -22,7 +22,10 @@ Controller::Controller(const ControllerConfig config) noexcept
     : config_(config),
       safetyPolicy_(config.safety),
       profileReadiness_(
-          assessRemoteStartReadiness(config.vehicleProfile, config.profilePolicy)) {}
+          assessRemoteStartReadiness(
+              config.vehicleProfile,
+              config.profilePolicy,
+              config.safety.requireHoodClosed)) {}
 
 Decision Controller::handle(
     const Event event,

@@ -28,11 +28,11 @@ Le premier jalon logiciel est opérationnel :
 - simulateur de scénario complet avec injection d'un défaut de sécurité ;
 - profils véhicule extensibles avec qualification fermée par défaut ;
 - profil de découverte pour l'E90 2009 N47D20C boîte automatique ;
-- absence de capteur de capot déclarée pour ce véhicule de référence, avec entrée physique indépendante requise ;
+- absence de capteur de capot déclarée pour ce véhicule de référence, contrôle activable au choix de l'utilisateur ;
 - import PC de journaux `python-can` vers un format canonique strict ;
 - sélection explicite d'un profil obligatoire dans le contrôleur ;
 - analyse différentielle hors ligne des octets et bits candidats ;
-- 35 scénarios C++ et 11 tests Python automatisés en intégration continue.
+- 37 scénarios C++ et 11 tests Python automatisés en intégration continue.
 
 Les communications BMW, la commande distante et les sorties physiques restent à
 implémenter lorsque le matériel, les signaux et les critères d'acceptation auront

@@ -5,10 +5,9 @@
 namespace bmw::remote::application {
 namespace {
 
-constexpr std::array<domain::VehicleSignal, 8U> CoreRequiredSignals = {
+constexpr std::array<domain::VehicleSignal, 7U> CoreRequiredSignals = {
     domain::VehicleSignal::BatteryMillivolts,
     domain::VehicleSignal::EngineRpm,
-    domain::VehicleSignal::HoodClosed,
     domain::VehicleSignal::BrakePressed,
     domain::VehicleSignal::ParkingBrakeApplied,
     domain::VehicleSignal::Transmission,
@@ -38,11 +37,16 @@ void assessSignal(
 
 ProfileReadinessAssessment assessRemoteStartReadiness(
     const domain::VehicleProfile& profile,
-    const ProfileReadinessPolicy policy) noexcept {
+    const ProfileReadinessPolicy policy,
+    const bool requireHoodClosed) noexcept {
     ProfileReadinessAssessment assessment{};
 
     for (const domain::VehicleSignal signal : CoreRequiredSignals) {
         assessSignal(assessment, profile, signal);
+    }
+
+    if (requireHoodClosed) {
+        assessSignal(assessment, profile, domain::VehicleSignal::HoodClosed);
     }
 
     if (policy.requireVehicleSecured) {
@@ -54,8 +58,10 @@ ProfileReadinessAssessment assessRemoteStartReadiness(
         assessment.add(ProfileReadinessReason::QualificationTooLow);
     }
 
-    if (profile.hoodInterlockSource == domain::HoodInterlockSource::Unspecified) {
-        assessment.add(ProfileReadinessReason::HoodInterlockSourceUnknown);
+    if (requireHoodClosed &&
+        (profile.hoodInterlockSource == domain::HoodInterlockSource::Unspecified ||
+         profile.hoodInterlockSource == domain::HoodInterlockSource::NotAvailable)) {
+        assessment.add(ProfileReadinessReason::HoodInterlockUnavailable);
     }
 
     if (profile.transmission == domain::Transmission::Unknown) {
@@ -70,9 +76,10 @@ ProfileReadinessAssessment assessRemoteStartReadiness(
 
 ProfileReadinessAssessment assessRemoteStartReadiness(
     const domain::VehicleProfile* const profile,
-    const ProfileReadinessPolicy policy) noexcept {
+    const ProfileReadinessPolicy policy,
+    const bool requireHoodClosed) noexcept {
     if (profile != nullptr) {
-        return assessRemoteStartReadiness(*profile, policy);
+        return assessRemoteStartReadiness(*profile, policy, requireHoodClosed);
     }
 
     ProfileReadinessAssessment assessment{};

@@ -148,6 +148,20 @@ void testManualTransmissionRequiresExplicitOptIn() {
     CHECK(policy.assessStart(vehicle).approved());
 }
 
+void testHoodSignalCanBeDisabledByExplicitSafetyPolicy() {
+    SafetyPolicyConfig config{};
+    config.requireHoodClosed = false;
+    const SafetyPolicy policy{config};
+    VehicleState vehicle = safeAutomaticVehicle();
+    vehicle.hoodClosed = {};
+
+    CHECK(policy.assessStart(vehicle).approved());
+    CHECK(policy.assessCranking(vehicle).approved());
+
+    vehicle.engineRpm.value = 800U;
+    CHECK(policy.assessRemoteRun(vehicle).approved());
+}
+
 void testControllerRejectsStartWhenNoProfileIsSelected() {
     Controller controller{};
 
@@ -570,7 +584,7 @@ void testReferenceProfileDescribesReferenceVehicleWithoutClaimingQualification()
     CHECK(profile.transmission == Transmission::Automatic);
     CHECK(profile.qualification == bmw::remote::domain::QualificationStage::Discovery);
     CHECK(profile.hoodInterlockSource ==
-          bmw::remote::domain::HoodInterlockSource::ExternalDiscreteInput);
+          bmw::remote::domain::HoodInterlockSource::NotAvailable);
 
     for (std::size_t index = 0U;
          index < bmw::remote::domain::vehicleSignalCount();
@@ -606,6 +620,7 @@ void testValidatedProfileWithVerifiedSignalsIsReady() {
         bmw::remote::domain::profiles::e90_2009_n47d20c_automatic();
     profile.signals.fill(SignalSupport::Verified);
     profile.qualification = bmw::remote::domain::QualificationStage::ReadOnlyValidated;
+    profile.hoodInterlockSource = bmw::remote::domain::HoodInterlockSource::VehicleSignal;
 
     CHECK(bmw::remote::application::assessRemoteStartReadiness(profile).ready());
 }
@@ -615,6 +630,7 @@ void testValidatedProfileStillFailsClosedWhenSignalIsMissing() {
         bmw::remote::domain::profiles::e90_2009_n47d20c_automatic();
     profile.signals.fill(SignalSupport::Verified);
     profile.qualification = bmw::remote::domain::QualificationStage::ReadOnlyValidated;
+    profile.hoodInterlockSource = bmw::remote::domain::HoodInterlockSource::VehicleSignal;
     profile.signals[bmw::remote::domain::signalIndex(VehicleSignal::HoodClosed)] =
         SignalSupport::Unavailable;
 
@@ -624,17 +640,44 @@ void testValidatedProfileStillFailsClosedWhenSignalIsMissing() {
     CHECK(readiness.contains(ProfileReadinessReason::MissingRequiredSignal));
 }
 
-void testValidatedProfileRejectsUnknownHoodInterlockSource() {
+void testValidatedProfileRejectsUnavailableHoodInterlockWhenRequired() {
     VehicleProfile profile =
         bmw::remote::domain::profiles::e90_2009_n47d20c_automatic();
     profile.signals.fill(SignalSupport::Verified);
     profile.qualification = bmw::remote::domain::QualificationStage::ReadOnlyValidated;
-    profile.hoodInterlockSource = bmw::remote::domain::HoodInterlockSource::Unspecified;
+    profile.hoodInterlockSource = bmw::remote::domain::HoodInterlockSource::NotAvailable;
 
     const auto readiness =
         bmw::remote::application::assessRemoteStartReadiness(profile);
     CHECK(!readiness.ready());
-    CHECK(readiness.contains(ProfileReadinessReason::HoodInterlockSourceUnknown));
+    CHECK(readiness.contains(ProfileReadinessReason::HoodInterlockUnavailable));
+}
+
+void testControllerAllowsExplicitOptionalHoodSignal() {
+    VehicleProfile profile =
+        bmw::remote::domain::profiles::e90_2009_n47d20c_automatic();
+    profile.signals.fill(SignalSupport::Verified);
+    profile.signals[bmw::remote::domain::signalIndex(VehicleSignal::HoodClosed)] =
+        SignalSupport::Unavailable;
+    profile.qualification = bmw::remote::domain::QualificationStage::ReadOnlyValidated;
+    profile.hoodInterlockSource = bmw::remote::domain::HoodInterlockSource::NotAvailable;
+
+    ControllerConfig config{};
+    config.vehicleProfile = &profile;
+    config.safety.requireHoodClosed = false;
+    Controller controller{config};
+    VehicleState vehicle = safeAutomaticVehicle();
+    vehicle.hoodClosed = {};
+
+    const auto request = controller.handle(
+        Event{EventType::RemoteStartRequested}, vehicle);
+    CHECK(request.state == ControllerState::Authorizing);
+    CHECK(request.profileReadiness.ready());
+
+    const auto authorized = controller.handle(
+        Event{EventType::VehicleStateUpdated}, vehicle);
+    CHECK(authorized.state == ControllerState::Preparing);
+    CHECK(authorized.safety.approved());
 }
 
 void testCanonicalTraceParserLoadsValidClassicFrames() {
@@ -704,6 +747,7 @@ int main() {
         {"multiple safety reasons", testUnsafeVehicleReportsAllDetectedReasons},
         {"manual denied by default", testManualTransmissionIsDeniedByDefault},
         {"manual explicit opt-in", testManualTransmissionRequiresExplicitOptIn},
+        {"optional hood safety policy", testHoodSignalCanBeDisabledByExplicitSafetyPolicy},
         {"missing profile rejection", testControllerRejectsStartWhenNoProfileIsSelected},
         {"unqualified profile rejection", testControllerRejectsUnqualifiedReferenceProfile},
         {"nominal start sequence", testNominalStartSequence},
@@ -730,7 +774,8 @@ int main() {
         {"discovery profile readiness", testDiscoveryProfileCannotEnableRemoteStart},
         {"validated profile readiness", testValidatedProfileWithVerifiedSignalsIsReady},
         {"missing profile signal", testValidatedProfileStillFailsClosedWhenSignalIsMissing},
-        {"unknown hood interlock source", testValidatedProfileRejectsUnknownHoodInterlockSource},
+        {"required hood interlock", testValidatedProfileRejectsUnavailableHoodInterlockWhenRequired},
+        {"optional hood controller", testControllerAllowsExplicitOptionalHoodSignal},
         {"canonical trace parsing", testCanonicalTraceParserLoadsValidClassicFrames},
         {"canonical trace monotonicity", testCanonicalTraceParserRejectsNonMonotonicInputAtomically},
         {"canonical trace rejection", testCanonicalTraceParserRejectsMalformedAndEmptyTraces},

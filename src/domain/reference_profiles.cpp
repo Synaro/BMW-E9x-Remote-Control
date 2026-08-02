@@ -28,7 +28,7 @@ constexpr VehicleProfile Profiles[] = {
         FuelType::Diesel,
         Transmission::Automatic,
         QualificationStage::Discovery,
-        HoodInterlockSource::ExternalDiscreteInput,
+        HoodInterlockSource::NotAvailable,
         ReferenceSignals,
     },
 };

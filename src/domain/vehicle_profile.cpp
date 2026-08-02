@@ -58,6 +58,7 @@ const char* toString(const SignalSupport support) noexcept {
 const char* toString(const HoodInterlockSource source) noexcept {
     switch (source) {
         case HoodInterlockSource::Unspecified: return "unspecified";
+        case HoodInterlockSource::NotAvailable: return "not_available";
         case HoodInterlockSource::VehicleSignal: return "vehicle_signal";
         case HoodInterlockSource::ExternalDiscreteInput: return "external_discrete_input";
         case HoodInterlockSource::Synthetic: return "synthetic";
