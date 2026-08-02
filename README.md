@@ -167,10 +167,12 @@ VIN :
 Voir [docs/diagnostic-inventory.md](docs/diagnostic-inventory.md) avant d'ouvrir
 une fonction dans ISTA, INPA ou Tool32.
 
-Pour VS Code, `.vscode/c_cpp_properties.json` configure Microsoft C/C++ et
-`compile_flags.txt` configure le mode de repli de `clangd`. Si d'anciens
-diagnostics restent affichés après une mise à jour, exécuter une fois
-`C/C++: Reset IntelliSense Database`, puis recharger la fenêtre.
+Pour VS Code, PlatformIO génère localement `.vscode/c_cpp_properties.json` avec
+les paramètres de l'environnement actif ; ce fichier reste hors Git car il
+contient des chemins propres à la machine. `compile_flags.txt` configure le mode
+de repli de `clangd`. Si d'anciens diagnostics restent affichés après une mise à
+jour, exécuter `PlatformIO: Rebuild IntelliSense Index`, puis
+`C/C++: Reset IntelliSense Database` et recharger la fenêtre.
 
 ## Capture CAN passive
 

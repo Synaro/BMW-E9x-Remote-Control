@@ -1,6 +1,5 @@
 .pio/
-.vscode/*
-!.vscode/c_cpp_properties.json
+.vscode/
 build/
 cmake-build-*/
 *.exe
