@@ -9,7 +9,8 @@ param(
         'hood-optional',
         'takeover-timeout',
         'takeover-confirmed',
-        'user-config')]
+        'user-config',
+        'settings-recovery')]
     [string]$Scenario = 'hood-required',
 
     [ValidateSet('required', 'optional')]

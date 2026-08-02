@@ -14,7 +14,9 @@ une topologie électrique.
 ```mermaid
 flowchart LR
     Sources["Commandes, véhicule, timers"] --> Runtime["Runtime"]
-    Settings["UserSettingsStore"] --> Validation["Validation bornée"]
+    Bytes["SettingsByteStorage"] --> Journal["Journal redondant + CRC"]
+    Journal --> Settings["UserSettingsStore"]
+    Settings --> Validation["Validation bornée"]
     Validation --> Controller
     Runtime --> Controller["Controller"]
     Controller --> Policy["SafetyPolicy"]
@@ -51,6 +53,12 @@ installation peut explicitement désactiver ce contrôle avec
 du contrôleur et du détecteur de verrouillages. Un échec de validation laisse le
 démarrage distant désactivé. Le format de fichier PC et la future mémoire du
 boîtier restent des adaptateurs d'infrastructure.
+
+La persistance concrète est séparée en deux niveaux. `SettingsByteStorage`
+abstrait une mémoire adressable et son commit ; `JournaledUserSettingsStore`
+encode deux générations versionnées avec CRC, sélectionne la plus récente valide
+et fournit un retour fail-safe si aucune ne peut être chargée. Voir
+[settings-persistence.md](settings-persistence.md).
 
 `ControllerConfig` exige un pointeur vers le profil sélectionné. Sans profil ou
 avec un profil non qualifié, `RemoteStartRequested` reste en `Idle`, demande la

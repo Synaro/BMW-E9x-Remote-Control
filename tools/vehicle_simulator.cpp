@@ -12,6 +12,7 @@
 #include "bmw_remote/application/user_settings.hpp"
 #include "bmw_remote/infrastructure/replay_vehicle_gateway.hpp"
 #include "bmw_remote/infrastructure/runtime.hpp"
+#include "bmw_remote/infrastructure/settings_storage.hpp"
 #include "bmw_remote/simulation/synthetic_can.hpp"
 #include "tools/can_trace_csv.hpp"
 #include "tools/user_settings_file.hpp"
@@ -27,6 +28,7 @@ enum class Scenario : std::uint8_t {
     TakeoverTimeout,
     TakeoverConfirmed,
     UserConfig,
+    SettingsRecovery,
 };
 
 class ConsoleActuators final : public infrastructure::ActuatorPort {
@@ -112,6 +114,7 @@ const char* scenarioName(const Scenario scenario) noexcept {
         case Scenario::TakeoverTimeout: return "takeover-timeout";
         case Scenario::TakeoverConfirmed: return "takeover-confirmed";
         case Scenario::UserConfig: return "user-config";
+        case Scenario::SettingsRecovery: return "settings-recovery";
     }
     return "unknown";
 }
@@ -141,6 +144,10 @@ bool parseScenario(const std::string_view text, Scenario& scenario) noexcept {
         scenario = Scenario::UserConfig;
         return true;
     }
+    if (text == "settings-recovery") {
+        scenario = Scenario::SettingsRecovery;
+        return true;
+    }
     return false;
 }
 
@@ -165,7 +172,8 @@ void printScenarioList() {
         << "hood-optional hood opens while running and is explicitly ignored\n"
         << "takeover-timeout door opens but takeover is not confirmed, then stop\n"
         << "takeover-confirmed door opens and authenticated takeover succeeds\n"
-        << "user-config uses every value from a supplied configuration file\n";
+        << "user-config uses every value from a supplied configuration file\n"
+        << "settings-recovery corrupts the newest slot and restores the previous one\n";
 }
 
 void printUsage(const char* const executable) {
@@ -255,9 +263,94 @@ int inspectExternalTrace(
     return 0;
 }
 
+class SimulatorSettingsStorage final
+    : public infrastructure::SettingsByteStorage {
+public:
+    SimulatorSettingsStorage() {
+        bytes_.fill(0xFFU);
+    }
+
+    [[nodiscard]] std::size_t capacity() const noexcept override {
+        return bytes_.size();
+    }
+
+    bool read(
+        const std::size_t offset,
+        std::uint8_t* const destination,
+        const std::size_t size) noexcept override {
+        if (destination == nullptr || offset > bytes_.size() ||
+            size > bytes_.size() - offset) {
+            return false;
+        }
+        for (std::size_t index = 0U; index < size; ++index) {
+            destination[index] = bytes_[offset + index];
+        }
+        return true;
+    }
+
+    bool write(
+        const std::size_t offset,
+        const std::uint8_t* const source,
+        const std::size_t size) noexcept override {
+        if (source == nullptr || offset > bytes_.size() ||
+            size > bytes_.size() - offset) {
+            return false;
+        }
+        for (std::size_t index = 0U; index < size; ++index) {
+            bytes_[offset + index] = source[index];
+        }
+        return true;
+    }
+
+    bool commit() noexcept override {
+        return true;
+    }
+
+    void corruptNewestSlot() noexcept {
+        bytes_[infrastructure::JournaledUserSettingsStore::SlotSize + 15U] ^=
+            0x01U;
+    }
+
+private:
+    std::array<
+        std::uint8_t,
+        infrastructure::JournaledUserSettingsStore::RequiredCapacity> bytes_{};
+};
+
+int runSettingsRecoveryScenario() {
+    SimulatorSettingsStorage storage{};
+    infrastructure::JournaledUserSettingsStore store{storage};
+    application::UserSettings previous{};
+    previous.maximumRemoteRunTimeMs = 10U * 60U * 1'000U;
+    application::UserSettings newest = previous;
+    newest.maximumRemoteRunTimeMs = 30U * 60U * 1'000U;
+
+    const bool firstSaved = store.save(previous);
+    const bool secondSaved = store.save(newest);
+    storage.corruptNewestSlot();
+
+    application::UserSettings recovered{};
+    const bool loaded = store.load(recovered);
+    const bool expectedOutcome =
+        firstSaved && secondSaved && loaded &&
+        recovered.maximumRemoteRunTimeMs == previous.maximumRemoteRunTimeMs;
+
+    std::cout
+        << "scenario: settings-recovery\n"
+        << "previous_remote_run_ms: " << previous.maximumRemoteRunTimeMs << '\n'
+        << "corrupted_remote_run_ms: " << newest.maximumRemoteRunTimeMs << '\n'
+        << "recovered_remote_run_ms: " << recovered.maximumRemoteRunTimeMs << '\n'
+        << "scenario_result: " << (expectedOutcome ? "PASS" : "FAIL") << '\n';
+    return expectedOutcome ? 0 : 2;
+}
+
 int runScenario(
     const Scenario scenario,
     const application::UserSettings* const suppliedSettings = nullptr) {
+    if (scenario == Scenario::SettingsRecovery) {
+        return runSettingsRecoveryScenario();
+    }
+
     application::UserSettings settings =
         suppliedSettings == nullptr ? application::UserSettings{} : *suppliedSettings;
     if (scenario == Scenario::HoodRequired) {
@@ -466,7 +559,8 @@ int runInteractive() {
         << "4. Portiere ouverte sans reprise : arret apres delai\n"
         << "5. Portiere ouverte avec reprise conducteur validee\n"
         << "6. Tester un fichier de configuration utilisateur\n"
-        << "7. Quitter\n\n"
+        << "7. Recuperation d'une configuration persistante corrompue\n"
+        << "8. Quitter\n\n"
         << "Choix: ";
 
     unsigned selection = 0U;
@@ -492,7 +586,8 @@ int runInteractive() {
             result = runUserConfiguration(path.c_str());
             break;
         }
-        case 7U: return 0;
+        case 7U: result = runScenario(Scenario::SettingsRecovery); break;
+        case 8U: return 0;
         default:
             std::cerr << "Invalid selection\n";
             result = 64;

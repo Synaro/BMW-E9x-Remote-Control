@@ -25,7 +25,8 @@ Il peut être lancé directement. Sans argument, il affiche un menu interactif :
 3. capot facultatif, ouverture entièrement ignorée ;
 4. portière ouverte sans reprise confirmée, puis arrêt à l'échéance ;
 5. portière ouverte avec reprise conducteur authentifiée ;
-6. chargement et exécution d'un fichier de configuration utilisateur.
+6. chargement et exécution d'un fichier de configuration utilisateur ;
+7. corruption du réglage récent et récupération de la génération précédente.
 
 ## Lancer un scénario depuis PowerShell
 
@@ -37,6 +38,7 @@ Il peut être lancé directement. Sans argument, il affiche un menu interactif :
 .\scripts\simulate.ps1 -Scenario takeover-confirmed
 .\scripts\simulate.ps1 `
   -ConfigPath .\config\user-settings.example.conf
+.\scripts\simulate.ps1 -Scenario settings-recovery
 ```
 
 Chaque scénario retourne le code `0` uniquement si le résultat final correspond
@@ -45,6 +47,10 @@ au comportement attendu et affiche `scenario_result: PASS`.
 Le parcours configuré charge toutes les valeurs, simule le nombre d'appuis choisi,
 affiche la durée moteur réellement armée puis applique la stratégie d'ouverture
 de portière. Voir [user-configuration.md](user-configuration.md).
+
+Le scénario `settings-recovery` utilise le vrai journal binaire, corrompt le CRC
+du second emplacement puis vérifie que le premier est restauré. Voir
+[settings-persistence.md](settings-persistence.md).
 
 ## Inspecter une trace
 
