@@ -1,10 +1,14 @@
+#include <array>
 #include <cstdint>
 #include <iostream>
 
 #include "bmw_remote/application/controller.hpp"
 #include "bmw_remote/application/safety_policy.hpp"
 #include "bmw_remote/domain/vehicle_state.hpp"
+#include "bmw_remote/infrastructure/replay_vehicle_gateway.hpp"
 #include "bmw_remote/infrastructure/runtime.hpp"
+#include "bmw_remote/infrastructure/vehicle_state_assembler.hpp"
+#include "bmw_remote/simulation/synthetic_can.hpp"
 
 namespace {
 
@@ -24,10 +28,19 @@ using bmw::remote::domain::SignalQuality;
 using bmw::remote::domain::Transmission;
 using bmw::remote::domain::VehicleState;
 using bmw::remote::infrastructure::ActuatorPort;
+using bmw::remote::infrastructure::CanFrame;
 using bmw::remote::infrastructure::NotificationSink;
+using bmw::remote::infrastructure::ReplayStatus;
+using bmw::remote::infrastructure::ReplayVehicleGateway;
 using bmw::remote::infrastructure::Runtime;
+using bmw::remote::infrastructure::VehicleStateAssembler;
 using bmw::remote::infrastructure::TimerPort;
 using bmw::remote::infrastructure::VehicleGateway;
+using bmw::remote::simulation::SyntheticBodyState;
+using bmw::remote::simulation::SyntheticCanDecoder;
+using bmw::remote::simulation::SyntheticPowertrainState;
+using bmw::remote::simulation::makeSyntheticBodyFrame;
+using bmw::remote::simulation::makeSyntheticPowertrainFrame;
 
 int failures = 0;
 
@@ -327,6 +340,148 @@ void testRuntimeConvertsActuatorFailureIntoSafeFault() {
     CHECK(actuator.secureCalls == 1U);
 }
 
+void testReplayRejectsNonMonotonicTrace() {
+    const std::array<CanFrame, 2U> trace = {
+        makeSyntheticPowertrainFrame(10U),
+        makeSyntheticBodyFrame(5U),
+    };
+    SyntheticCanDecoder decoder{};
+    ReplayVehicleGateway gateway{trace.data(), trace.size(), decoder};
+
+    CHECK(!gateway.requestState());
+    CHECK(gateway.lastBatch().status == ReplayStatus::InvalidTrace);
+    CHECK(gateway.lastBatch().emittedFrames == 0U);
+}
+
+void testReplayOnlyEmitsFramesDueAtCurrentTime() {
+    SyntheticPowertrainState running{};
+    running.engineRpm = 850U;
+    const std::array<CanFrame, 4U> trace = {
+        makeSyntheticPowertrainFrame(0U),
+        makeSyntheticBodyFrame(0U),
+        makeSyntheticPowertrainFrame(1'000U, running),
+        makeSyntheticBodyFrame(1'000U),
+    };
+    SyntheticCanDecoder decoder{};
+    ReplayVehicleGateway gateway{trace.data(), trace.size(), decoder};
+
+    CHECK(gateway.setElapsedTime(0U));
+    CHECK(gateway.requestState());
+    CHECK(gateway.lastBatch().status == ReplayStatus::Ready);
+    CHECK(gateway.lastBatch().emittedFrames == 2U);
+    CHECK(gateway.state().engineRpm.value == 0U);
+
+    CHECK(gateway.setElapsedTime(999U));
+    CHECK(gateway.requestState());
+    CHECK(gateway.lastBatch().emittedFrames == 0U);
+
+    CHECK(gateway.setElapsedTime(1'000U));
+    CHECK(gateway.requestState());
+    CHECK(gateway.lastBatch().status == ReplayStatus::Complete);
+    CHECK(gateway.lastBatch().emittedFrames == 2U);
+    CHECK(gateway.state().engineRpm.value == 850U);
+}
+
+void testAssemblerMarksOldSignalsStale() {
+    const std::array<CanFrame, 2U> trace = {
+        makeSyntheticPowertrainFrame(0U),
+        makeSyntheticBodyFrame(0U),
+    };
+    SyntheticCanDecoder decoder{};
+    ReplayVehicleGateway gateway{trace.data(), trace.size(), decoder};
+
+    CHECK(gateway.requestState());
+    CHECK(gateway.setElapsedTime(2'501U));
+    const VehicleState stale = gateway.state();
+
+    CHECK(stale.batteryMillivolts.quality == SignalQuality::Stale);
+    CHECK(stale.engineRpm.quality == SignalQuality::Stale);
+    CHECK(stale.hoodClosed.quality == SignalQuality::Stale);
+    CHECK(stale.transmission.quality == SignalQuality::Stale);
+    CHECK(stale.criticalFaultPresent.quality == SignalQuality::Stale);
+}
+
+void testRecognizedMalformedFrameStopsReplay() {
+    CanFrame malformed = makeSyntheticPowertrainFrame(0U);
+    malformed.data[7] = 0U;
+    const std::array<CanFrame, 1U> trace = {malformed};
+    SyntheticCanDecoder decoder{};
+    ReplayVehicleGateway gateway{trace.data(), trace.size(), decoder};
+
+    CHECK(!gateway.requestState());
+    CHECK(gateway.lastBatch().status == ReplayStatus::ConsumerRejected);
+    CHECK(gateway.statistics().rejectedFrames == 1U);
+}
+
+void testUnknownFrameIsIgnoredWithoutCreatingSignals() {
+    CanFrame unknown{};
+    unknown.identifier = 0x123U;
+    unknown.dataLength = 8U;
+    const std::array<CanFrame, 1U> trace = {unknown};
+    SyntheticCanDecoder decoder{};
+    ReplayVehicleGateway gateway{trace.data(), trace.size(), decoder};
+
+    CHECK(gateway.requestState());
+    CHECK(gateway.lastBatch().status == ReplayStatus::Complete);
+    CHECK(gateway.statistics().ignoredFrames == 1U);
+    CHECK(gateway.state().batteryMillivolts.quality == SignalQuality::Unavailable);
+}
+
+void testInvalidDecodedBatchIsAppliedAtomically() {
+    SyntheticPowertrainState invalid{};
+    invalid.transmission = static_cast<Transmission>(99U);
+    const CanFrame frame = makeSyntheticPowertrainFrame(0U, invalid);
+    SyntheticCanDecoder decoder{};
+    VehicleStateAssembler assembler{decoder};
+
+    CHECK(!assembler.consume(frame));
+    const VehicleState vehicle = assembler.snapshot(0U);
+    CHECK(vehicle.engineRpm.quality == SignalQuality::Unavailable);
+    CHECK(vehicle.batteryMillivolts.quality == SignalQuality::Unavailable);
+    CHECK(vehicle.transmission.quality == SignalQuality::Unavailable);
+}
+
+void testReplayRejectsClockMovingBackwards() {
+    const std::array<CanFrame, 1U> trace = {
+        makeSyntheticPowertrainFrame(0U),
+    };
+    SyntheticCanDecoder decoder{};
+    ReplayVehicleGateway gateway{trace.data(), trace.size(), decoder};
+
+    CHECK(gateway.setElapsedTime(100U));
+    CHECK(gateway.requestState());
+    CHECK(!gateway.setElapsedTime(99U));
+    CHECK(!gateway.requestState());
+    CHECK(gateway.lastBatch().status == ReplayStatus::NonMonotonicTime);
+
+    gateway.reset();
+    CHECK(gateway.setElapsedTime(0U));
+    CHECK(gateway.requestState());
+}
+
+void testReplayedVehicleStateFeedsSafetyPolicy() {
+    SyntheticBodyState hoodOpen{};
+    hoodOpen.hoodClosed = false;
+    const std::array<CanFrame, 4U> trace = {
+        makeSyntheticPowertrainFrame(0U),
+        makeSyntheticBodyFrame(0U),
+        makeSyntheticPowertrainFrame(100U),
+        makeSyntheticBodyFrame(100U, hoodOpen),
+    };
+    SyntheticCanDecoder decoder{};
+    ReplayVehicleGateway gateway{trace.data(), trace.size(), decoder};
+    SafetyPolicy policy{};
+
+    CHECK(gateway.requestState());
+    CHECK(policy.assessStart(gateway.state()).approved());
+
+    CHECK(gateway.setElapsedTime(100U));
+    CHECK(gateway.requestState());
+    const auto assessment = policy.assessStart(gateway.state());
+    CHECK(!assessment.approved());
+    CHECK(assessment.contains(SafetyReason::HoodOpen));
+}
+
 using TestFunction = void (*)();
 
 struct TestCase final {
@@ -353,6 +508,14 @@ int main() {
         {"fault reset guards", testFaultResetRequiresStoppedEngineAndNoCriticalFault},
         {"gateway failure", testRuntimeConvertsGatewayFailureIntoSafeFault},
         {"actuator failure", testRuntimeConvertsActuatorFailureIntoSafeFault},
+        {"non-monotonic trace", testReplayRejectsNonMonotonicTrace},
+        {"time-bounded replay", testReplayOnlyEmitsFramesDueAtCurrentTime},
+        {"signal freshness", testAssemblerMarksOldSignalsStale},
+        {"malformed synthetic frame", testRecognizedMalformedFrameStopsReplay},
+        {"unknown frame", testUnknownFrameIsIgnoredWithoutCreatingSignals},
+        {"atomic decoded batch", testInvalidDecodedBatchIsAppliedAtomically},
+        {"non-monotonic replay clock", testReplayRejectsClockMovingBackwards},
+        {"replayed safety state", testReplayedVehicleStateFeedsSafetyPolicy},
     };
 
     for (const TestCase& test : tests) {

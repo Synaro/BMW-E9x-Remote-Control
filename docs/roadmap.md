@@ -10,6 +10,17 @@
 - [x] Tests hôte et intégration continue
 - [x] Firmware de référence inerte
 
+## Jalon 1.1 — Simulation et rejeu
+
+- [x] Modèle de trame CAN classique/étendue validé
+- [x] Rejeu temporel sans allocation dynamique
+- [x] Décodage atomique en lots bornés
+- [x] Calcul de fraîcheur individuel des signaux
+- [x] Gateway de rejeu compatible avec le runtime
+- [x] Protocole synthétique explicitement séparé de BMW
+- [x] Simulateur nominal avec injection d'un interverrouillage
+- [ ] Importer le format de capture retenu pour le matériel réel
+
 ## Jalon 2 — Spécification matérielle
 
 - [ ] Choisir la carte après étude alimentation, température et E/S
@@ -21,7 +32,7 @@
 
 ## Jalon 3 — Communications et commande
 
-- [ ] Implémenter un adaptateur véhicule en lecture seule
+- [ ] Implémenter le décodeur véhicule réel en lecture seule
 - [ ] Tester perte, retard et corruption des données
 - [ ] Définir une commande distante authentifiée et résistante au rejeu
 - [ ] Ajouter une journalisation bornée et non sensible

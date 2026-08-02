@@ -2,7 +2,7 @@ $ErrorActionPreference = 'Stop'
 
 $projectRoot = Split-Path -Parent $PSScriptRoot
 $buildDirectory = Join-Path $projectRoot 'build'
-$testExecutable = Join-Path $buildDirectory 'bmw_remote_tests.exe'
+$simulatorExecutable = Join-Path $buildDirectory 'bmw_remote_simulator.exe'
 
 New-Item -ItemType Directory -Path $buildDirectory -Force | Out-Null
 
@@ -21,15 +21,15 @@ New-Item -ItemType Directory -Path $buildDirectory -Force | Out-Null
     (Join-Path $projectRoot 'src/infrastructure/runtime.cpp') `
     (Join-Path $projectRoot 'src/infrastructure/vehicle_state_assembler.cpp') `
     (Join-Path $projectRoot 'src/simulation/synthetic_can.cpp') `
-    (Join-Path $projectRoot 'tests/test_main.cpp') `
-    -o $testExecutable
+    (Join-Path $projectRoot 'tools/vehicle_simulator.cpp') `
+    -o $simulatorExecutable
 
 if ($LASTEXITCODE -ne 0) {
-    throw "Compilation failed with exit code $LASTEXITCODE"
+    throw "Simulator compilation failed with exit code $LASTEXITCODE"
 }
 
-& $testExecutable
+& $simulatorExecutable
 
 if ($LASTEXITCODE -ne 0) {
-    throw "Tests failed with exit code $LASTEXITCODE"
+    throw "Simulator failed with exit code $LASTEXITCODE"
 }

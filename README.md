@@ -23,11 +23,18 @@ Le premier jalon logiciel est opérationnel :
 - arrêt fail-safe en cas de défaut d'un adaptateur ;
 - ports abstraits pour véhicule, actionneurs, minuterie et notifications ;
 - firmware ESP32 de référence inerte ;
-- 15 scénarios hôte automatisés et intégration continue.
+- rejeu temporel de traces CAN et assemblage des signaux avec gestion de fraîcheur ;
+- protocole CAN synthétique réservé aux simulations hors véhicule ;
+- simulateur de scénario complet avec injection d'un défaut de sécurité ;
+- 23 scénarios hôte automatisés et intégration continue.
 
 Les communications BMW, la commande distante et les sorties physiques restent à
 implémenter lorsque le matériel, les signaux et les critères d'acceptation auront
 été précisément définis.
+
+Le moteur de rejeu accepte déjà des tableaux bornés de trames CAN. Aucun
+identifiant BMW n'est supposé : le format de capture et le décodeur réel seront
+ajoutés à partir de données légitimes et documentées.
 
 ## Architecture
 
@@ -93,10 +100,26 @@ ctest --test-dir build --output-on-failure
 include/bmw_remote/domain/          Modèle métier du véhicule
 include/bmw_remote/application/     Sécurité, événements, décisions, contrôleur
 include/bmw_remote/infrastructure/  Contrats des adaptateurs et runtime
+include/bmw_remote/simulation/      Protocole synthétique hors véhicule
 src/                                Implémentations et firmware inerte
 tests/                              Scénarios hôte
+tools/                              Simulateur exécutable
 docs/                               Architecture, sécurité et intégration
 ```
+
+## Simulateur CAN
+
+Sous Windows, le scénario synthétique peut être compilé et exécuté avec :
+
+```powershell
+./scripts/simulate.ps1
+```
+
+Le scénario rejoue six trames synthétiques : véhicule sûr, démarrage confirmé,
+puis ouverture du capot pendant la session distante. Le résultat attendu est une
+transition immédiate vers `Fault` et la sécurisation des sorties abstraites.
+
+Voir [docs/can-replay.md](docs/can-replay.md) pour le contrat du moteur de rejeu.
 
 ## Principes de contribution
 
