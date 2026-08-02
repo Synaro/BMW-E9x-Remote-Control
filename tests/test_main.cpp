@@ -10,6 +10,7 @@
 #include "bmw_remote/application/lock_sequence_detector.hpp"
 #include "bmw_remote/application/profile_readiness.hpp"
 #include "bmw_remote/application/safety_policy.hpp"
+#include "bmw_remote/application/user_settings.hpp"
 #include "bmw_remote/domain/reference_profiles.hpp"
 #include "bmw_remote/domain/vehicle_profile.hpp"
 #include "bmw_remote/domain/vehicle_state.hpp"
@@ -18,6 +19,7 @@
 #include "bmw_remote/infrastructure/vehicle_state_assembler.hpp"
 #include "bmw_remote/simulation/synthetic_can.hpp"
 #include "tools/can_trace_csv.hpp"
+#include "tools/user_settings_file.hpp"
 
 namespace {
 
@@ -28,12 +30,15 @@ using bmw::remote::application::ControllerState;
 using bmw::remote::application::Event;
 using bmw::remote::application::EventType;
 using bmw::remote::application::FaultCode;
+using bmw::remote::application::HoodMonitoringMode;
 using bmw::remote::application::LockSequenceConfig;
 using bmw::remote::application::LockSequenceDetector;
 using bmw::remote::application::ProfileReadinessReason;
 using bmw::remote::application::SafetyPolicy;
 using bmw::remote::application::SafetyPolicyConfig;
 using bmw::remote::application::SafetyReason;
+using bmw::remote::application::UserSettings;
+using bmw::remote::application::UserSettingsReason;
 using bmw::remote::domain::Gear;
 using bmw::remote::domain::Observed;
 using bmw::remote::domain::SignalQuality;
@@ -136,6 +141,158 @@ void testLockButtonBounceIsIgnored() {
     CHECK(detector.pressCount() == 1U);
     CHECK(!detector.observeLockPress(1'500U));
     CHECK(detector.observeLockPress(2'000U));
+}
+
+void testDefaultUserSettingsAreValidAndPreserved() {
+    const UserSettings settings{};
+    const auto configuration = bmw::remote::application::makeUserConfiguration(
+        settings,
+        &syntheticVehicleProfile());
+
+    CHECK(configuration.validation.valid());
+    CHECK(configuration.controller.remoteStartEnabled);
+    CHECK(configuration.controller.safety.requireHoodClosed);
+    CHECK(configuration.controller.maximumRemoteRunTimeMs == 900'000U);
+    CHECK(configuration.controller.driverTakeoverTimeoutMs == 60'000U);
+    CHECK(configuration.lockSequence.requiredPresses == 3U);
+}
+
+void testUserSettingsConfigureHoodTimersEntryAndLocks() {
+    UserSettings settings{};
+    settings.hoodMonitoring = HoodMonitoringMode::Disabled;
+    settings.driverEntryMode =
+        bmw::remote::application::DriverEntryMode::StopImmediately;
+    settings.maximumRemoteRunTimeMs = 30U * 60U * 1'000U;
+    settings.driverTakeoverTimeoutMs = 120'000U;
+    settings.lockPressCount = 4U;
+    settings.lockMinimumGapMs = 100U;
+    settings.lockMaximumGapMs = 2'000U;
+    settings.lockMaximumSequenceMs = 6'000U;
+
+    const auto configuration = bmw::remote::application::makeUserConfiguration(
+        settings,
+        &syntheticVehicleProfile());
+
+    CHECK(configuration.validation.valid());
+    CHECK(!configuration.controller.safety.requireHoodClosed);
+    CHECK(configuration.controller.driverEntryMode ==
+          bmw::remote::application::DriverEntryMode::StopImmediately);
+    CHECK(configuration.controller.maximumRemoteRunTimeMs == 1'800'000U);
+    CHECK(configuration.controller.driverTakeoverTimeoutMs == 120'000U);
+    CHECK(configuration.lockSequence.requiredPresses == 4U);
+    CHECK(configuration.lockSequence.maximumSequenceMs == 6'000U);
+}
+
+void testUnsafeUserSettingsAreRejectedFailClosed() {
+    UserSettings settings{};
+    settings.maximumRemoteRunTimeMs = 24U * 60U * 60U * 1'000U;
+    settings.driverTakeoverTimeoutMs = 1'000U;
+    settings.lockPressCount = 1U;
+    settings.lockMinimumGapMs = 2'000U;
+    settings.lockMaximumGapMs = 500U;
+    settings.lockMaximumSequenceMs = 400U;
+
+    const auto configuration = bmw::remote::application::makeUserConfiguration(
+        settings,
+        &syntheticVehicleProfile());
+
+    CHECK(!configuration.validation.valid());
+    CHECK(configuration.validation.contains(
+        UserSettingsReason::RemoteRunTimeOutOfRange));
+    CHECK(configuration.validation.contains(
+        UserSettingsReason::TakeoverTimeoutOutOfRange));
+    CHECK(configuration.validation.contains(
+        UserSettingsReason::LockPressCountOutOfRange));
+    CHECK(configuration.validation.contains(
+        UserSettingsReason::InconsistentLockTiming));
+    CHECK(!configuration.controller.remoteStartEnabled);
+}
+
+void testUserCanDisableRemoteStart() {
+    UserSettings settings{};
+    settings.remoteStartEnabled = false;
+    const auto configuration = bmw::remote::application::makeUserConfiguration(
+        settings,
+        &syntheticVehicleProfile());
+    Controller controller{configuration.controller};
+
+    const auto disabled = controller.handle(
+        Event{EventType::RemoteStartRequested}, safeAutomaticVehicle());
+
+    CHECK(disabled.state == ControllerState::Idle);
+    CHECK(disabled.contains(ActionType::SecureOutputs));
+    CHECK(disabled.contains(ActionType::NotifyRemoteStartDisabled));
+    CHECK(!disabled.contains(ActionType::RequestVehicleState));
+}
+
+void testUserCanStopImmediatelyWhenDoorOpens() {
+    UserSettings settings{};
+    settings.driverEntryMode =
+        bmw::remote::application::DriverEntryMode::StopImmediately;
+    const auto configuration = bmw::remote::application::makeUserConfiguration(
+        settings,
+        &syntheticVehicleProfile());
+    Controller controller{configuration.controller};
+    VehicleState vehicle = safeAutomaticVehicle();
+    advanceToRunning(controller, vehicle);
+    vehicle.doorsClosed.value = false;
+
+    const auto stopping = controller.handle(
+        Event{EventType::VehicleStateUpdated}, vehicle);
+
+    CHECK(stopping.state == ControllerState::Stopping);
+    CHECK(stopping.contains(ActionType::SecureOutputs));
+    CHECK(!stopping.contains(ActionType::NotifyTakeoverPending));
+}
+
+void testUserSettingsFileLoadsStrictConfiguration() {
+    std::istringstream input{
+        "remote_start_enabled=true\n"
+        "hood_monitoring=optional\n"
+        "remote_run_minutes=30\n"
+        "driver_entry_mode=stop_immediately\n"
+        "takeover_timeout_seconds=120\n"
+        "lock_press_count=4\n"
+        "lock_minimum_gap_ms=100\n"
+        "lock_maximum_gap_ms=1800\n"
+        "lock_sequence_window_ms=6000\n"};
+    UserSettings settings{};
+    std::string error{};
+
+    CHECK(bmw::remote::host::parseUserSettings(input, settings, error));
+    CHECK(error.empty());
+    CHECK(settings.hoodMonitoring == HoodMonitoringMode::Disabled);
+    CHECK(settings.maximumRemoteRunTimeMs == 1'800'000U);
+    CHECK(settings.driverEntryMode ==
+          bmw::remote::application::DriverEntryMode::StopImmediately);
+    CHECK(settings.driverTakeoverTimeoutMs == 120'000U);
+    CHECK(settings.lockPressCount == 4U);
+}
+
+void testUserSettingsFileRejectsUnknownAndDuplicateKeys() {
+    std::istringstream unknown{"mystery_setting=true\n"};
+    std::istringstream duplicate{
+        "remote_run_minutes=10\n"
+        "remote_run_minutes=20\n"};
+    UserSettings settings{};
+    std::string error{};
+
+    CHECK(!bmw::remote::host::parseUserSettings(unknown, settings, error));
+    CHECK(error.find("unknown setting") != std::string::npos);
+    error.clear();
+    CHECK(!bmw::remote::host::parseUserSettings(duplicate, settings, error));
+    CHECK(error.find("duplicate setting") != std::string::npos);
+}
+
+void testUserSettingsFileRejectsUnsafeDurations() {
+    std::istringstream input{
+        "remote_run_minutes=0\n"
+        "takeover_timeout_seconds=1\n"};
+    UserSettings settings{};
+    std::string error{};
+
+    CHECK(!bmw::remote::host::parseUserSettings(input, settings, error));
+    CHECK(error.find("safety bounds") != std::string::npos);
 }
 
 void testSafeAutomaticVehicleIsApproved() {
@@ -921,6 +1078,14 @@ int main() {
         {"three-lock gesture", testThreeLockPressesTriggerRemoteStartGesture},
         {"slow lock sequence", testSlowLockSequenceDoesNotTrigger},
         {"lock button debounce", testLockButtonBounceIsIgnored},
+        {"default user settings", testDefaultUserSettingsAreValidAndPreserved},
+        {"custom user settings", testUserSettingsConfigureHoodTimersEntryAndLocks},
+        {"invalid user settings", testUnsafeUserSettingsAreRejectedFailClosed},
+        {"remote start disabled", testUserCanDisableRemoteStart},
+        {"door opens stop mode", testUserCanStopImmediatelyWhenDoorOpens},
+        {"settings file", testUserSettingsFileLoadsStrictConfiguration},
+        {"settings file strict keys", testUserSettingsFileRejectsUnknownAndDuplicateKeys},
+        {"settings file safety bounds", testUserSettingsFileRejectsUnsafeDurations},
         {"safe automatic vehicle", testSafeAutomaticVehicleIsApproved},
         {"unavailable signal", testUnavailableSignalFailsClosed},
         {"multiple safety reasons", testUnsafeVehicleReportsAllDetectedReasons},

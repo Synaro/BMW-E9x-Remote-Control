@@ -52,6 +52,17 @@ Une seule échéance d'état est active à la fois. L'implémentation doit gére
 retour à zéro du compteur monotone, garantir une échéance non anticipée et
 produire exactement un événement `TimerElapsed` par armement valide.
 
+## UserSettingsStore
+
+L'adaptateur de persistance doit charger et enregistrer `UserSettings` sans
+interpréter les règles métier. Il doit prévoir une version de schéma, un contrôle
+d'intégrité, une écriture atomique et une stratégie de récupération après
+coupure d'alimentation. Après chargement, `validateUserSettings()` reste
+obligatoire ; une lecture techniquement réussie ne rend pas les valeurs sûres.
+
+Une interface utilisateur ne doit écrire que dans ce port. Elle ne modifie
+jamais directement `ControllerConfig`, les sorties ou l'état courant du moteur.
+
 ## NotificationSink
 
 La notification est informative et ne participe jamais à la sécurité. Sa panne

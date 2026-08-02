@@ -91,6 +91,7 @@ application::FaultCode Runtime::executeAction(
                        : FaultCode::TimerFailure;
 
         case ActionType::NotifyProfileRejected:
+        case ActionType::NotifyRemoteStartDisabled:
         case ActionType::NotifyStartAccepted:
         case ActionType::NotifyStartRejected:
         case ActionType::NotifyRunning:

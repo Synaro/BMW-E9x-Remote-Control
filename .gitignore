@@ -11,6 +11,8 @@ cmake-build-*/
 .DS_Store
 Thumbs.db
 captures/private/
+config/user-settings.conf
+config/*.local.conf
 *.blf
 __pycache__/
 *.pyc

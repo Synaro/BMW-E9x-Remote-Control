@@ -3,6 +3,7 @@
 #include <cstdint>
 
 #include "bmw_remote/application/controller.hpp"
+#include "bmw_remote/application/user_settings.hpp"
 
 namespace bmw::remote::infrastructure {
 
@@ -27,6 +28,13 @@ public:
     virtual ~TimerPort() = default;
     virtual bool arm(std::uint32_t durationMs) noexcept = 0;
     virtual bool cancel() noexcept = 0;
+};
+
+class UserSettingsStore {
+public:
+    virtual ~UserSettingsStore() = default;
+    virtual bool load(application::UserSettings& settings) noexcept = 0;
+    virtual bool save(const application::UserSettings& settings) noexcept = 0;
 };
 
 class NotificationSink {

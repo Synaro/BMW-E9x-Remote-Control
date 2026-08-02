@@ -64,6 +64,7 @@ enum class ActionType : std::uint8_t {
     ArmTimer,
     CancelTimer,
     NotifyProfileRejected,
+    NotifyRemoteStartDisabled,
     NotifyStartAccepted,
     NotifyStartRejected,
     NotifyRunning,
@@ -100,10 +101,17 @@ private:
     void add(ActionType type, std::uint32_t durationMs = 0U) noexcept;
 };
 
+enum class DriverEntryMode : std::uint8_t {
+    RequireTakeover,
+    StopImmediately,
+};
+
 struct ControllerConfig final {
     const domain::VehicleProfile* vehicleProfile{nullptr};
     ProfileReadinessPolicy profilePolicy{};
     SafetyPolicyConfig safety{};
+    bool remoteStartEnabled{true};
+    DriverEntryMode driverEntryMode{DriverEntryMode::RequireTakeover};
     std::uint32_t authorizationTimeoutMs{2'000U};
     std::uint32_t preparationDelayMs{1'500U};
     std::uint32_t maximumCrankTimeMs{5'000U};

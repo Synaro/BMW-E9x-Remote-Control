@@ -79,6 +79,12 @@ void Controller::handleStartRequest(Decision& decision) noexcept {
         return;
     }
 
+    if (!config_.remoteStartEnabled) {
+        decision.add(ActionType::SecureOutputs);
+        decision.add(ActionType::NotifyRemoteStartDisabled);
+        return;
+    }
+
     if (!profileReadiness_.ready()) {
         decision.add(ActionType::SecureOutputs);
         decision.add(ActionType::NotifyProfileRejected);
@@ -157,11 +163,15 @@ void Controller::handleVehicleUpdate(
 
         case ControllerState::Running:
             if (driverEntryDetected(vehicle)) {
-                decision.safety = safetyPolicy_.assessDriverTakeover(vehicle);
-                if (decision.safety.approved()) {
-                    beginAwaitingTakeover(decision);
+                if (config_.driverEntryMode == DriverEntryMode::RequireTakeover) {
+                    decision.safety = safetyPolicy_.assessDriverTakeover(vehicle);
+                    if (decision.safety.approved()) {
+                        beginAwaitingTakeover(decision);
+                    } else {
+                        enterFault(decision, FaultCode::SafetyInterlock);
+                    }
                 } else {
-                    enterFault(decision, FaultCode::SafetyInterlock);
+                    beginStopping(decision);
                 }
             } else {
                 decision.safety = safetyPolicy_.assessRemoteRun(vehicle);
@@ -405,6 +415,7 @@ const char* toString(const ActionType action) noexcept {
         case ActionType::ArmTimer: return "arm_timer";
         case ActionType::CancelTimer: return "cancel_timer";
         case ActionType::NotifyProfileRejected: return "notify_profile_rejected";
+        case ActionType::NotifyRemoteStartDisabled: return "notify_remote_start_disabled";
         case ActionType::NotifyStartAccepted: return "notify_start_accepted";
         case ActionType::NotifyStartRejected: return "notify_start_rejected";
         case ActionType::NotifyRunning: return "notify_running";
