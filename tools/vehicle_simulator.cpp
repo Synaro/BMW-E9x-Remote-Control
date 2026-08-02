@@ -57,11 +57,14 @@ public:
         const application::ActionType notification,
         const application::ControllerState state,
         const application::FaultCode fault,
-        const application::SafetyAssessment safety) noexcept override {
+        const application::SafetyAssessment safety,
+        const application::ProfileReadinessAssessment profileReadiness) noexcept override {
         std::cout << "  notification: " << application::toString(notification)
                   << " state=" << application::toString(state)
                   << " fault=" << application::toString(fault)
-                  << " safety_mask=" << safety.reasons << '\n';
+                  << " safety_mask=" << safety.reasons
+                  << " profile_mask=" << static_cast<unsigned>(profileReadiness.reasons)
+                  << '\n';
     }
 };
 
@@ -149,8 +152,14 @@ int runBuiltInScenario() {
     ConsoleActuators actuators{};
     ConsoleTimer timer{};
     ConsoleNotifications notifications{};
+    application::ControllerConfig controllerConfig{};
+    controllerConfig.vehicleProfile = &simulation::syntheticVehicleProfile();
     infrastructure::Runtime runtime{
-        application::Controller{}, gateway, actuators, timer, notifications};
+        application::Controller{controllerConfig},
+        gateway,
+        actuators,
+        timer,
+        notifications};
 
     domain::VehicleState vehicle{};
 

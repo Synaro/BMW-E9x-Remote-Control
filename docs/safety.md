@@ -21,14 +21,20 @@ certification fonctionnelle ou automobile.
 9. Une deuxième demande de démarrage ne peut pas réengager le démarreur depuis
    un état actif.
 10. La durée de fonctionnement distant est bornée.
+11. Une demande de démarrage sans profil explicitement sélectionné et qualifié
+    reste en `Idle`, sécurise les sorties et n'interroge pas le véhicule.
+12. Le capot fermé est exigé par défaut. Une installation sans capteur peut
+    explicitement désactiver ce contrôle ; le signal est alors entièrement
+    ignoré plutôt que remplacé par une valeur inventée.
 
 ## Matrice d'autorisation initiale
 
 | Condition | Exigence par défaut | Résultat en cas d'échec |
 |---|---|---|
+| Profil véhicule | Sélectionné, signaux vérifiés, niveau lecture seule | Refus avant communication |
+| Capot | Fermé et frais lorsque `requireHoodClosed` vaut `true` | Refus |
 | Tension batterie | ≥ 11,8 V et fraîche | Refus |
 | Régime moteur | < 500 tr/min et frais | Refus |
-| Capot | Fermé et frais | Refus |
 | Portes / coffre | Fermés et frais | Refus |
 | Frein de service | Relâché et frais | Refus |
 | Frein de stationnement | Serré et frais | Refus |
@@ -44,7 +50,8 @@ ne doit pas être activée sans conception de sécurité dédiée.
 ## Surveillance pendant la session
 
 Pendant `Preparing`, `Cranking` et `Running`, les mises à jour véhicule sont
-réévaluées. Une ouverture, un changement de rapport, un frein actionné, une perte
+réévaluées. Une ouverture surveillée (portes, coffre et capot lorsqu'il est requis),
+un changement de rapport, un frein actionné, une perte
 de fraîcheur ou un défaut critique mène à l'état `Fault` avec sécurisation des
 sorties.
 

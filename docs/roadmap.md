@@ -29,11 +29,22 @@
 - [x] Profil de découverte E90 2009 N47D20C boîte automatique
 - [x] Garde de qualification fermé par défaut
 - [ ] Ajouter les variantes E9x à partir de données validées
-- [ ] Sélectionner explicitement un profil dans la configuration
+- [x] Sélectionner explicitement un profil dans la configuration
+
+## Jalon 1.3 — Découverte hors ligne
+
+- [x] Lecteur Python strict du format canonique
+- [x] Comparaison statistique de deux traces
+- [x] Classement des octets et bits candidats
+- [x] Scénario synthétique capot fermé / ouvert
+- [x] Protocole de collecte répétable en lecture seule
+- [ ] Qualifier une interface de capture brute compatible E9x
+- [ ] Collecter les premières paires privées sur le véhicule de référence
 
 ## Jalon 2 — Spécification matérielle
 
 - [ ] Choisir la carte après étude alimentation, température et E/S
+- [ ] Optionnel : concevoir une entrée indépendante pour les installations qui exigent le capot
 - [ ] Établir la matrice complète des variantes E9x visées
 - [ ] Identifier les signaux nécessaires et leurs sources légitimes
 - [ ] Définir les seuils de fraîcheur et les critères de plausibilité

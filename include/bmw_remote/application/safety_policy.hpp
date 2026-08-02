@@ -45,6 +45,7 @@ struct SafetyPolicyConfig final {
     std::uint16_t minimumBatteryMillivolts{11'800U};
     std::uint16_t runningRpmThreshold{500U};
     bool requireVehicleSecured{true};
+    bool requireHoodClosed{true};
     bool allowManualTransmission{false};
 };
 

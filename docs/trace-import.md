@@ -82,4 +82,6 @@ Pour ce jalon :
 
 La prochaine étape de découverte consistera à définir une fiche d'observation
 reproductible avec des événements sans danger, puis à corréler les changements
-hors ligne avant d'écrire le moindre décodeur BMW.
+hors ligne avant d'écrire le moindre décodeur BMW. Cette procédure et l'outil de
+comparaison sont décrits dans
+[read-only-discovery.md](read-only-discovery.md).

@@ -4,11 +4,11 @@
 from __future__ import annotations
 
 import argparse
-import csv
 import math
-from dataclasses import dataclass
 from pathlib import Path
-from typing import Iterable, Protocol, Sequence, TextIO
+from typing import Iterable, Protocol, Sequence
+
+from canonical_trace import CanonicalFrame, write_canonical_csv
 
 
 class CanMessage(Protocol):
@@ -20,14 +20,6 @@ class CanMessage(Protocol):
     is_fd: bool
     dlc: int
     data: Sequence[int]
-
-
-@dataclass(frozen=True)
-class CanonicalFrame:
-    timestamp_ms: int
-    identifier: int
-    extended: bool
-    data: bytes
 
 
 def canonicalize_messages(
@@ -77,22 +69,6 @@ def canonicalize_messages(
     if not frames:
         raise ValueError("trace contains no CAN frames")
     return frames
-
-
-def write_canonical_csv(frames: Iterable[CanonicalFrame], output: TextIO) -> None:
-    writer = csv.writer(output, lineterminator="\n")
-    writer.writerow(["timestamp_ms", "identifier", "extended", "dlc", "data_hex"])
-    for frame in frames:
-        writer.writerow(
-            [
-                frame.timestamp_ms,
-                f"0x{frame.identifier:X}",
-                1 if frame.extended else 0,
-                len(frame.data),
-                frame.data.hex().upper(),
-            ]
-        )
-
 
 def import_trace(input_path: Path, output_path: Path, maximum_frames: int) -> int:
     try:

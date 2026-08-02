@@ -35,7 +35,8 @@ public:
         application::ActionType notification,
         application::ControllerState state,
         application::FaultCode fault,
-        application::SafetyAssessment safety) noexcept = 0;
+        application::SafetyAssessment safety,
+        application::ProfileReadinessAssessment profileReadiness) noexcept = 0;
 };
 
 }  // namespace bmw::remote::infrastructure

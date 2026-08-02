@@ -19,12 +19,15 @@ SafetyAssessment SafetyPolicy::assessCommon(
     SafetyAssessment assessment{};
 
     requireFresh(assessment, vehicle.batteryMillivolts);
-    requireFresh(assessment, vehicle.hoodClosed);
     requireFresh(assessment, vehicle.brakePressed);
     requireFresh(assessment, vehicle.parkingBrakeApplied);
     requireFresh(assessment, vehicle.transmission);
     requireFresh(assessment, vehicle.gear);
     requireFresh(assessment, vehicle.criticalFaultPresent);
+
+    if (config_.requireHoodClosed) {
+        requireFresh(assessment, vehicle.hoodClosed);
+    }
 
     if (config_.requireVehicleSecured) {
         requireFresh(assessment, vehicle.doorsClosed);
@@ -36,7 +39,9 @@ SafetyAssessment SafetyPolicy::assessCommon(
         assessment.add(SafetyReason::BatteryTooLow);
     }
 
-    if (vehicle.hoodClosed.isFresh() && !vehicle.hoodClosed.value) {
+    if (config_.requireHoodClosed &&
+        vehicle.hoodClosed.isFresh() &&
+        !vehicle.hoodClosed.value) {
         assessment.add(SafetyReason::HoodOpen);
     }
 

@@ -2,6 +2,7 @@
 
 #include <cstdint>
 
+#include "bmw_remote/domain/vehicle_profile.hpp"
 #include "bmw_remote/domain/vehicle_state.hpp"
 #include "bmw_remote/infrastructure/can_frame.hpp"
 #include "bmw_remote/infrastructure/vehicle_state_assembler.hpp"
@@ -38,6 +39,8 @@ public:
         const infrastructure::CanFrame& frame,
         infrastructure::DecodedSignalBatch& output) const noexcept override;
 };
+
+[[nodiscard]] const domain::VehicleProfile& syntheticVehicleProfile() noexcept;
 
 [[nodiscard]] infrastructure::CanFrame makeSyntheticPowertrainFrame(
     std::uint32_t timestampMs,

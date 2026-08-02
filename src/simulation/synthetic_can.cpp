@@ -1,7 +1,37 @@
 #include "bmw_remote/simulation/synthetic_can.hpp"
 
+#include <array>
+
 namespace bmw::remote::simulation {
 namespace {
+
+constexpr std::array<domain::SignalSupport, domain::vehicleSignalCount()> VerifiedSignals = {
+    domain::SignalSupport::Verified,
+    domain::SignalSupport::Verified,
+    domain::SignalSupport::Verified,
+    domain::SignalSupport::Verified,
+    domain::SignalSupport::Verified,
+    domain::SignalSupport::Verified,
+    domain::SignalSupport::Verified,
+    domain::SignalSupport::Verified,
+    domain::SignalSupport::Verified,
+    domain::SignalSupport::Verified,
+};
+
+constexpr domain::VehicleProfile SyntheticProfile = {
+    "synthetic-offline-automatic",
+    "Synthetic offline automatic vehicle",
+    domain::VehiclePlatform::Unknown,
+    domain::BodyVariant::Unknown,
+    0U,
+    0U,
+    "synthetic",
+    domain::FuelType::Unknown,
+    domain::Transmission::Automatic,
+    domain::QualificationStage::BenchValidated,
+    domain::HoodInterlockSource::Synthetic,
+    VerifiedSignals,
+};
 
 [[nodiscard]] constexpr std::uint16_t decodeLittleEndian16(
     const std::uint8_t low,
@@ -49,6 +79,10 @@ void encodeLittleEndian16(
 }
 
 }  // namespace
+
+const domain::VehicleProfile& syntheticVehicleProfile() noexcept {
+    return SyntheticProfile;
+}
 
 infrastructure::DecodeResult SyntheticCanDecoder::decode(
     const infrastructure::CanFrame& frame,

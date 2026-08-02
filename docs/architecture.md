@@ -36,6 +36,18 @@ signal sans contenir de détail CAN. Un garde d'application distinct empêche un
 profil de découverte d'autoriser une fonctionnalité réelle. Voir
 [vehicle-profiles.md](vehicle-profiles.md).
 
+La source du signal de capot est une capacité du profil. Elle peut être absente,
+provenir d'un signal véhicule validé ou d'une entrée discrète indépendante. Le
+modèle reste identique dans tous les cas (`HoodClosed`) ; seul l'adaptateur
+d'infrastructure change. Par défaut une source absente provoque un refus. Une
+installation peut explicitement désactiver ce contrôle avec
+`SafetyPolicyConfig::requireHoodClosed = false`.
+
+`ControllerConfig` exige un pointeur vers le profil sélectionné. Sans profil ou
+avec un profil non qualifié, `RemoteStartRequested` reste en `Idle`, demande la
+sécurisation des sorties et n'interroge pas le véhicule. Le profil synthétique
+qualifié reste limité aux tests et au simulateur.
+
 ## Modèle des signaux
 
 Chaque donnée du véhicule est un `Observed<T>` portant une valeur et une qualité :
@@ -133,6 +145,10 @@ signature dédiée. Il n'encode aucune connaissance BMW.
 Les outils hôte peuvent convertir et charger un CSV canonique. Ils utilisent des
 conteneurs dynamiques acceptables sur PC, mais restent hors de `bmw_remote_core`
 et du firmware embarqué. Voir [trace-import.md](trace-import.md).
+
+L'analyse différentielle reste également un outil PC. Elle classe des candidats
+par distance de distribution et stabilité, mais ne modifie jamais le profil ni
+le décodeur automatiquement. Voir [read-only-discovery.md](read-only-discovery.md).
 
 ## Contraintes temporelles
 

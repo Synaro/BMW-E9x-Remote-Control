@@ -41,6 +41,14 @@ enum class SignalSupport : std::uint8_t {
     Verified,
 };
 
+enum class HoodInterlockSource : std::uint8_t {
+    Unspecified,
+    NotAvailable,
+    VehicleSignal,
+    ExternalDiscreteInput,
+    Synthetic,
+};
+
 struct VehicleProfile final {
     const char* id{"unknown"};
     const char* displayName{"Unknown vehicle"};
@@ -52,6 +60,7 @@ struct VehicleProfile final {
     FuelType fuel{FuelType::Unknown};
     Transmission transmission{Transmission::Unknown};
     QualificationStage qualification{QualificationStage::Discovery};
+    HoodInterlockSource hoodInterlockSource{HoodInterlockSource::Unspecified};
     std::array<SignalSupport, vehicleSignalCount()> signals{};
 
     [[nodiscard]] constexpr SignalSupport support(const VehicleSignal signal) const noexcept {
@@ -80,5 +89,6 @@ private:
 [[nodiscard]] const char* toString(BodyVariant body) noexcept;
 [[nodiscard]] const char* toString(QualificationStage stage) noexcept;
 [[nodiscard]] const char* toString(SignalSupport support) noexcept;
+[[nodiscard]] const char* toString(HoodInterlockSource source) noexcept;
 
 }  // namespace bmw::remote::domain

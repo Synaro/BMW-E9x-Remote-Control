@@ -85,6 +85,7 @@ application::FaultCode Runtime::executeAction(
                        ? FaultCode::None
                        : FaultCode::TimerFailure;
 
+        case ActionType::NotifyProfileRejected:
         case ActionType::NotifyStartAccepted:
         case ActionType::NotifyStartRejected:
         case ActionType::NotifyRunning:
@@ -94,7 +95,12 @@ application::FaultCode Runtime::executeAction(
         case ActionType::NotifyReady:
         case ActionType::NotifyRequestIgnored:
         case ActionType::NotifyResetRejected:
-            notifications_.publish(action.type, decision.state, decision.fault, decision.safety);
+            notifications_.publish(
+                action.type,
+                decision.state,
+                decision.fault,
+                decision.safety,
+                decision.profileReadiness);
             return FaultCode::None;
     }
 
@@ -121,7 +127,12 @@ void Runtime::executeSafing(const application::Decision& decision) noexcept {
                 break;
 
             case ActionType::NotifyFault:
-                notifications_.publish(action.type, decision.state, decision.fault, decision.safety);
+                notifications_.publish(
+                    action.type,
+                    decision.state,
+                    decision.fault,
+                    decision.safety,
+                    decision.profileReadiness);
                 break;
 
             default:
