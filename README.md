@@ -165,7 +165,7 @@ transitions. Voir [CONTRIBUTING.md](CONTRIBUTING.md).
 ## Origine et inspiration
 
 Le concept général est inspiré du dépôt
-[viktorvano/BMW-Remote-Start](https://github.com/viktorvano/BMW-Remote-Start).
+[AlbertoMarziali/bmw_remote_start](https://github.com/AlbertoMarziali/bmw_remote_start).
 Ce projet est une implémentation indépendante : aucun code du dépôt de référence
 n'a été copié. L'objectif est une architecture plus modulaire, explicite et
 adaptée à une validation progressive.
