@@ -41,6 +41,9 @@ certification fonctionnelle ou automobile.
     version, du CRC et de toutes les bornes métier.
 20. Si aucun des deux emplacements persistants n'est valide, le démarrage
     distant reste désactivé.
+21. Une impulsion de verrouillage n'alimente la séquence de démarrage que si sa
+    source est déclarée vérifiée, sa preuve récente et son ordre strictement
+    croissant ; tout refus structurel annule la séquence partielle.
 
 ## Matrice d'autorisation initiale
 
@@ -101,4 +104,5 @@ Une analyse de risques formelle et des essais HIL doivent compléter ces défens
 - diagnostic CAN/K-CAN/CAS/DME ;
 - détection de présence humaine ou animale ;
 - qualification BMW des preuves autorisant la reprise conducteur ;
+- qualification BMW de la provenance et de l'anti-rejeu des verrouillages ;
 - protection physique contre les erreurs de câblage.

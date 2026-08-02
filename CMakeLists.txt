@@ -4,6 +4,7 @@ project(bmw_e9x_remote_control LANGUAGES CXX)
 
 add_library(bmw_remote_core
     src/application/controller.cpp
+    src/application/lock_command_gate.cpp
     src/application/lock_sequence_detector.cpp
     src/application/profile_readiness.cpp
     src/application/safety_policy.cpp
@@ -125,6 +126,9 @@ if(BMW_REMOTE_BUILD_TESTS)
         add_test(
             NAME bmw_remote_simulator_settings_link
             COMMAND bmw_remote_simulator --scenario settings-link)
+        add_test(
+            NAME bmw_remote_simulator_lock_replay_guard
+            COMMAND bmw_remote_simulator --scenario lock-replay-guard)
     endif()
 
     if(BMW_REMOTE_BUILD_CONFIGURATOR)

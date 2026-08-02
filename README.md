@@ -20,6 +20,7 @@ Le premier jalon logiciel est opérationnel :
 - politique de sécurité indépendante du matériel ;
 - machine d'état événementielle complète ;
 - détection applicative configurable de trois impulsions de verrouillage ;
+- garde fermée par défaut sur leur provenance, fraîcheur et ordre ;
 - profil utilisateur validé avant application, sans recompilation du noyau ;
 - configurateur Windows interactif avec enregistrement vérifié et remplacement sûr ;
 - protocole binaire de configuration versionné, borné et protégé par CRC ;
@@ -46,7 +47,7 @@ Le premier jalon logiciel est opérationnel :
 - identification du produit, de la cible, de la version et des capacités avant écriture ;
 - journal de diagnostic circulaire, borné et dépourvu de données véhicule brutes ;
 - campagnes déterministes de perte, retard et corruption des données véhicule ;
-- 94 tests C++, 11 scénarios du simulateur, 3 contrôles du configurateur et
+- 101 tests C++, 12 scénarios du simulateur, 3 contrôles du configurateur et
   21 tests Python automatisés en intégration continue.
 
 L'adaptateur BMW qui observera réellement le verrouillage, qualifiera la reprise
@@ -88,6 +89,8 @@ et les invariants dans [docs/safety.md](docs/safety.md). Le système de variante
 est décrit dans [docs/vehicle-profiles.md](docs/vehicle-profiles.md).
 Le déclenchement par trois verrouillages et le cycle de reprise sont spécifiés
 dans [docs/remote-session.md](docs/remote-session.md).
+La frontière de confiance et les limites anti-rejeu des commandes sont décrites
+dans [docs/lock-command-security.md](docs/lock-command-security.md).
 Les préférences, leurs limites et leur future persistance sont décrites dans
 [docs/user-configuration.md](docs/user-configuration.md).
 Le journal binaire redondant est spécifié dans
@@ -205,10 +208,10 @@ Sous Windows, l'exécutable interactif peut être construit avec :
 .\build\bmw_remote_simulator.exe
 ```
 
-Onze scénarios permettent de tester le parcours nominal, le capot obligatoire ou
+Douze scénarios permettent de tester le parcours nominal, le capot obligatoire ou
 facultatif, la reprise conducteur, la perte, le retard et la corruption des
 données, un profil utilisateur, la récupération du stockage et la liaison de
-configuration. Un scénario précis
+configuration, ainsi que la garde anti-rejeu des verrouillages. Un scénario précis
 peut aussi être compilé et exécuté avec :
 
 ```powershell
@@ -221,6 +224,7 @@ peut aussi être compilé et exécuté avec :
 .\scripts\simulate.ps1 -ConfigPath .\config\user-settings.example.conf
 .\scripts\simulate.ps1 -Scenario settings-recovery
 .\scripts\simulate.ps1 -Scenario settings-link
+.\scripts\simulate.ps1 -Scenario lock-replay-guard
 ```
 
 Chaque parcours affiche aussi le journal chronologique des commandes,
