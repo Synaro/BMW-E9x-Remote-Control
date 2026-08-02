@@ -45,7 +45,8 @@ Le premier jalon logiciel est opérationnel :
 - configurateur Windows relié au port COM avec écriture et relecture vérifiée ;
 - identification du produit, de la cible, de la version et des capacités avant écriture ;
 - journal de diagnostic circulaire, borné et dépourvu de données véhicule brutes ;
-- 91 tests C++, 8 scénarios du simulateur, 3 contrôles du configurateur et
+- campagnes déterministes de perte, retard et corruption des données véhicule ;
+- 94 tests C++, 11 scénarios du simulateur, 3 contrôles du configurateur et
   21 tests Python automatisés en intégration continue.
 
 L'adaptateur BMW qui observera réellement le verrouillage, qualifiera la reprise
@@ -204,15 +205,19 @@ Sous Windows, l'exécutable interactif peut être construit avec :
 .\build\bmw_remote_simulator.exe
 ```
 
-Huit scénarios permettent de tester le parcours nominal, le capot obligatoire ou
-facultatif, la reprise conducteur, un profil utilisateur, la récupération du
-stockage et la future liaison de configuration. Un scénario précis
+Onze scénarios permettent de tester le parcours nominal, le capot obligatoire ou
+facultatif, la reprise conducteur, la perte, le retard et la corruption des
+données, un profil utilisateur, la récupération du stockage et la liaison de
+configuration. Un scénario précis
 peut aussi être compilé et exécuté avec :
 
 ```powershell
 .\scripts\simulate.ps1 -Scenario hood-optional
 .\scripts\simulate.ps1 -Scenario takeover-timeout
 .\scripts\simulate.ps1 -Scenario takeover-confirmed
+.\scripts\simulate.ps1 -Scenario signal-loss
+.\scripts\simulate.ps1 -Scenario signal-delay
+.\scripts\simulate.ps1 -Scenario frame-corruption
 .\scripts\simulate.ps1 -ConfigPath .\config\user-settings.example.conf
 .\scripts\simulate.ps1 -Scenario settings-recovery
 .\scripts\simulate.ps1 -Scenario settings-link

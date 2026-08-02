@@ -30,6 +30,9 @@ enum class Scenario : std::uint8_t {
     HoodOptional,
     TakeoverTimeout,
     TakeoverConfirmed,
+    SignalLoss,
+    SignalDelay,
+    FrameCorruption,
     UserConfig,
     SettingsRecovery,
     SettingsLink,
@@ -126,6 +129,20 @@ void printDiagnosticJournal(
     }
 }
 
+int finishRuntimeScenario(
+    const bool expectedOutcome,
+    const infrastructure::ReplayVehicleGateway& gateway,
+    const infrastructure::DiagnosticJournal& diagnosticJournal) {
+    const infrastructure::AssemblyStatistics stats = gateway.statistics();
+    printDiagnosticJournal(diagnosticJournal);
+    std::cout << "replay: " << stats.consumedFrames << " frames, "
+              << stats.decodedSignals << " decoded signals, "
+              << stats.rejectedFrames << " rejected frames\n"
+              << "scenario_result: " << (expectedOutcome ? "PASS" : "FAIL")
+              << '\n';
+    return expectedOutcome ? 0 : 2;
+}
+
 const char* qualityName(const domain::SignalQuality quality) noexcept {
     switch (quality) {
         case domain::SignalQuality::Unavailable: return "unavailable";
@@ -142,6 +159,9 @@ const char* scenarioName(const Scenario scenario) noexcept {
         case Scenario::HoodOptional: return "hood-optional";
         case Scenario::TakeoverTimeout: return "takeover-timeout";
         case Scenario::TakeoverConfirmed: return "takeover-confirmed";
+        case Scenario::SignalLoss: return "signal-loss";
+        case Scenario::SignalDelay: return "signal-delay";
+        case Scenario::FrameCorruption: return "frame-corruption";
         case Scenario::UserConfig: return "user-config";
         case Scenario::SettingsRecovery: return "settings-recovery";
         case Scenario::SettingsLink: return "settings-link";
@@ -168,6 +188,18 @@ bool parseScenario(const std::string_view text, Scenario& scenario) noexcept {
     }
     if (text == "takeover-confirmed") {
         scenario = Scenario::TakeoverConfirmed;
+        return true;
+    }
+    if (text == "signal-loss") {
+        scenario = Scenario::SignalLoss;
+        return true;
+    }
+    if (text == "signal-delay") {
+        scenario = Scenario::SignalDelay;
+        return true;
+    }
+    if (text == "frame-corruption") {
+        scenario = Scenario::FrameCorruption;
         return true;
     }
     if (text == "user-config") {
@@ -206,6 +238,9 @@ void printScenarioList() {
         << "hood-optional hood opens while running and is explicitly ignored\n"
         << "takeover-timeout door opens but takeover is not confirmed, then stop\n"
         << "takeover-confirmed door opens and authenticated takeover succeeds\n"
+        << "signal-loss omits body updates until freshness forces a safe fault\n"
+        << "signal-delay withholds updates until preparation is rejected\n"
+        << "frame-corruption rejects a recognized frame before authorization\n"
         << "user-config uses every value from a supplied configuration file\n"
         << "settings-recovery corrupts the newest slot and restores the previous one\n"
         << "settings-link exercises framed, authorized and idle-only configuration\n";
@@ -615,6 +650,8 @@ int runScenario(
         scenario == Scenario::TakeoverTimeout ||
         scenario == Scenario::TakeoverConfirmed ||
         scenario == Scenario::UserConfig;
+    const bool injectSignalLoss = scenario == Scenario::SignalLoss;
+    const bool injectFrameCorruption = scenario == Scenario::FrameCorruption;
     if (injectHoodOpening) {
         finalBody.hoodClosed = false;
     }
@@ -622,20 +659,34 @@ int runScenario(
         finalBody.doorsClosed = false;
     }
 
-    const std::array<infrastructure::CanFrame, 8U> trace = {
-        simulation::makeSyntheticPowertrainFrame(0U, stopped),
-        simulation::makeSyntheticBodyFrame(0U, safeBody),
-        simulation::makeSyntheticPowertrainFrame(1'800U, running),
-        simulation::makeSyntheticBodyFrame(1'800U, safeBody),
-        simulation::makeSyntheticPowertrainFrame(5'000U, running),
-        simulation::makeSyntheticBodyFrame(5'000U, finalBody),
-        simulation::makeSyntheticPowertrainFrame(6'000U, stopped),
-        simulation::makeSyntheticBodyFrame(6'000U, safeBody),
-    };
+    std::array<infrastructure::CanFrame, 8U> trace{};
+    std::size_t traceSize = 0U;
+    trace[traceSize++] =
+        simulation::makeSyntheticPowertrainFrame(0U, stopped);
+    infrastructure::CanFrame initialBody =
+        simulation::makeSyntheticBodyFrame(0U, safeBody);
+    if (injectFrameCorruption) {
+        initialBody.data[7U] ^= 0x01U;
+    }
+    trace[traceSize++] = initialBody;
+    trace[traceSize++] =
+        simulation::makeSyntheticPowertrainFrame(1'800U, running);
+    trace[traceSize++] =
+        simulation::makeSyntheticBodyFrame(1'800U, safeBody);
+    trace[traceSize++] =
+        simulation::makeSyntheticPowertrainFrame(5'000U, running);
+    if (!injectSignalLoss) {
+        trace[traceSize++] =
+            simulation::makeSyntheticBodyFrame(5'000U, finalBody);
+    }
+    trace[traceSize++] =
+        simulation::makeSyntheticPowertrainFrame(6'000U, stopped);
+    trace[traceSize++] =
+        simulation::makeSyntheticBodyFrame(6'000U, safeBody);
 
     simulation::SyntheticCanDecoder decoder{};
     infrastructure::ReplayVehicleGateway gateway{
-        trace.data(), trace.size(), decoder};
+        trace.data(), traceSize, decoder};
     ConsoleActuators actuators{};
     ConsoleTimer timer{};
     ConsoleNotifications notifications{};
@@ -676,14 +727,26 @@ int runScenario(
         0U);
     printDecision("remote start", decision);
 
+    if (scenario == Scenario::FrameCorruption) {
+        const bool expectedOutcome =
+            decision.state == application::ControllerState::Fault &&
+            decision.fault ==
+                application::FaultCode::VehicleCommunication &&
+            decision.contains(application::ActionType::SecureOutputs) &&
+            gateway.lastBatch().status ==
+                infrastructure::ReplayStatus::ConsumerRejected &&
+            gateway.statistics().rejectedFrames == 1U;
+        std::cout << "injection: corrupted recognized body frame\n";
+        return finishRuntimeScenario(
+            expectedOutcome, gateway, diagnosticJournal);
+    }
+
     if (scenario == Scenario::UserConfig && !settings.remoteStartEnabled) {
         const bool expectedOutcome =
             decision.state == application::ControllerState::Idle &&
             decision.contains(application::ActionType::NotifyRemoteStartDisabled);
-        printDiagnosticJournal(diagnosticJournal);
-        std::cout << "scenario_result: "
-                  << (expectedOutcome ? "PASS" : "FAIL") << '\n';
-        return expectedOutcome ? 0 : 2;
+        return finishRuntimeScenario(
+            expectedOutcome, gateway, diagnosticJournal);
     }
 
     vehicle = gateway.state();
@@ -693,11 +756,34 @@ int runScenario(
         0U);
     printDecision("safe snapshot", decision);
 
+    if (scenario == Scenario::SignalDelay) {
+        if (!gateway.setElapsedTime(
+                configuration.controller.preparationDelayMs) ||
+            !gateway.requestState()) {
+            std::cerr << "Replay failed during delayed update injection\n";
+            return 1;
+        }
+        vehicle = gateway.state();
+        std::cout << "injection: no new signals before preparation deadline\n";
+    }
+
     decision = runtime.dispatch(
         application::Event{application::EventType::TimerElapsed},
         vehicle,
         configuration.controller.preparationDelayMs);
     printDecision("preparation timer", decision);
+
+    if (scenario == Scenario::SignalDelay) {
+        const bool expectedOutcome =
+            decision.state == application::ControllerState::Fault &&
+            decision.fault == application::FaultCode::SafetyInterlock &&
+            decision.safety.contains(
+                application::SafetyReason::SignalUnavailable) &&
+            decision.contains(application::ActionType::SecureOutputs) &&
+            gateway.lastBatch().emittedFrames == 0U;
+        return finishRuntimeScenario(
+            expectedOutcome, gateway, diagnosticJournal);
+    }
 
     if (!gateway.setElapsedTime(1'800U) || !gateway.requestState()) {
         std::cerr << "Replay failed at 1800 ms\n";
@@ -756,6 +842,14 @@ int runScenario(
             decision.state == application::ControllerState::Running &&
             decision.fault == application::FaultCode::None &&
             decision.safety.approved();
+    } else if (scenario == Scenario::SignalLoss) {
+        expectedOutcome =
+            decision.state == application::ControllerState::Fault &&
+            decision.fault == application::FaultCode::SafetyInterlock &&
+            decision.safety.contains(
+                application::SafetyReason::SignalUnavailable) &&
+            decision.contains(application::ActionType::SecureOutputs) &&
+            vehicle.doorsClosed.quality == domain::SignalQuality::Stale;
     } else if (scenario == Scenario::TakeoverTimeout) {
         decision = runtime.dispatch(
             application::Event{application::EventType::TimerElapsed},
@@ -785,12 +879,8 @@ int runScenario(
             decision.fault == application::FaultCode::None;
     }
 
-    const infrastructure::AssemblyStatistics stats = gateway.statistics();
-    printDiagnosticJournal(diagnosticJournal);
-    std::cout << "replay: " << stats.consumedFrames << " frames, "
-              << stats.decodedSignals << " decoded signals\n"
-              << "scenario_result: " << (expectedOutcome ? "PASS" : "FAIL") << '\n';
-    return expectedOutcome ? 0 : 2;
+    return finishRuntimeScenario(
+        expectedOutcome, gateway, diagnosticJournal);
 }
 
 int runUserConfiguration(const char* const path) {
@@ -809,10 +899,13 @@ int runInteractive() {
         << "3. Capot facultatif : ouverture ignoree\n"
         << "4. Portiere ouverte sans reprise : arret apres delai\n"
         << "5. Portiere ouverte avec reprise conducteur validee\n"
-        << "6. Tester un fichier de configuration utilisateur\n"
-        << "7. Recuperation d'une configuration persistante corrompue\n"
-        << "8. Liaison de configuration securisee simulee\n"
-        << "9. Quitter\n\n"
+        << "6. Perte des mises a jour carrosserie\n"
+        << "7. Retard des signaux avant lancement\n"
+        << "8. Corruption d'une trame reconnue\n"
+        << "9. Tester un fichier de configuration utilisateur\n"
+        << "10. Recuperation d'une configuration persistante corrompue\n"
+        << "11. Liaison de configuration securisee simulee\n"
+        << "12. Quitter\n\n"
         << "Choix: ";
 
     unsigned selection = 0U;
@@ -829,7 +922,10 @@ int runInteractive() {
         case 3U: result = runScenario(Scenario::HoodOptional); break;
         case 4U: result = runScenario(Scenario::TakeoverTimeout); break;
         case 5U: result = runScenario(Scenario::TakeoverConfirmed); break;
-        case 6U: {
+        case 6U: result = runScenario(Scenario::SignalLoss); break;
+        case 7U: result = runScenario(Scenario::SignalDelay); break;
+        case 8U: result = runScenario(Scenario::FrameCorruption); break;
+        case 9U: {
             std::cout << "Configuration path: ";
             std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
             std::string path{};
@@ -838,9 +934,9 @@ int runInteractive() {
             result = runUserConfiguration(path.c_str());
             break;
         }
-        case 7U: result = runScenario(Scenario::SettingsRecovery); break;
-        case 8U: result = runScenario(Scenario::SettingsLink); break;
-        case 9U: return 0;
+        case 10U: result = runScenario(Scenario::SettingsRecovery); break;
+        case 11U: result = runScenario(Scenario::SettingsLink); break;
+        case 12U: return 0;
         default:
             std::cerr << "Invalid selection\n";
             result = 64;

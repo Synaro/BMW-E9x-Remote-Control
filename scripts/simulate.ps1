@@ -9,6 +9,9 @@ param(
         'hood-optional',
         'takeover-timeout',
         'takeover-confirmed',
+        'signal-loss',
+        'signal-delay',
+        'frame-corruption',
         'user-config',
         'settings-recovery',
         'settings-link')]

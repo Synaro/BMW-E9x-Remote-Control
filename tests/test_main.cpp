@@ -1954,6 +1954,141 @@ void testDiagnosticJournalOverwritesOldestRecordsDeterministically() {
     CHECK(journal.overwrittenCount() == 0U);
 }
 
+void testLostBodyUpdatesBecomeStaleAndFaultRemoteRun() {
+    SyntheticPowertrainState running{};
+    running.engineRpm = 850U;
+    const std::array<CanFrame, 5U> trace = {
+        makeSyntheticPowertrainFrame(0U),
+        makeSyntheticBodyFrame(0U),
+        makeSyntheticPowertrainFrame(1'800U, running),
+        makeSyntheticBodyFrame(1'800U),
+        makeSyntheticPowertrainFrame(5'000U, running),
+    };
+    SyntheticCanDecoder decoder{};
+    ReplayVehicleGateway gateway{trace.data(), trace.size(), decoder};
+    FakeActuator actuator{};
+    FakeTimer timer{};
+    FakeNotifications notifications{};
+    DiagnosticJournal journal{};
+    Runtime runtime{
+        qualifiedController(),
+        gateway,
+        actuator,
+        timer,
+        notifications,
+        &journal};
+    VehicleState vehicle{};
+
+    CHECK(runtime.dispatch(
+              Event{EventType::RemoteStartRequested}, vehicle, 0U)
+              .state == ControllerState::Authorizing);
+    vehicle = gateway.state();
+    CHECK(runtime.dispatch(
+              Event{EventType::VehicleStateUpdated}, vehicle, 0U)
+              .state == ControllerState::Preparing);
+    CHECK(runtime.dispatch(
+              Event{EventType::TimerElapsed}, vehicle, 1'500U)
+              .state == ControllerState::Cranking);
+    CHECK(gateway.setElapsedTime(1'800U));
+    CHECK(gateway.requestState());
+    vehicle = gateway.state();
+    CHECK(runtime.dispatch(
+              Event{EventType::VehicleStateUpdated}, vehicle, 1'800U)
+              .state == ControllerState::Running);
+
+    CHECK(gateway.setElapsedTime(5'000U));
+    CHECK(gateway.requestState());
+    vehicle = gateway.state();
+    CHECK(vehicle.engineRpm.quality == SignalQuality::Fresh);
+    CHECK(vehicle.doorsClosed.quality == SignalQuality::Stale);
+    const auto fault = runtime.dispatch(
+        Event{EventType::VehicleStateUpdated}, vehicle, 5'000U);
+
+    CHECK(fault.state == ControllerState::Fault);
+    CHECK(fault.fault == FaultCode::SafetyInterlock);
+    CHECK(fault.safety.contains(SafetyReason::SignalUnavailable));
+    CHECK(fault.contains(ActionType::SecureOutputs));
+    CHECK(actuator.secureCalls == 1U);
+}
+
+void testDelayedSignalsPreventPreparationFromCranking() {
+    SyntheticPowertrainState running{};
+    running.engineRpm = 850U;
+    const std::array<CanFrame, 4U> trace = {
+        makeSyntheticPowertrainFrame(0U),
+        makeSyntheticBodyFrame(0U),
+        makeSyntheticPowertrainFrame(1'800U, running),
+        makeSyntheticBodyFrame(1'800U),
+    };
+    SyntheticCanDecoder decoder{};
+    ReplayVehicleGateway gateway{trace.data(), trace.size(), decoder};
+    FakeActuator actuator{};
+    FakeTimer timer{};
+    FakeNotifications notifications{};
+    Runtime runtime{
+        qualifiedController(), gateway, actuator, timer, notifications};
+    VehicleState vehicle{};
+
+    static_cast<void>(runtime.dispatch(
+        Event{EventType::RemoteStartRequested}, vehicle, 0U));
+    vehicle = gateway.state();
+    CHECK(runtime.dispatch(
+              Event{EventType::VehicleStateUpdated}, vehicle, 0U)
+              .state == ControllerState::Preparing);
+    CHECK(gateway.setElapsedTime(1'500U));
+    CHECK(gateway.requestState());
+    CHECK(gateway.lastBatch().emittedFrames == 0U);
+    vehicle = gateway.state();
+    CHECK(vehicle.engineRpm.quality == SignalQuality::Stale);
+    CHECK(vehicle.transmission.quality == SignalQuality::Stale);
+
+    const auto fault = runtime.dispatch(
+        Event{EventType::TimerElapsed}, vehicle, 1'500U);
+    CHECK(fault.state == ControllerState::Fault);
+    CHECK(fault.fault == FaultCode::SafetyInterlock);
+    CHECK(fault.safety.contains(SafetyReason::SignalUnavailable));
+    CHECK(!fault.contains(ActionType::EngageStarter));
+    CHECK(actuator.secureCalls == 1U);
+}
+
+void testCorruptedRecognizedFrameFaultsAuthorizationGateway() {
+    CanFrame corruptedBody = makeSyntheticBodyFrame(0U);
+    corruptedBody.data[7U] ^= 0x01U;
+    const std::array<CanFrame, 2U> trace = {
+        makeSyntheticPowertrainFrame(0U),
+        corruptedBody,
+    };
+    SyntheticCanDecoder decoder{};
+    ReplayVehicleGateway gateway{trace.data(), trace.size(), decoder};
+    FakeActuator actuator{};
+    FakeTimer timer{};
+    FakeNotifications notifications{};
+    DiagnosticJournal journal{};
+    Runtime runtime{
+        qualifiedController(),
+        gateway,
+        actuator,
+        timer,
+        notifications,
+        &journal};
+
+    const auto fault = runtime.dispatch(
+        Event{EventType::RemoteStartRequested}, VehicleState{}, 0U);
+
+    CHECK(fault.state == ControllerState::Fault);
+    CHECK(fault.fault == FaultCode::VehicleCommunication);
+    CHECK(fault.contains(ActionType::SecureOutputs));
+    CHECK(gateway.lastBatch().status == ReplayStatus::ConsumerRejected);
+    CHECK(gateway.statistics().rejectedFrames == 1U);
+    CHECK(actuator.secureCalls == 1U);
+    DiagnosticRecord infrastructureFailure{};
+    CHECK(journal.read(2U, infrastructureFailure));
+    CHECK(
+        infrastructureFailure.type ==
+        DiagnosticRecordType::InfrastructureFailure);
+    CHECK(infrastructureFailure.fault == FaultCode::VehicleCommunication);
+}
+
 void testReplayRejectsNonMonotonicTrace() {
     const std::array<CanFrame, 2U> trace = {
         makeSyntheticPowertrainFrame(10U),
@@ -2340,6 +2475,9 @@ int main() {
         {"diagnostic journal failures", testDiagnosticJournalRecordsRuntimeAndSafingFailures},
         {"diagnostic journal quiet updates", testDiagnosticJournalDoesNotStoreUneventfulVehicleUpdates},
         {"diagnostic journal rollover", testDiagnosticJournalOverwritesOldestRecordsDeterministically},
+        {"lost body updates", testLostBodyUpdatesBecomeStaleAndFaultRemoteRun},
+        {"delayed safety signals", testDelayedSignalsPreventPreparationFromCranking},
+        {"corrupted authorization frame", testCorruptedRecognizedFrameFaultsAuthorizationGateway},
         {"non-monotonic trace", testReplayRejectsNonMonotonicTrace},
         {"time-bounded replay", testReplayOnlyEmitsFramesDueAtCurrentTime},
         {"signal freshness", testAssemblerMarksOldSignalsStale},
