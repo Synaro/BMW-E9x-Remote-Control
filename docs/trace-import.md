@@ -10,6 +10,16 @@ au véhicule :
 journal de capture -> import_can_trace.py -> .cantrace.csv -> simulate.ps1
 ```
 
+Une interface dont le mode silencieux est pris en charge peut aussi produire le
+format canonique directement :
+
+```text
+interface qualifiée -> capture_can_trace.py -> .cantrace.csv -> simulate.ps1
+```
+
+Voir [capture-qualification.md](capture-qualification.md) pour les pilotes
+acceptés, les critères de refus et la procédure de qualification matérielle.
+
 Installer l'unique dépendance optionnelle :
 
 ```powershell

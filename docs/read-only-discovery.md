@@ -40,6 +40,10 @@ activation d'actionneur ou exécution de job dont l'effet n'est pas établi.
 ## Phase B — Paire de captures contrôlée
 
 Cette phase exige une interface de capture brute configurée sans émission.
+L'outil fourni accepte uniquement les chemins silencieux déjà documentés et
+intégrés ; voir [capture-qualification.md](capture-qualification.md). Son refus
+d'un pilote ne signifie pas que le matériel est inutilisable, mais qu'il n'est
+pas encore qualifié par ce projet.
 
 Conditions minimales :
 
@@ -65,6 +69,11 @@ Pour chaque événement :
 3. répéter au moins trois paires indépendantes ;
 4. réaliser également le changement inverse ;
 5. conserver les fichiers dans `captures/private/<session>/`.
+
+Lorsque l'interface fait partie des pilotes acceptés, la trace canonique peut
+être créée directement avec `scripts/capture-can-trace.ps1`. Dans les autres cas,
+produire un journal avec l'outil du fabricant puis utiliser l'importeur, sans
+contourner le refus du mode silencieux.
 
 ## Import et comparaison
 
