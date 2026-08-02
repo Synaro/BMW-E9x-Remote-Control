@@ -11,6 +11,7 @@
 - [x] Fichier de configuration strict pour le simulateur
 - [x] Journal binaire redondant, versionné et protégé par CRC
 - [x] Récupération après corruption ou écriture interrompue
+- [x] Configurateur PC interactif et écriture de fichier vérifiée
 - [x] Actions bornées sans allocation dynamique
 - [x] Runtime et ports abstraits
 - [x] Tests hôte et intégration continue
@@ -68,7 +69,7 @@
 - [ ] Implémenter l'adaptateur réel de confirmation de reprise conducteur
 - [ ] Ajouter une journalisation bornée et non sensible
 - [ ] Implémenter `SettingsByteStorage` sur la mémoire réelle du boîtier
-- [ ] Choisir l'interface utilisateur de configuration (web, Bluetooth ou USB)
+- [ ] Choisir le transport entre le configurateur et le boîtier (web, Bluetooth ou USB)
 - [ ] Valider la consommation au repos
 
 ## Jalon 4 — Actionneurs sur banc

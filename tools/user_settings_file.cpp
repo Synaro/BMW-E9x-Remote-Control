@@ -4,10 +4,13 @@
 #include <charconv>
 #include <cctype>
 #include <cstdint>
+#include <filesystem>
 #include <fstream>
 #include <limits>
+#include <sstream>
 #include <string>
 #include <string_view>
+#include <system_error>
 #include <vector>
 
 namespace bmw::remote::host {
@@ -161,6 +164,25 @@ bool knownKey(const std::string_view key) noexcept {
            key == "lock_sequence_window_ms";
 }
 
+bool sameSettings(
+    const application::UserSettings& left,
+    const application::UserSettings& right) noexcept {
+    return left.remoteStartEnabled == right.remoteStartEnabled &&
+           left.hoodMonitoring == right.hoodMonitoring &&
+           left.driverEntryMode == right.driverEntryMode &&
+           left.maximumRemoteRunTimeMs == right.maximumRemoteRunTimeMs &&
+           left.driverTakeoverTimeoutMs == right.driverTakeoverTimeoutMs &&
+           left.lockPressCount == right.lockPressCount &&
+           left.lockMinimumGapMs == right.lockMinimumGapMs &&
+           left.lockMaximumGapMs == right.lockMaximumGapMs &&
+           left.lockMaximumSequenceMs == right.lockMaximumSequenceMs;
+}
+
+void removeIfPresent(const std::filesystem::path& path) noexcept {
+    std::error_code ignored{};
+    static_cast<void>(std::filesystem::remove(path, ignored));
+}
+
 }  // namespace
 
 bool parseUserSettings(
@@ -245,6 +267,143 @@ bool loadUserSettingsFile(
         return false;
     }
     return parseUserSettings(input, settings, error);
+}
+
+bool writeUserSettings(
+    std::ostream& output,
+    const application::UserSettings& settings,
+    std::string& error) {
+    const application::UserSettingsValidation validation =
+        application::validateUserSettings(settings);
+    if (!validation.valid()) {
+        error = "configuration rejected by safety bounds, reasons_mask=" +
+                std::to_string(validation.reasons);
+        return false;
+    }
+
+    constexpr std::uint32_t MillisecondsPerMinute{60'000U};
+    constexpr std::uint32_t MillisecondsPerSecond{1'000U};
+    if (settings.maximumRemoteRunTimeMs % MillisecondsPerMinute != 0U) {
+        error = "remote run time cannot be represented as whole minutes";
+        return false;
+    }
+    if (settings.driverTakeoverTimeoutMs % MillisecondsPerSecond != 0U) {
+        error = "takeover timeout cannot be represented as whole seconds";
+        return false;
+    }
+
+    output << "# BMW E9x Remote Control - configuration utilisateur\n"
+           << "# Generee par le configurateur ; les valeurs invalides sont refusees.\n\n"
+           << "remote_start_enabled="
+           << (settings.remoteStartEnabled ? "true" : "false") << "\n"
+           << "hood_monitoring=" << application::toString(settings.hoodMonitoring)
+           << "\n"
+           << "remote_run_minutes="
+           << settings.maximumRemoteRunTimeMs / MillisecondsPerMinute << "\n"
+           << "driver_entry_mode=" << application::toString(settings.driverEntryMode)
+           << "\n"
+           << "takeover_timeout_seconds="
+           << settings.driverTakeoverTimeoutMs / MillisecondsPerSecond << "\n"
+           << "lock_press_count=" << static_cast<unsigned int>(settings.lockPressCount)
+           << "\n"
+           << "lock_minimum_gap_ms=" << settings.lockMinimumGapMs << "\n"
+           << "lock_maximum_gap_ms=" << settings.lockMaximumGapMs << "\n"
+           << "lock_sequence_window_ms=" << settings.lockMaximumSequenceMs << "\n";
+
+    if (!output) {
+        error = "unable to write configuration";
+        return false;
+    }
+
+    error.clear();
+    return true;
+}
+
+bool saveUserSettingsFile(
+    const char* const path,
+    const application::UserSettings& settings,
+    std::string& error) {
+    if (path == nullptr || path[0] == '\0') {
+        error = "configuration path is empty";
+        return false;
+    }
+
+    std::ostringstream serialized{};
+    if (!writeUserSettings(serialized, settings, error)) {
+        return false;
+    }
+
+    const std::filesystem::path target{path};
+    std::filesystem::path temporary{target};
+    temporary += ".tmp";
+    std::filesystem::path backup{target};
+    backup += ".bak";
+
+    {
+        std::ofstream output{temporary, std::ios::binary | std::ios::trunc};
+        if (!output) {
+            error = "unable to create temporary configuration file";
+            return false;
+        }
+        output << serialized.str();
+        output.flush();
+        if (!output) {
+            removeIfPresent(temporary);
+            error = "unable to persist temporary configuration file";
+            return false;
+        }
+    }
+
+    application::UserSettings verified{};
+    std::string verificationError{};
+    const std::string temporaryPath = temporary.string();
+    if (!loadUserSettingsFile(temporaryPath.c_str(), verified, verificationError) ||
+        !sameSettings(settings, verified)) {
+        removeIfPresent(temporary);
+        error = "temporary configuration verification failed";
+        if (!verificationError.empty()) {
+            error += ": " + verificationError;
+        }
+        return false;
+    }
+
+    std::error_code filesystemError{};
+    const bool hadExistingTarget = std::filesystem::exists(target, filesystemError);
+    if (filesystemError) {
+        removeIfPresent(temporary);
+        error = "unable to inspect destination: " + filesystemError.message();
+        return false;
+    }
+
+    if (hadExistingTarget) {
+        removeIfPresent(backup);
+        std::filesystem::rename(target, backup, filesystemError);
+        if (filesystemError) {
+            removeIfPresent(temporary);
+            error = "unable to preserve previous configuration: " +
+                    filesystemError.message();
+            return false;
+        }
+    }
+
+    filesystemError.clear();
+    std::filesystem::rename(temporary, target, filesystemError);
+    if (filesystemError) {
+        if (hadExistingTarget) {
+            std::error_code restoreError{};
+            std::filesystem::rename(backup, target, restoreError);
+        }
+        removeIfPresent(temporary);
+        error = "unable to install new configuration: " +
+                filesystemError.message();
+        return false;
+    }
+
+    if (hadExistingTarget) {
+        removeIfPresent(backup);
+    }
+    error.clear();
+    return true;
 }
 
 }  // namespace bmw::remote::host

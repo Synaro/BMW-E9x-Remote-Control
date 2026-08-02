@@ -17,4 +17,14 @@ namespace bmw::remote::host {
     application::UserSettings& settings,
     std::string& error);
 
+[[nodiscard]] bool writeUserSettings(
+    std::ostream& output,
+    const application::UserSettings& settings,
+    std::string& error);
+
+[[nodiscard]] bool saveUserSettingsFile(
+    const char* path,
+    const application::UserSettings& settings,
+    std::string& error);
+
 }  // namespace bmw::remote::host
