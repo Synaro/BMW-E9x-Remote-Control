@@ -46,6 +46,12 @@ Il peut être lancé directement. Sans argument, il affiche un menu interactif :
 Chaque scénario retourne le code `0` uniquement si le résultat final correspond
 au comportement attendu et affiche `scenario_result: PASS`.
 
+Les scénarios qui utilisent le runtime affichent aussi `diagnostic_log`. Les
+entrées sont ordonnées de la plus ancienne à la plus récente et montrent le temps
+monotone, la commande ou transition, le défaut et le motif du refus. Le compteur
+`overwritten` indique combien d'anciennes entrées auraient été remplacées. Voir
+[diagnostic-journal.md](diagnostic-journal.md).
+
 Le parcours configuré charge toutes les valeurs, simule le nombre d'appuis choisi,
 affiche la durée moteur réellement armée puis applique la stratégie d'ouverture
 de portière. Voir [user-configuration.md](user-configuration.md).

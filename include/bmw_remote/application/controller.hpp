@@ -88,6 +88,7 @@ struct Decision final {
 
     ControllerState previousState{ControllerState::Idle};
     ControllerState state{ControllerState::Idle};
+    FaultCode previousFault{FaultCode::None};
     FaultCode fault{FaultCode::None};
     SafetyAssessment safety{};
     ProfileReadinessAssessment profileReadiness{};
@@ -180,6 +181,7 @@ private:
 
 [[nodiscard]] const char* toString(ControllerState state) noexcept;
 [[nodiscard]] const char* toString(FaultCode fault) noexcept;
+[[nodiscard]] const char* toString(EventType event) noexcept;
 [[nodiscard]] const char* toString(ActionType action) noexcept;
 
 }  // namespace bmw::remote::application

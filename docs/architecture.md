@@ -27,6 +27,7 @@ flowchart LR
     Policy --> Model["VehicleState"]
     Controller --> Decision["Decision"]
     Decision --> Runtime
+    Runtime --> Diagnostics["Journal diagnostic borné"]
     Runtime --> Ports["Ports abstraits"]
     Ports --> Adapters["Adaptateurs matériels futurs"]
 ```
@@ -164,6 +165,13 @@ Si une opération véhicule, actionneur ou minuterie échoue, le runtime injecte
 l'annulation du timer, le relâchement du démarreur et la sécurisation globale des
 sorties. Le runtime retente ces seules actions de mise en sécurité sans boucle de
 récursion.
+
+Le runtime peut également alimenter un `DiagnosticJournal` optionnel. Ce tableau
+circulaire conserve uniquement les commandes, transitions, refus et défauts
+sémantiques. Les mises à jour véhicule sans effet ne sont pas consignées et
+aucune trame ou valeur véhicule brute n'est stockée. Les échecs rencontrés lors
+des tentatives de mise en sécurité sont enregistrés sans provoquer de récursion.
+Voir [diagnostic-journal.md](diagnostic-journal.md).
 
 ## Chaîne de rejeu CAN
 
