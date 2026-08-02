@@ -1,7 +1,12 @@
 param(
     [string]$TracePath,
 
-    [ValidateSet('nominal', 'hood-required', 'hood-optional')]
+    [ValidateSet(
+        'nominal',
+        'hood-required',
+        'hood-optional',
+        'takeover-timeout',
+        'takeover-confirmed')]
     [string]$Scenario = 'hood-required',
 
     [ValidateSet('required', 'optional')]

@@ -4,9 +4,10 @@
 
 Le premier jalon fournit un noyau de décision complet, compilable sur ordinateur
 et microcontrôleur. Il ne suppose aucun protocole BMW et ne commande aucun
-matériel réel. Cette limite est intentionnelle : les décisions de sécurité
-peuvent être vérifiées avant de sélectionner un transceiver, une topologie
-électrique ou une source de commande distante.
+matériel réel. Il sait reconnaître une séquence abstraite de trois impulsions de
+verrouillage, mais leur acquisition BMW appartient au futur adaptateur. Cette
+limite permet de vérifier les décisions avant de sélectionner un transceiver ou
+une topologie électrique.
 
 ## Règle de dépendance
 
@@ -70,12 +71,17 @@ stateDiagram-v2
     Authorizing --> Idle: demande refusée
     Preparing --> Cranking: délai écoulé + sécurité valide
     Cranking --> Running: régime moteur confirmé
-    Running --> Stopping: arrêt demandé ou durée maximale
+    Running --> AwaitingTakeover: portière ouverte
+    Running --> Stopping: arrêt demandé ou 15 min écoulées
+    AwaitingTakeover --> DriverControl: reprise authentifiée
+    AwaitingTakeover --> Stopping: reprise absente après 60 s
+    DriverControl --> Idle: moteur arrêté par le conducteur
     Stopping --> Idle: arrêt moteur confirmé
     Authorizing --> Fault: timeout / panne
     Preparing --> Fault: interverrouillage perdu
     Cranking --> Fault: interverrouillage / timeout
     Running --> Fault: interverrouillage perdu
+    AwaitingTakeover --> Fault: interverrouillage critique perdu
     Stopping --> Fault: arrêt non confirmé
     Fault --> Idle: réarmement sûr
 ```
@@ -89,6 +95,8 @@ stateDiagram-v2
 | `Preparing` | Activation abstraite de l'allumage et délai contrôlé. |
 | `Cranking` | Commande abstraite du démarreur avec durée maximale. |
 | `Running` | Session distante surveillée et limitée dans le temps. |
+| `AwaitingTakeover` | Portière ouverte, attente bornée d'une reprise authentifiée. |
+| `DriverControl` | Commande distante libérée, conduite sous contrôle du conducteur. |
 | `Stopping` | Mise en sécurité des sorties et attente de confirmation. |
 | `Fault` | Défaut mémorisé, sorties sécurisées, réarmement contrôlé. |
 
@@ -103,8 +111,9 @@ véhicule. Il retourne une `Decision` contenant :
 - au maximum huit actions ordonnées.
 
 La capacité fixe empêche une allocation mémoire imprévisible. Les actions sont
-des intentions telles que `RequestVehicleState`, `EngageStarter`, `SecureOutputs`
-ou `ArmTimer` ; elles ne contiennent aucune broche ou trame réseau.
+des intentions telles que `RequestVehicleState`, `EngageStarter`,
+`ReleaseRemoteControl`, `SecureOutputs` ou `ArmTimer` ; elles ne contiennent
+aucune broche ou trame réseau.
 
 ## Exécution fail-safe
 
@@ -160,6 +169,7 @@ Les valeurs par défaut sont configurables dans `ControllerConfig` :
 | Préparation avant lancement | 1,5 s |
 | Lancement maximal | 5 s |
 | Session distante maximale | 15 min |
+| Confirmation de reprise conducteur | 60 s |
 | Confirmation d'arrêt | 3 s |
 
 Ces valeurs sont des valeurs de développement, pas des paramètres homologués.

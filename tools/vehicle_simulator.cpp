@@ -21,6 +21,8 @@ enum class Scenario : std::uint8_t {
     Nominal,
     HoodRequired,
     HoodOptional,
+    TakeoverTimeout,
+    TakeoverConfirmed,
 };
 
 class ConsoleActuators final : public infrastructure::ActuatorPort {
@@ -37,6 +39,11 @@ public:
 
     bool disengageStarter() noexcept override {
         std::cout << "  actuator: disengage starter\n";
+        return true;
+    }
+
+    bool releaseRemoteControl() noexcept override {
+        std::cout << "  actuator: release control to authenticated driver\n";
         return true;
     }
 
@@ -98,6 +105,8 @@ const char* scenarioName(const Scenario scenario) noexcept {
         case Scenario::Nominal: return "nominal";
         case Scenario::HoodRequired: return "hood-required";
         case Scenario::HoodOptional: return "hood-optional";
+        case Scenario::TakeoverTimeout: return "takeover-timeout";
+        case Scenario::TakeoverConfirmed: return "takeover-confirmed";
     }
     return "unknown";
 }
@@ -113,6 +122,14 @@ bool parseScenario(const std::string_view text, Scenario& scenario) noexcept {
     }
     if (text == "hood-optional") {
         scenario = Scenario::HoodOptional;
+        return true;
+    }
+    if (text == "takeover-timeout") {
+        scenario = Scenario::TakeoverTimeout;
+        return true;
+    }
+    if (text == "takeover-confirmed") {
+        scenario = Scenario::TakeoverConfirmed;
         return true;
     }
     return false;
@@ -136,7 +153,9 @@ void printScenarioList() {
     std::cout
         << "nominal       remote start, running confirmation, remote stop\n"
         << "hood-required hood opens while running and causes the expected fault\n"
-        << "hood-optional hood opens while running and is explicitly ignored\n";
+        << "hood-optional hood opens while running and is explicitly ignored\n"
+        << "takeover-timeout door opens but takeover is not confirmed, then stop\n"
+        << "takeover-confirmed door opens and authenticated takeover succeeds\n";
 }
 
 void printUsage(const char* const executable) {
@@ -204,9 +223,16 @@ int runScenario(const Scenario scenario) {
 
     simulation::SyntheticBodyState safeBody{};
     simulation::SyntheticBodyState finalBody = safeBody;
-    const bool injectHoodOpening = scenario != Scenario::Nominal;
+    const bool injectHoodOpening =
+        scenario == Scenario::HoodRequired || scenario == Scenario::HoodOptional;
+    const bool injectDriverEntry =
+        scenario == Scenario::TakeoverTimeout ||
+        scenario == Scenario::TakeoverConfirmed;
     if (injectHoodOpening) {
         finalBody.hoodClosed = false;
+    }
+    if (injectDriverEntry) {
+        finalBody.doorsClosed = false;
     }
 
     const std::array<infrastructure::CanFrame, 8U> trace = {
@@ -275,7 +301,11 @@ int runScenario(const Scenario scenario) {
     vehicle = gateway.state();
     decision = runtime.dispatch(
         application::Event{application::EventType::VehicleStateUpdated}, vehicle);
-    printDecision(injectHoodOpening ? "hood opened" : "safe running update", decision);
+    printDecision(
+        injectHoodOpening
+            ? "hood opened"
+            : (injectDriverEntry ? "driver door opened" : "safe running update"),
+        decision);
 
     bool expectedOutcome = false;
     if (scenario == Scenario::Nominal) {
@@ -299,11 +329,27 @@ int runScenario(const Scenario scenario) {
             decision.state == application::ControllerState::Fault &&
             decision.fault == application::FaultCode::SafetyInterlock &&
             decision.safety.contains(application::SafetyReason::HoodOpen);
-    } else {
+    } else if (scenario == Scenario::HoodOptional) {
         expectedOutcome =
             decision.state == application::ControllerState::Running &&
             decision.fault == application::FaultCode::None &&
             decision.safety.approved();
+    } else if (scenario == Scenario::TakeoverTimeout) {
+        decision = runtime.dispatch(
+            application::Event{application::EventType::TimerElapsed}, vehicle);
+        printDecision("takeover timer expired", decision);
+        expectedOutcome =
+            decision.state == application::ControllerState::Stopping &&
+            decision.fault == application::FaultCode::None;
+    } else {
+        decision = runtime.dispatch(
+            application::Event{application::EventType::DriverTakeoverConfirmed},
+            vehicle);
+        printDecision("authenticated takeover", decision);
+        expectedOutcome =
+            decision.state == application::ControllerState::DriverControl &&
+            decision.fault == application::FaultCode::None &&
+            decision.contains(application::ActionType::ReleaseRemoteControl);
     }
 
     const infrastructure::AssemblyStatistics stats = gateway.statistics();
@@ -319,7 +365,9 @@ int runInteractive() {
         << "1. Demarrage et arret nominaux\n"
         << "2. Capot obligatoire : ouverture => defaut\n"
         << "3. Capot facultatif : ouverture ignoree\n"
-        << "4. Quitter\n\n"
+        << "4. Portiere ouverte sans reprise : arret apres delai\n"
+        << "5. Portiere ouverte avec reprise conducteur validee\n"
+        << "6. Quitter\n\n"
         << "Choix: ";
 
     unsigned selection = 0U;
@@ -333,7 +381,9 @@ int runInteractive() {
         case 1U: result = runScenario(Scenario::Nominal); break;
         case 2U: result = runScenario(Scenario::HoodRequired); break;
         case 3U: result = runScenario(Scenario::HoodOptional); break;
-        case 4U: return 0;
+        case 4U: result = runScenario(Scenario::TakeoverTimeout); break;
+        case 5U: result = runScenario(Scenario::TakeoverConfirmed); break;
+        case 6U: return 0;
         default:
             std::cerr << "Invalid selection\n";
             result = 64;

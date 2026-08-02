@@ -22,7 +22,9 @@ Il peut être lancé directement. Sans argument, il affiche un menu interactif :
 
 1. démarrage puis arrêt nominaux ;
 2. capot obligatoire, ouverture conduisant au défaut attendu ;
-3. capot facultatif, ouverture entièrement ignorée.
+3. capot facultatif, ouverture entièrement ignorée ;
+4. portière ouverte sans reprise confirmée, puis arrêt à l'échéance ;
+5. portière ouverte avec reprise conducteur authentifiée.
 
 ## Lancer un scénario depuis PowerShell
 
@@ -30,6 +32,8 @@ Il peut être lancé directement. Sans argument, il affiche un menu interactif :
 .\scripts\simulate.ps1 -Scenario nominal
 .\scripts\simulate.ps1 -Scenario hood-required
 .\scripts\simulate.ps1 -Scenario hood-optional
+.\scripts\simulate.ps1 -Scenario takeover-timeout
+.\scripts\simulate.ps1 -Scenario takeover-confirmed
 ```
 
 Chaque scénario retourne le code `0` uniquement si le résultat final correspond

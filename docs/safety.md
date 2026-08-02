@@ -26,6 +26,11 @@ certification fonctionnelle ou automobile.
 12. Le capot fermé est exigé par défaut. Une installation sans capteur peut
     explicitement désactiver ce contrôle ; le signal est alors entièrement
     ignoré plutôt que remplacé par une valeur inventée.
+13. Une ouverture de portière pendant `Running` ne suffit jamais à conserver le
+    moteur en marche : elle ouvre une fenêtre de reprise de 60 secondes.
+14. Sans confirmation de reprise authentifiée, le contrôleur ordonne l'arrêt.
+15. Après une reprise confirmée, les commandes distantes d'arrêt sont ignorées
+    afin de ne pas couper un moteur placé sous contrôle du conducteur.
 
 ## Matrice d'autorisation initiale
 
@@ -50,10 +55,17 @@ ne doit pas être activée sans conception de sécurité dédiée.
 ## Surveillance pendant la session
 
 Pendant `Preparing`, `Cranking` et `Running`, les mises à jour véhicule sont
-réévaluées. Une ouverture surveillée (portes, coffre et capot lorsqu'il est requis),
-un changement de rapport, un frein actionné, une perte
-de fraîcheur ou un défaut critique mène à l'état `Fault` avec sécurisation des
-sorties.
+réévaluées. Le coffre, le capot lorsqu'il est requis, un changement de rapport,
+un frein actionné, une perte de fraîcheur ou un défaut critique mène à `Fault`
+avec sécurisation des sorties.
+
+En `Running`, l'ouverture d'une portière constitue l'unique exception : elle
+passe à `AwaitingTakeover`, où la portière et le frein de service peuvent être
+actionnés pendant 60 secondes. Le moteur doit rester confirmé, la boîte en
+`Park`, le frein de stationnement serré et les autres interverrouillages valides.
+L'expiration entraîne `Stopping`. Seul un événement
+`DriverTakeoverConfirmed`, produit par un futur adaptateur authentifié, permet
+de libérer la commande distante vers `DriverControl`.
 
 ## Défenses matérielles attendues
 
@@ -78,5 +90,5 @@ Une analyse de risques formelle et des essais HIL doivent compléter ces défens
 - compatibilité exacte par variante E9x ;
 - diagnostic CAN/K-CAN/CAS/DME ;
 - détection de présence humaine ou animale ;
-- prise de contrôle par la clé et transfert de session ;
+- qualification BMW des preuves autorisant la reprise conducteur ;
 - protection physique contre les erreurs de câblage.

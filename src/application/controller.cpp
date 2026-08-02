@@ -53,6 +53,10 @@ Decision Controller::handle(
             handleTimer(decision, vehicle);
             break;
 
+        case EventType::DriverTakeoverConfirmed:
+            handleDriverTakeover(decision, vehicle);
+            break;
+
         case EventType::InfrastructureFailure:
             enterFault(
                 decision,
@@ -95,7 +99,12 @@ void Controller::handleStopRequest(Decision& decision) noexcept {
             break;
 
         case ControllerState::Running:
+        case ControllerState::AwaitingTakeover:
             beginStopping(decision);
+            break;
+
+        case ControllerState::DriverControl:
+            decision.add(ActionType::NotifyRequestIgnored);
             break;
 
         case ControllerState::Fault:
@@ -147,9 +156,32 @@ void Controller::handleVehicleUpdate(
             break;
 
         case ControllerState::Running:
-            decision.safety = safetyPolicy_.assessRemoteRun(vehicle);
+            if (driverEntryDetected(vehicle)) {
+                decision.safety = safetyPolicy_.assessDriverTakeover(vehicle);
+                if (decision.safety.approved()) {
+                    beginAwaitingTakeover(decision);
+                } else {
+                    enterFault(decision, FaultCode::SafetyInterlock);
+                }
+            } else {
+                decision.safety = safetyPolicy_.assessRemoteRun(vehicle);
+                if (!decision.safety.approved()) {
+                    enterFault(decision, FaultCode::SafetyInterlock);
+                }
+            }
+            break;
+
+        case ControllerState::AwaitingTakeover:
+            decision.safety = safetyPolicy_.assessDriverTakeover(vehicle);
             if (!decision.safety.approved()) {
                 enterFault(decision, FaultCode::SafetyInterlock);
+            }
+            break;
+
+        case ControllerState::DriverControl:
+            if (vehicle.engineRpm.isFresh() && !engineIsRunning(vehicle)) {
+                transition(decision, ControllerState::Idle);
+                decision.add(ActionType::NotifyReady);
             }
             break;
 
@@ -190,6 +222,13 @@ void Controller::handleTimer(
             beginStopping(decision);
             break;
 
+        case ControllerState::AwaitingTakeover:
+            beginStopping(decision);
+            break;
+
+        case ControllerState::DriverControl:
+            break;
+
         case ControllerState::Stopping:
             enterFault(decision, FaultCode::StopTimeout);
             break;
@@ -198,6 +237,23 @@ void Controller::handleTimer(
         case ControllerState::Fault:
             break;
     }
+}
+
+void Controller::handleDriverTakeover(
+    Decision& decision,
+    const domain::VehicleState& vehicle) noexcept {
+    if (state_ != ControllerState::AwaitingTakeover) {
+        decision.add(ActionType::NotifyRequestIgnored);
+        return;
+    }
+
+    decision.safety = safetyPolicy_.assessDriverTakeover(vehicle);
+    if (!decision.safety.approved()) {
+        enterFault(decision, FaultCode::SafetyInterlock);
+        return;
+    }
+
+    completeDriverTakeover(decision);
 }
 
 void Controller::handleReset(
@@ -248,6 +304,21 @@ void Controller::beginRunning(Decision& decision) noexcept {
     decision.add(ActionType::ArmTimer, config_.maximumRemoteRunTimeMs);
 }
 
+void Controller::beginAwaitingTakeover(Decision& decision) noexcept {
+    transition(decision, ControllerState::AwaitingTakeover);
+    decision.add(ActionType::CancelTimer);
+    decision.add(ActionType::NotifyTakeoverPending);
+    decision.add(ActionType::ArmTimer, config_.driverTakeoverTimeoutMs);
+}
+
+void Controller::completeDriverTakeover(Decision& decision) noexcept {
+    transition(decision, ControllerState::DriverControl);
+    decision.add(ActionType::CancelTimer);
+    decision.add(ActionType::DisengageStarter);
+    decision.add(ActionType::ReleaseRemoteControl);
+    decision.add(ActionType::NotifyTakeoverComplete);
+}
+
 void Controller::beginStopping(Decision& decision) noexcept {
     transition(decision, ControllerState::Stopping);
     decision.add(ActionType::CancelTimer);
@@ -288,6 +359,11 @@ bool Controller::engineIsRunning(
            vehicle.engineRpm.value >= safetyPolicy_.runningRpmThreshold();
 }
 
+bool Controller::driverEntryDetected(
+    const domain::VehicleState& vehicle) const noexcept {
+    return vehicle.doorsClosed.isFresh() && !vehicle.doorsClosed.value;
+}
+
 const char* toString(const ControllerState state) noexcept {
     switch (state) {
         case ControllerState::Idle: return "idle";
@@ -295,6 +371,8 @@ const char* toString(const ControllerState state) noexcept {
         case ControllerState::Preparing: return "preparing";
         case ControllerState::Cranking: return "cranking";
         case ControllerState::Running: return "running";
+        case ControllerState::AwaitingTakeover: return "awaiting_takeover";
+        case ControllerState::DriverControl: return "driver_control";
         case ControllerState::Stopping: return "stopping";
         case ControllerState::Fault: return "fault";
     }
@@ -322,6 +400,7 @@ const char* toString(const ActionType action) noexcept {
         case ActionType::EnableIgnition: return "enable_ignition";
         case ActionType::EngageStarter: return "engage_starter";
         case ActionType::DisengageStarter: return "disengage_starter";
+        case ActionType::ReleaseRemoteControl: return "release_remote_control";
         case ActionType::SecureOutputs: return "secure_outputs";
         case ActionType::ArmTimer: return "arm_timer";
         case ActionType::CancelTimer: return "cancel_timer";
@@ -329,6 +408,8 @@ const char* toString(const ActionType action) noexcept {
         case ActionType::NotifyStartAccepted: return "notify_start_accepted";
         case ActionType::NotifyStartRejected: return "notify_start_rejected";
         case ActionType::NotifyRunning: return "notify_running";
+        case ActionType::NotifyTakeoverPending: return "notify_takeover_pending";
+        case ActionType::NotifyTakeoverComplete: return "notify_takeover_complete";
         case ActionType::NotifyStopping: return "notify_stopping";
         case ActionType::NotifyStopped: return "notify_stopped";
         case ActionType::NotifyFault: return "notify_fault";

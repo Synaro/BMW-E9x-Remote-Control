@@ -4,6 +4,7 @@ project(bmw_e9x_remote_control LANGUAGES CXX)
 
 add_library(bmw_remote_core
     src/application/controller.cpp
+    src/application/lock_sequence_detector.cpp
     src/application/profile_readiness.cpp
     src/application/safety_policy.cpp
     src/domain/reference_profiles.cpp
@@ -80,5 +81,11 @@ if(BMW_REMOTE_BUILD_TESTS)
         add_test(
             NAME bmw_remote_simulator_hood_optional
             COMMAND bmw_remote_simulator --scenario hood-optional)
+        add_test(
+            NAME bmw_remote_simulator_takeover_timeout
+            COMMAND bmw_remote_simulator --scenario takeover-timeout)
+        add_test(
+            NAME bmw_remote_simulator_takeover_confirmed
+            COMMAND bmw_remote_simulator --scenario takeover-confirmed)
     endif()
 endif()

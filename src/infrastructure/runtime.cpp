@@ -70,6 +70,11 @@ application::FaultCode Runtime::executeAction(
                        ? FaultCode::None
                        : FaultCode::ActuatorFailure;
 
+        case ActionType::ReleaseRemoteControl:
+            return actuators_.releaseRemoteControl()
+                       ? FaultCode::None
+                       : FaultCode::ActuatorFailure;
+
         case ActionType::SecureOutputs:
             return actuators_.secureOutputs()
                        ? FaultCode::None
@@ -89,6 +94,8 @@ application::FaultCode Runtime::executeAction(
         case ActionType::NotifyStartAccepted:
         case ActionType::NotifyStartRejected:
         case ActionType::NotifyRunning:
+        case ActionType::NotifyTakeoverPending:
+        case ActionType::NotifyTakeoverComplete:
         case ActionType::NotifyStopping:
         case ActionType::NotifyStopped:
         case ActionType::NotifyFault:
