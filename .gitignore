@@ -1,0 +1,12 @@
+.pio/
+.vscode/
+build/
+cmake-build-*/
+*.exe
+*.o
+*.obj
+*.elf
+*.bin
+*.map
+.DS_Store
+Thumbs.db
