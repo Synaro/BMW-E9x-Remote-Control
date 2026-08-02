@@ -77,8 +77,14 @@ circuits de réveil et mesures de courant nécessaires sur le schéma final.
 
 1. Compiler et flasher le firmware inerte.
 2. Vérifier l'identification USB et la console série.
-3. Raccorder le protocole de configuration au port USB.
+3. Vérifier le protocole de configuration déjà raccordé au port USB.
 4. Tester les débranchements, trames partielles et redémarrages.
+
+Le port USB est réservé au protocole binaire : le firmware n'y mélange aucun
+message de journalisation. Sur la cible de banc, la possession de l'accès
+physique à ce connecteur constitue l'autorisation locale et le contrôleur reste
+figé dans l'état applicatif `Idle`. Ce modèle devra être réévalué lorsque les
+fonctions véhicule seront activées.
 
 ### Phase B — deux CAN simulés sur table
 
