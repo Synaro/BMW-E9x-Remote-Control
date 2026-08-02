@@ -136,8 +136,18 @@ public:
 }
 
 [[nodiscard]] std::string trim(const std::string& value) {
+    constexpr unsigned char Utf8BomFirst = 0xEFU;
+    constexpr unsigned char Utf8BomSecond = 0xBBU;
+    constexpr unsigned char Utf8BomThird = 0xBFU;
+    const std::size_t contentStart =
+        value.size() >= 3U &&
+                static_cast<unsigned char>(value[0]) == Utf8BomFirst &&
+                static_cast<unsigned char>(value[1]) == Utf8BomSecond &&
+                static_cast<unsigned char>(value[2]) == Utf8BomThird
+            ? 3U
+            : 0U;
     const auto first = std::find_if_not(
-        value.begin(), value.end(),
+        value.begin() + static_cast<std::ptrdiff_t>(contentStart), value.end(),
         [](const unsigned char character) { return std::isspace(character) != 0; });
     const auto last = std::find_if_not(
         value.rbegin(), value.rend(),

@@ -3188,7 +3188,8 @@ void testSandboxRejectsInvalidUpdatesAndPropagatesWatchdog() {
 }
 
 void testSandboxLineProtocolReturnsOneJsonObjectPerCommand() {
-    std::istringstream input{"status\nstart\nquit\n"};
+    std::istringstream input{
+        "\xEF\xBB\xBF" "status\nstart\nquit\n"};
     std::ostringstream output{};
     CHECK(bmw::remote::host::runSandboxProtocol(input, output) == 0);
 
