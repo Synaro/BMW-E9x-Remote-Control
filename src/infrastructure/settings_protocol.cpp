@@ -168,6 +168,9 @@ SettingsProtocolFrame SettingsProtocolService::handle(
         case SettingsMessageType::WriteRequest:
             responseType = SettingsMessageType::WriteResponse;
             break;
+        case SettingsMessageType::IdentifyRequest:
+            responseType = SettingsMessageType::IdentifyResponse;
+            break;
         default:
             return responseFor(
                 request,
@@ -191,6 +194,22 @@ SettingsProtocolFrame SettingsProtocolService::handle(
             request,
             responseType,
             SettingsProtocolStatus::Unauthorized);
+    }
+
+    if (request.type == SettingsMessageType::IdentifyRequest) {
+        SettingsProtocolFrame response = responseFor(
+            request,
+            responseType,
+            SettingsProtocolStatus::Ok);
+        if (!encodeSettingsDeviceIdentity(identity_, response.payload)) {
+            return responseFor(
+                request,
+                responseType,
+                SettingsProtocolStatus::InvalidPayload);
+        }
+        response.payloadSize = static_cast<std::uint16_t>(
+            SettingsDeviceIdentityPayloadSize);
+        return response;
     }
 
     if (request.type == SettingsMessageType::ReadRequest) {

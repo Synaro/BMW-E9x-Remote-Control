@@ -36,12 +36,33 @@ pas une protection cryptographique.
 |---:|---|---:|
 | `0x01` | lecture des réglages | 0 |
 | `0x02` | écriture des réglages | 24 |
+| `0x03` | identification du boîtier | 0 |
 | `0x81` | réponse de lecture | 24 si succès |
 | `0x82` | réponse d'écriture | 0 |
+| `0x83` | réponse d'identification | 12 si succès |
 | `0xFF` | message non pris en charge | 0 |
 
 L'identifiant de requête est renvoyé tel quel dans la réponse pour associer un
 échange. Il n'est ni un secret ni une protection anti-rejeu.
+
+## Identité du boîtier
+
+La réponse d'identification permet de confirmer un produit compatible avant
+toute écriture :
+
+| Octets | Champ |
+|---:|---|
+| 0–3 | signature produit ASCII `E9RC` |
+| 4 | cible matérielle |
+| 5 | version majeure du firmware |
+| 6 | version mineure du firmware |
+| 7 | correctif du firmware |
+| 8–11 | masque de capacités |
+
+La cible `1` désigne l'ESP32-S3-DevKitC-1 et `254` la simulation hôte. Les trois
+premiers bits de capacités annoncent respectivement lecture des réglages,
+écriture et persistance. Le configurateur refuse une écriture si la signature,
+la réponse ou les capacités attendues sont absentes.
 
 ## Payload `UserSettings`
 
@@ -82,6 +103,7 @@ requête applicative.
 ## Règles de sécurité
 
 - lecture et écriture exigent une session authentifiée par l'adaptateur ;
+- le configurateur identifie le produit et ses capacités avant toute écriture ;
 - une écriture est acceptée uniquement lorsque le contrôleur est en `Idle` ;
 - la lecture reste possible pendant une session active, sans mutation ;
 - un succès d'écriture signifie « enregistré et vérifié » ;

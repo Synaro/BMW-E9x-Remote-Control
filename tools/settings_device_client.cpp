@@ -41,6 +41,32 @@ using Clock = std::chrono::steady_clock;
 
 }  // namespace
 
+bool SettingsDeviceClient::probe(
+    infrastructure::SettingsDeviceIdentity& identity,
+    std::string& error) {
+    infrastructure::SettingsProtocolFrame request{};
+    request.type = infrastructure::SettingsMessageType::IdentifyRequest;
+
+    infrastructure::SettingsProtocolFrame response{};
+    if (!exchange(
+            request,
+            infrastructure::SettingsMessageType::IdentifyResponse,
+            response,
+            error)) {
+        return false;
+    }
+
+    infrastructure::SettingsDeviceIdentity received{};
+    if (!infrastructure::decodeSettingsDeviceIdentity(
+            response.payload, response.payloadSize, received)) {
+        error = "identite du boitier invalide";
+        return false;
+    }
+    identity = received;
+    error.clear();
+    return true;
+}
+
 bool SettingsDeviceClient::read(
     application::UserSettings& settings,
     std::string& error) {
@@ -76,6 +102,21 @@ bool SettingsDeviceClient::writeAndVerify(
     std::string& error) {
     if (!application::validateUserSettings(settings).valid()) {
         error = "configuration refusee par les limites de securite";
+        return false;
+    }
+
+    infrastructure::SettingsDeviceIdentity identity{};
+    if (!probe(identity, error)) {
+        error = "identification du boitier impossible : " + error;
+        return false;
+    }
+    if (!infrastructure::hasCapability(
+            identity,
+            infrastructure::SettingsDeviceCapability::SettingsWrite) ||
+        !infrastructure::hasCapability(
+            identity,
+            infrastructure::SettingsDeviceCapability::PersistentSettings)) {
+        error = "le boitier n'annonce pas l'ecriture persistante des reglages";
         return false;
     }
 

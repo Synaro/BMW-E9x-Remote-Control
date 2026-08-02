@@ -14,6 +14,7 @@ add_library(bmw_remote_core
     src/infrastructure/can_trace_replay.cpp
     src/infrastructure/replay_vehicle_gateway.cpp
     src/infrastructure/runtime.cpp
+    src/infrastructure/settings_identity.cpp
     src/infrastructure/settings_payload.cpp
     src/infrastructure/settings_protocol.cpp
     src/infrastructure/settings_storage.cpp
@@ -125,5 +126,10 @@ if(BMW_REMOTE_BUILD_TESTS)
             COMMAND bmw_remote_configurator
                 --check
                 --config ${CMAKE_CURRENT_SOURCE_DIR}/config/user-settings.example.conf)
+        add_test(
+            NAME bmw_remote_configurator_bench_safe
+            COMMAND bmw_remote_configurator
+                --check
+                --config ${CMAKE_CURRENT_SOURCE_DIR}/config/bench-safe.example.conf)
     endif()
 endif()

@@ -6,6 +6,7 @@
 
 #include "bmw_remote/application/controller.hpp"
 #include "bmw_remote/infrastructure/ports.hpp"
+#include "bmw_remote/infrastructure/settings_identity.hpp"
 #include "bmw_remote/infrastructure/settings_payload.hpp"
 
 namespace bmw::remote::infrastructure {
@@ -13,8 +14,10 @@ namespace bmw::remote::infrastructure {
 enum class SettingsMessageType : std::uint8_t {
     ReadRequest = 0x01U,
     WriteRequest = 0x02U,
+    IdentifyRequest = 0x03U,
     ReadResponse = 0x81U,
     WriteResponse = 0x82U,
+    IdentifyResponse = 0x83U,
     ErrorResponse = 0xFFU,
 };
 
@@ -87,8 +90,11 @@ struct SettingsProtocolAccess final {
 
 class SettingsProtocolService final {
 public:
-    explicit SettingsProtocolService(UserSettingsStore& store) noexcept
-        : store_(store) {}
+    explicit SettingsProtocolService(
+        UserSettingsStore& store,
+        SettingsDeviceIdentity identity = settingsPrototypeIdentity(
+            SettingsHardwareTarget::HostSimulation)) noexcept
+        : store_(store), identity_(identity) {}
 
     [[nodiscard]] SettingsProtocolFrame handle(
         const SettingsProtocolFrame& request,
@@ -96,6 +102,7 @@ public:
 
 private:
     UserSettingsStore& store_;
+    SettingsDeviceIdentity identity_{};
 };
 
 [[nodiscard]] const char* toString(SettingsProtocolStatus status) noexcept;

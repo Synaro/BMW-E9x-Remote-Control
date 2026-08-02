@@ -58,13 +58,17 @@ librement la durée moteur entre 1 et 60 minutes.
 # Lire et afficher les réglages du prototype
 .\scripts\configure.ps1 -ReadDevice COM3
 
+# Vérifier uniquement l'identité et les capacités du prototype
+.\scripts\configure.ps1 -ProbeDevice COM3
+
 # Écrire le fichier local, puis vérifier le résultat par relecture
 .\scripts\configure.ps1 -WriteDevice COM3
 ```
 
 L'exécutable accepte aussi directement `--show`, `--check`,
 `--write-defaults`, `--print-defaults`, `--list-devices`,
-`--read-device PORT`, `--write-device PORT`, `--config CHEMIN` et `--help`.
+`--probe-device PORT`, `--read-device PORT`, `--write-device PORT`,
+`--config CHEMIN` et `--help`.
 
 La détection liste volontairement tous les ports série actifs : elle ne devine
 pas lequel correspond au boîtier. Cette sélection explicite évite d'écrire par
@@ -87,6 +91,7 @@ Le contrat de transfert est décrit dans
 ## Garanties de la liaison USB
 
 - chaque échange possède un identifiant vérifié ;
+- la signature produit, la cible, la version et les capacités sont sondées ;
 - le temps de réponse total est limité à 2 secondes ;
 - une trame partielle est abandonnée après 250 ms entre deux octets ;
 - longueur, version et CRC sont contrôlés avant d'interpréter une réponse ;

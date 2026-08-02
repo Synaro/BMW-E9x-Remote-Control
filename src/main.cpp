@@ -18,13 +18,20 @@ using bmw::remote::infrastructure::ArduinoStreamSettingsTransport;
 using bmw::remote::infrastructure::JournaledUserSettingsStore;
 using bmw::remote::infrastructure::SettingsProtocolAccess;
 using bmw::remote::infrastructure::SettingsProtocolEndpoint;
+using bmw::remote::infrastructure::SettingsHardwareTarget;
+using bmw::remote::infrastructure::SettingsStreamConfig;
+using bmw::remote::infrastructure::settingsPrototypeIdentity;
 
 constexpr std::size_t MaximumBytesPerLoop = 64U;
 
 ArduinoEepromSettingsStorage settingsStorage;
 JournaledUserSettingsStore settingsStore{settingsStorage};
 ArduinoStreamSettingsTransport settingsTransport{Serial};
-SettingsProtocolEndpoint settingsEndpoint{settingsStore, settingsTransport};
+SettingsProtocolEndpoint settingsEndpoint{
+    settingsStore,
+    settingsTransport,
+    SettingsStreamConfig{},
+    settingsPrototypeIdentity(SettingsHardwareTarget::Esp32S3DevKitC1)};
 
 [[nodiscard]] SettingsProtocolAccess localUsbAccess() noexcept {
     // This firmware contains no vehicle runtime or actuator adapter. Its state

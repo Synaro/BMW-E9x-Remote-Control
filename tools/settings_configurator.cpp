@@ -27,6 +27,7 @@ enum class Mode : std::uint8_t {
     WriteDefaults,
     PrintDefaults,
     ListDevices,
+    ProbeDevice,
     ReadDevice,
     WriteDevice,
 };
@@ -47,6 +48,7 @@ void printUsage(const char* const executable) {
         << "  " << executable << " --write-defaults [--config CHEMIN]\n"
         << "  " << executable << " --print-defaults\n"
         << "  " << executable << " --list-devices\n"
+        << "  " << executable << " --probe-device PORT\n"
         << "  " << executable << " --read-device PORT\n"
         << "  " << executable
         << " --write-device PORT [--config CHEMIN]\n\n"
@@ -120,14 +122,18 @@ bool parseArguments(
             }
             continue;
         }
-        if (argument == "--read-device" || argument == "--write-device") {
+        if (argument == "--probe-device" || argument == "--read-device" ||
+            argument == "--write-device") {
             if (index + 1 >= argc) {
                 error = std::string{argument} + " exige un port COM";
                 return false;
             }
-            const Mode requested = argument == "--read-device"
-                                       ? Mode::ReadDevice
-                                       : Mode::WriteDevice;
+            Mode requested = Mode::ProbeDevice;
+            if (argument == "--read-device") {
+                requested = Mode::ReadDevice;
+            } else if (argument == "--write-device") {
+                requested = Mode::WriteDevice;
+            }
             if (!selectMode(requested, options, error)) {
                 return false;
             }
@@ -431,6 +437,54 @@ int runListDevices() {
     return 0;
 }
 
+void printDeviceIdentity(
+    const bmw::remote::infrastructure::SettingsDeviceIdentity identity) {
+    using bmw::remote::infrastructure::SettingsDeviceCapability;
+    using bmw::remote::infrastructure::hasCapability;
+
+    std::cout
+        << "Boitier BMW E9x Remote Control compatible :\n"
+        << "  cible : "
+        << bmw::remote::infrastructure::toString(identity.hardwareTarget)
+        << "\n  firmware : "
+        << static_cast<unsigned int>(identity.firmwareMajor) << '.'
+        << static_cast<unsigned int>(identity.firmwareMinor) << '.'
+        << static_cast<unsigned int>(identity.firmwarePatch)
+        << "\n  lecture reglages : "
+        << (hasCapability(identity, SettingsDeviceCapability::SettingsRead)
+                ? "oui"
+                : "non")
+        << "\n  ecriture reglages : "
+        << (hasCapability(identity, SettingsDeviceCapability::SettingsWrite)
+                ? "oui"
+                : "non")
+        << "\n  persistance : "
+        << (hasCapability(identity, SettingsDeviceCapability::PersistentSettings)
+                ? "oui"
+                : "non")
+        << '\n';
+}
+
+int runProbeDevice(const Options& options) {
+    constexpr std::uint32_t UsbSerialBaudRate = 115'200U;
+    std::string error{};
+    bmw::remote::host::SerialSettingsChannel channel{};
+    if (!channel.open(options.devicePort, UsbSerialBaudRate, error)) {
+        std::cerr << "Erreur : " << error << '\n';
+        return 2;
+    }
+
+    bmw::remote::host::SettingsDeviceClient client{channel};
+    bmw::remote::infrastructure::SettingsDeviceIdentity identity{};
+    if (!client.probe(identity, error)) {
+        std::cerr << "Erreur : " << error << '\n';
+        return 2;
+    }
+    printDeviceIdentity(identity);
+    std::cout << "device_probe_result: PASS\n";
+    return 0;
+}
+
 int runReadDevice(const Options& options) {
     constexpr std::uint32_t UsbSerialBaudRate = 115'200U;
     std::string error{};
@@ -441,6 +495,18 @@ int runReadDevice(const Options& options) {
     }
 
     bmw::remote::host::SettingsDeviceClient client{channel};
+    bmw::remote::infrastructure::SettingsDeviceIdentity identity{};
+    if (!client.probe(identity, error)) {
+        std::cerr << "Erreur : " << error << '\n';
+        return 2;
+    }
+    if (!bmw::remote::infrastructure::hasCapability(
+            identity,
+            bmw::remote::infrastructure::SettingsDeviceCapability::SettingsRead)) {
+        std::cerr << "Erreur : le boitier n'annonce pas la lecture des reglages\n";
+        return 2;
+    }
+    printDeviceIdentity(identity);
     UserSettings settings{};
     if (!client.read(settings, error)) {
         std::cerr << "Erreur : " << error << '\n';
@@ -499,6 +565,9 @@ int main(const int argc, char* argv[]) {
 
     if (options.mode == Mode::ListDevices) {
         return runListDevices();
+    }
+    if (options.mode == Mode::ProbeDevice) {
+        return runProbeDevice(options);
     }
     if (options.mode == Mode::ReadDevice) {
         return runReadDevice(options);

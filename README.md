@@ -43,7 +43,8 @@ Le premier jalon logiciel est opérationnel :
 - ESP32-S3-DevKitC-1-N8 sélectionné pour le prototype de banc avec USB filaire ;
 - endpoint USB ESP32-S3 raccordé au journal de configuration en flash ;
 - configurateur Windows relié au port COM avec écriture et relecture vérifiée ;
-- 84 tests C++, 8 scénarios du simulateur, 2 contrôles du configurateur et
+- identification du produit, de la cible, de la version et des capacités avant écriture ;
+- 87 tests C++, 8 scénarios du simulateur, 3 contrôles du configurateur et
   21 tests Python automatisés en intégration continue.
 
 L'adaptateur BMW qui observera réellement le verrouillage, qualifiera la reprise
@@ -176,12 +177,20 @@ les ports puis lire ou écrire le boîtier :
 
 ```powershell
 .\scripts\configure.ps1 -ListDevices
+.\scripts\configure.ps1 -ProbeDevice COM3
 .\scripts\configure.ps1 -ReadDevice COM3
 .\scripts\configure.ps1 -WriteDevice COM3
 ```
 
 Une écriture n'est déclarée réussie qu'après relecture et comparaison complète.
 Voir [docs/configurator.md](docs/configurator.md).
+
+Le premier essai avec une carte neuve est automatisé et utilise une
+configuration de banc où le démarrage distant reste désactivé :
+
+```powershell
+.\scripts\first-usb-test.ps1 -Port COM3
+```
 
 ## Simulateur applicatif
 

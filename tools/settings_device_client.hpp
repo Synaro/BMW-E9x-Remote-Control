@@ -45,6 +45,10 @@ public:
         SettingsDeviceClientConfig config = {}) noexcept
         : channel_(channel), config_(config) {}
 
+    [[nodiscard]] bool probe(
+        infrastructure::SettingsDeviceIdentity& identity,
+        std::string& error);
+
     [[nodiscard]] bool read(
         application::UserSettings& settings,
         std::string& error);

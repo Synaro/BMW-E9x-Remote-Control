@@ -78,6 +78,8 @@
 - [x] Choisir l'USB filaire entre le configurateur et le boîtier V1
 - [x] Implémenter le transport USB sur ESP32-S3
 - [x] Raccorder le configurateur Windows au port série USB avec relecture
+- [x] Identifier la cible et ses capacités avant toute écriture USB
+- [x] Automatiser le flashage et le premier test USB du prototype
 - [ ] Implémenter l'authentification et l'anti-rejeu propres au transport choisi
 - [ ] Valider la consommation au repos
 
