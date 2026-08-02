@@ -120,4 +120,3 @@ avec alimentation, interfaces, protections et interverrouillages qualifiés.
 - [Microchip MCP2515](https://ww1.microchip.com/downloads/aemDocuments/documents/APID/ProductDocuments/DataSheets/MCP2515-Family-Data-Sheet-DS20001801K.pdf)
 - [TI TCAN1044A-Q1](https://www.ti.com/product/TCAN1044A-Q1)
 - [TI LM5164-Q1](https://www.ti.com/product/LM5164-Q1)
-
