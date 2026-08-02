@@ -71,7 +71,10 @@ option(BMW_REMOTE_BUILD_SIMULATOR "Build the offline vehicle simulator" ON)
 option(BMW_REMOTE_BUILD_CONFIGURATOR "Build the user settings configurator" ON)
 
 if(BMW_REMOTE_BUILD_SIMULATOR)
-    add_executable(bmw_remote_simulator tools/vehicle_simulator.cpp)
+    add_executable(
+        bmw_remote_simulator
+        tools/sandbox_session.cpp
+        tools/vehicle_simulator.cpp)
     target_link_libraries(
         bmw_remote_simulator PRIVATE bmw_remote_simulation bmw_remote_host_tools)
 endif()
@@ -87,7 +90,10 @@ option(BMW_REMOTE_BUILD_TESTS "Build the host-side unit tests" ON)
 
 if(BMW_REMOTE_BUILD_TESTS)
     enable_testing()
-    add_executable(bmw_remote_tests tests/test_main.cpp)
+    add_executable(
+        bmw_remote_tests
+        tests/test_main.cpp
+        tools/sandbox_session.cpp)
     target_link_libraries(
         bmw_remote_tests PRIVATE bmw_remote_simulation bmw_remote_host_tools)
     add_test(NAME bmw_remote_tests COMMAND bmw_remote_tests)

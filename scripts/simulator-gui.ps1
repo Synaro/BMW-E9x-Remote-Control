@@ -1,7 +1,8 @@
 ﻿param(
     [switch]$SkipBuild,
     [switch]$SelfTest,
-    [string]$PreviewPath
+    [string]$PreviewPath,
+    [string]$SandboxPreviewPath
 )
 
 Set-StrictMode -Version Latest
@@ -174,6 +175,70 @@ function Invoke-SimulatorProcess {
     }
 }
 
+function Start-SandboxProcess {
+    $startInfo = [System.Diagnostics.ProcessStartInfo]::new()
+    $startInfo.FileName = $simulatorExecutable
+    $startInfo.Arguments = '--sandbox'
+    $startInfo.WorkingDirectory = $projectRoot
+    $startInfo.UseShellExecute = $false
+    $startInfo.CreateNoWindow = $true
+    $startInfo.RedirectStandardInput = $true
+    $startInfo.RedirectStandardOutput = $true
+    $startInfo.RedirectStandardError = $true
+
+    $process = [System.Diagnostics.Process]::new()
+    $process.StartInfo = $startInfo
+    if (-not $process.Start()) {
+        throw 'Impossible de lancer le bac à sable.'
+    }
+    return $process
+}
+
+function Invoke-SandboxCommand {
+    param(
+        [Parameter(Mandatory)][System.Diagnostics.Process]$Process,
+        [Parameter(Mandatory)][string]$Command
+    )
+
+    if ($Process.HasExited) {
+        $details = $Process.StandardError.ReadToEnd()
+        throw "Le bac à sable s'est arrêté prématurément. $details"
+    }
+    $Process.StandardInput.WriteLine($Command)
+    $Process.StandardInput.Flush()
+    $line = $Process.StandardOutput.ReadLine()
+    if ($null -eq $line) {
+        $details = $Process.StandardError.ReadToEnd()
+        throw "Le bac à sable n'a pas répondu. $details"
+    }
+    try {
+        return $line | ConvertFrom-Json
+    } catch {
+        throw "Réponse invalide du bac à sable : $line"
+    }
+}
+
+function Stop-SandboxProcess {
+    param([System.Diagnostics.Process]$Process)
+
+    if ($null -eq $Process) {
+        return
+    }
+    try {
+        if (-not $Process.HasExited) {
+            $Process.StandardInput.WriteLine('quit')
+            $Process.StandardInput.Flush()
+            [void]$Process.StandardOutput.ReadLine()
+            if (-not $Process.WaitForExit(1000)) {
+                $Process.Kill()
+                [void]$Process.WaitForExit(1000)
+            }
+        }
+    } finally {
+        $Process.Dispose()
+    }
+}
+
 try {
     Initialize-SimulatorExecutable
 
@@ -202,6 +267,34 @@ try {
         if ($smokeTest.ExitCode -ne 0 -or
             $smokeTest.StandardOutput -notmatch 'scenario_result: PASS') {
             throw 'Le test de fumée de la chaîne supervisée a échoué.'
+        }
+        $sandboxProcess = Start-SandboxProcess
+        try {
+            $sandboxStatus = Invoke-SandboxCommand $sandboxProcess 'status'
+            $sandboxPreparing = Invoke-SandboxCommand $sandboxProcess 'start'
+            $sandboxCranking = Invoke-SandboxCommand $sandboxProcess 'timer'
+            $sandboxRunning = Invoke-SandboxCommand $sandboxProcess 'vehicle rpm=850'
+            $sandboxFault = Invoke-SandboxCommand $sandboxProcess 'watchdog'
+            if (-not $sandboxStatus.ok -or $sandboxStatus.state -ne 'idle' -or
+                $sandboxPreparing.state -ne 'preparing' -or
+                $sandboxCranking.state -ne 'cranking' -or
+                $sandboxRunning.state -ne 'running' -or
+                $sandboxFault.state -ne 'fault' -or
+                $sandboxFault.fault -ne 'actuator_failure' -or
+                $sandboxFault.ignition_active -or
+                $sandboxFault.starter_active) {
+                $observed = @(
+                    "status=$($sandboxStatus.state)/$($sandboxStatus.ok)/$($sandboxStatus.error)",
+                    "start=$($sandboxPreparing.state)/$($sandboxPreparing.fault)",
+                    "timer=$($sandboxCranking.state)/$($sandboxCranking.fault)",
+                    "running=$($sandboxRunning.state)/$($sandboxRunning.fault)",
+                    "watchdog=$($sandboxFault.state)/$($sandboxFault.fault)/$($sandboxFault.supervisor_fault)",
+                    "outputs=$($sandboxFault.ignition_active)/$($sandboxFault.starter_active)"
+                ) -join ', '
+                throw "Le test du bac à sable persistant a échoué : $observed"
+            }
+        } finally {
+            Stop-SandboxProcess $sandboxProcess
         }
         Write-Output 'gui_self_test: PASS'
         exit 0
@@ -272,12 +365,12 @@ try {
     $sidebarLayout = [System.Windows.Forms.TableLayoutPanel]::new()
     $sidebarLayout.Dock = 'Fill'
     $sidebarLayout.ColumnCount = 1
-    $sidebarLayout.RowCount = 9
+    $sidebarLayout.RowCount = 10
     $sidebarLayout.BackColor = $colors.Panel
     [void]$sidebarLayout.ColumnStyles.Add(
         [System.Windows.Forms.ColumnStyle]::new(
             [System.Windows.Forms.SizeType]::Percent, 100))
-    foreach ($height in @(30, 260, 28, 75, 28, 46, 46, 46, 35)) {
+    foreach ($height in @(30, 220, 28, 75, 28, 46, 46, 46, 46, 35)) {
         [void]$sidebarLayout.RowStyles.Add(
             [System.Windows.Forms.RowStyle]::new(
                 [System.Windows.Forms.SizeType]::Absolute, $height))
@@ -347,17 +440,19 @@ try {
 
     $runButton = New-FlatButton '▶  Lancer le scénario' $colors.Accent
     [void]$sidebarLayout.Controls.Add($runButton, 0, 5)
+    $sandboxButton = New-FlatButton '◉  Ouvrir le bac à sable' $colors.Success
+    [void]$sidebarLayout.Controls.Add($sandboxButton, 0, 6)
     $configButton = New-FlatButton '⚙  Tester une configuration…'
-    [void]$sidebarLayout.Controls.Add($configButton, 0, 6)
+    [void]$sidebarLayout.Controls.Add($configButton, 0, 7)
     $traceButton = New-FlatButton '⌁  Inspecter une trace CAN…'
-    [void]$sidebarLayout.Controls.Add($traceButton, 0, 7)
+    [void]$sidebarLayout.Controls.Add($traceButton, 0, 8)
 
     $hoodRequired = [System.Windows.Forms.CheckBox]::new()
     $hoodRequired.Text = "Capot requis pour l'inspection de trace"
     $hoodRequired.Checked = $true
     $hoodRequired.ForeColor = $colors.Muted
     $hoodRequired.Dock = 'Fill'
-    [void]$sidebarLayout.Controls.Add($hoodRequired, 0, 8)
+    [void]$sidebarLayout.Controls.Add($hoodRequired, 0, 9)
     [void]$sidebar.Controls.Add($sidebarLayout)
 
     $mainPanel = [System.Windows.Forms.Panel]::new()
@@ -421,6 +516,7 @@ try {
     function Set-UiBusy {
         param([bool]$Busy)
         $runButton.Enabled = -not $Busy
+        $sandboxButton.Enabled = -not $Busy
         $configButton.Enabled = -not $Busy
         $traceButton.Enabled = -not $Busy
         $scenarioList.Enabled = -not $Busy
@@ -476,6 +572,438 @@ try {
         }
     }
 
+    function Show-SandboxWindow {
+        param([string]$PreviewFile)
+
+        $sandboxForm = [System.Windows.Forms.Form]::new()
+        $sandboxForm.Text = 'BMW E9x Remote Control — Bac à sable interactif'
+        $sandboxForm.StartPosition = 'CenterParent'
+        $sandboxForm.MinimumSize = [System.Drawing.Size]::new(1080, 720)
+        $sandboxForm.Size = [System.Drawing.Size]::new(1180, 790)
+        $sandboxForm.BackColor = $colors.Window
+        $sandboxForm.ForeColor = $colors.Text
+        $sandboxForm.Font = $uiFont
+
+        $sandboxHeader = [System.Windows.Forms.Panel]::new()
+        $sandboxHeader.Dock = 'Top'
+        $sandboxHeader.Height = 104
+        $sandboxHeader.BackColor = $colors.Panel
+        $sandboxHeader.Padding = [System.Windows.Forms.Padding]::new(22, 12, 22, 8)
+
+        $sandboxTitle = [System.Windows.Forms.Label]::new()
+        $sandboxTitle.Text = 'REPOS'
+        $sandboxTitle.Font = $titleFont
+        $sandboxTitle.ForeColor = $colors.Success
+        $sandboxTitle.AutoSize = $true
+        $sandboxTitle.Location = [System.Drawing.Point]::new(20, 10)
+        [void]$sandboxHeader.Controls.Add($sandboxTitle)
+
+        $sandboxSummary = [System.Windows.Forms.Label]::new()
+        $sandboxSummary.Text = 'Initialisation de la session…'
+        $sandboxSummary.ForeColor = $colors.Muted
+        $sandboxSummary.AutoSize = $true
+        $sandboxSummary.Location = [System.Drawing.Point]::new(23, 54)
+        [void]$sandboxHeader.Controls.Add($sandboxSummary)
+
+        $sandboxSafety = [System.Windows.Forms.Label]::new()
+        $sandboxSafety.Text = '●  PROCESSUS LOCAL — aucune connexion au véhicule'
+        $sandboxSafety.Font = $smallFont
+        $sandboxSafety.ForeColor = $colors.Warning
+        $sandboxSafety.AutoSize = $true
+        $sandboxSafety.Location = [System.Drawing.Point]::new(775, 20)
+        [void]$sandboxHeader.Controls.Add($sandboxSafety)
+
+        $sandboxContent = [System.Windows.Forms.TableLayoutPanel]::new()
+        $sandboxContent.Dock = 'Fill'
+        $sandboxContent.ColumnCount = 2
+        $sandboxContent.RowCount = 1
+        $sandboxContent.Padding = [System.Windows.Forms.Padding]::new(14)
+        $sandboxContent.BackColor = $colors.Window
+        [void]$sandboxContent.ColumnStyles.Add(
+            [System.Windows.Forms.ColumnStyle]::new(
+                [System.Windows.Forms.SizeType]::Absolute, 440))
+        [void]$sandboxContent.ColumnStyles.Add(
+            [System.Windows.Forms.ColumnStyle]::new(
+                [System.Windows.Forms.SizeType]::Percent, 100))
+
+        $controlsPanel = [System.Windows.Forms.Panel]::new()
+        $controlsPanel.Dock = 'Fill'
+        $controlsPanel.BackColor = $colors.Panel
+        $controlsPanel.Padding = [System.Windows.Forms.Padding]::new(16)
+
+        $vehicleLayout = [System.Windows.Forms.TableLayoutPanel]::new()
+        $vehicleLayout.Dock = 'Top'
+        $vehicleLayout.Height = 356
+        $vehicleLayout.ColumnCount = 2
+        $vehicleLayout.RowCount = 9
+        [void]$vehicleLayout.ColumnStyles.Add(
+            [System.Windows.Forms.ColumnStyle]::new(
+                [System.Windows.Forms.SizeType]::Percent, 50))
+        [void]$vehicleLayout.ColumnStyles.Add(
+            [System.Windows.Forms.ColumnStyle]::new(
+                [System.Windows.Forms.SizeType]::Percent, 50))
+        foreach ($rowHeight in @(36, 38, 38, 36, 36, 36, 36, 40, 58)) {
+            [void]$vehicleLayout.RowStyles.Add(
+                [System.Windows.Forms.RowStyle]::new(
+                    [System.Windows.Forms.SizeType]::Absolute, $rowHeight))
+        }
+
+        $vehicleHeading = [System.Windows.Forms.Label]::new()
+        $vehicleHeading.Text = 'ÉTAT DU VÉHICULE'
+        $vehicleHeading.Font = $sectionFont
+        $vehicleHeading.ForeColor = $colors.Text
+        $vehicleHeading.Dock = 'Fill'
+        [void]$vehicleLayout.Controls.Add($vehicleHeading, 0, 0)
+        $vehicleLayout.SetColumnSpan($vehicleHeading, 2)
+
+        function New-SandboxFieldLabel {
+            param([string]$Text)
+            $label = [System.Windows.Forms.Label]::new()
+            $label.Text = $Text
+            $label.ForeColor = $colors.Muted
+            $label.Dock = 'Fill'
+            $label.TextAlign = 'MiddleLeft'
+            return $label
+        }
+
+        function New-SandboxCheckBox {
+            param([string]$Text, [bool]$Checked)
+            $checkBox = [System.Windows.Forms.CheckBox]::new()
+            $checkBox.Text = $Text
+            $checkBox.Checked = $Checked
+            $checkBox.ForeColor = $colors.Text
+            $checkBox.Dock = 'Fill'
+            return $checkBox
+        }
+
+        $rpmLabel = New-SandboxFieldLabel 'Régime moteur (tr/min)'
+        [void]$vehicleLayout.Controls.Add($rpmLabel, 0, 1)
+        $rpmInput = [System.Windows.Forms.NumericUpDown]::new()
+        $rpmInput.Minimum = 0
+        $rpmInput.Maximum = 8000
+        $rpmInput.Increment = 50
+        $rpmInput.BackColor = $colors.PanelRaised
+        $rpmInput.ForeColor = $colors.Text
+        $rpmInput.Dock = 'Fill'
+        [void]$vehicleLayout.Controls.Add($rpmInput, 1, 1)
+
+        $gearLabel = New-SandboxFieldLabel 'Rapport de boîte'
+        [void]$vehicleLayout.Controls.Add($gearLabel, 0, 2)
+        $gearInput = [System.Windows.Forms.ComboBox]::new()
+        $gearInput.DropDownStyle = 'DropDownList'
+        $gearInput.BackColor = $colors.PanelRaised
+        $gearInput.ForeColor = $colors.Text
+        $gearInput.Dock = 'Fill'
+        [void]$gearInput.Items.AddRange(@('park', 'neutral', 'reverse', 'drive'))
+        $gearInput.SelectedItem = 'park'
+        [void]$vehicleLayout.Controls.Add($gearInput, 1, 2)
+
+        $doorsClosedInput = New-SandboxCheckBox 'Portes fermées' $true
+        $trunkClosedInput = New-SandboxCheckBox 'Coffre fermé' $true
+        [void]$vehicleLayout.Controls.Add($doorsClosedInput, 0, 3)
+        [void]$vehicleLayout.Controls.Add($trunkClosedInput, 1, 3)
+
+        $hoodAvailableInput = New-SandboxCheckBox 'Signal capot disponible' $true
+        $hoodClosedInput = New-SandboxCheckBox 'Capot fermé' $true
+        [void]$vehicleLayout.Controls.Add($hoodAvailableInput, 0, 4)
+        [void]$vehicleLayout.Controls.Add($hoodClosedInput, 1, 4)
+
+        $brakeInput = New-SandboxCheckBox 'Frein appuyé' $false
+        $parkingInput = New-SandboxCheckBox 'Frein parking serré' $true
+        [void]$vehicleLayout.Controls.Add($brakeInput, 0, 5)
+        [void]$vehicleLayout.Controls.Add($parkingInput, 1, 5)
+
+        $criticalInput = New-SandboxCheckBox 'Défaut critique' $false
+        $interlockInput = New-SandboxCheckBox 'Autorisation matérielle' $true
+        [void]$vehicleLayout.Controls.Add($criticalInput, 0, 6)
+        [void]$vehicleLayout.Controls.Add($interlockInput, 1, 6)
+
+        $hoodModeLabel = New-SandboxFieldLabel 'Surveillance du capot'
+        [void]$vehicleLayout.Controls.Add($hoodModeLabel, 0, 7)
+        $hoodModeInput = [System.Windows.Forms.ComboBox]::new()
+        $hoodModeInput.DropDownStyle = 'DropDownList'
+        $hoodModeInput.BackColor = $colors.PanelRaised
+        $hoodModeInput.ForeColor = $colors.Text
+        $hoodModeInput.Dock = 'Fill'
+        [void]$hoodModeInput.Items.AddRange(@('Obligatoire', 'Facultative'))
+        $hoodModeInput.SelectedIndex = 0
+        [void]$vehicleLayout.Controls.Add($hoodModeInput, 1, 7)
+
+        $applyVehicleButton = New-FlatButton "APPLIQUER L'ÉTAT" $colors.Accent
+        [void]$vehicleLayout.Controls.Add($applyVehicleButton, 0, 8)
+        $vehicleLayout.SetColumnSpan($applyVehicleButton, 2)
+
+        $actionsLayout = [System.Windows.Forms.TableLayoutPanel]::new()
+        $actionsLayout.Dock = 'Fill'
+        $actionsLayout.Padding = [System.Windows.Forms.Padding]::new(0, 8, 0, 0)
+        $actionsLayout.ColumnCount = 2
+        $actionsLayout.RowCount = 4
+        [void]$actionsLayout.ColumnStyles.Add(
+            [System.Windows.Forms.ColumnStyle]::new(
+                [System.Windows.Forms.SizeType]::Percent, 50))
+        [void]$actionsLayout.ColumnStyles.Add(
+            [System.Windows.Forms.ColumnStyle]::new(
+                [System.Windows.Forms.SizeType]::Percent, 50))
+        foreach ($index in 1..4) {
+            [void]$actionsLayout.RowStyles.Add(
+                [System.Windows.Forms.RowStyle]::new(
+                    [System.Windows.Forms.SizeType]::Percent, 25))
+        }
+        $newSessionButton = New-FlatButton 'Nouvelle session'
+        $startRemoteButton = New-FlatButton 'Démarrage distant' $colors.Success
+        $timerButton = New-FlatButton 'Échéance du timer'
+        $stopRemoteButton = New-FlatButton 'Arrêt distant' $colors.Failure
+        $takeoverButton = New-FlatButton 'Confirmer la reprise'
+        $resetButton = New-FlatButton 'Réarmer le défaut'
+        $watchdogButton = New-FlatButton 'Perdre le heartbeat' $colors.Warning
+        [void]$actionsLayout.Controls.Add($newSessionButton, 0, 0)
+        $actionsLayout.SetColumnSpan($newSessionButton, 2)
+        [void]$actionsLayout.Controls.Add($startRemoteButton, 0, 1)
+        [void]$actionsLayout.Controls.Add($timerButton, 1, 1)
+        [void]$actionsLayout.Controls.Add($stopRemoteButton, 0, 2)
+        [void]$actionsLayout.Controls.Add($takeoverButton, 1, 2)
+        [void]$actionsLayout.Controls.Add($resetButton, 0, 3)
+        [void]$actionsLayout.Controls.Add($watchdogButton, 1, 3)
+        [void]$controlsPanel.Controls.Add($actionsLayout)
+        [void]$controlsPanel.Controls.Add($vehicleLayout)
+
+        $dashboardPanel = [System.Windows.Forms.TableLayoutPanel]::new()
+        $dashboardPanel.Dock = 'Fill'
+        $dashboardPanel.BackColor = $colors.Window
+        $dashboardPanel.Padding = [System.Windows.Forms.Padding]::new(14, 0, 0, 0)
+        $dashboardPanel.ColumnCount = 1
+        $dashboardPanel.RowCount = 2
+        [void]$dashboardPanel.ColumnStyles.Add(
+            [System.Windows.Forms.ColumnStyle]::new(
+                [System.Windows.Forms.SizeType]::Percent, 100))
+        [void]$dashboardPanel.RowStyles.Add(
+            [System.Windows.Forms.RowStyle]::new(
+                [System.Windows.Forms.SizeType]::Absolute, 142))
+        [void]$dashboardPanel.RowStyles.Add(
+            [System.Windows.Forms.RowStyle]::new(
+                [System.Windows.Forms.SizeType]::Percent, 100))
+
+        $dashboardCards = [System.Windows.Forms.Panel]::new()
+        $dashboardCards.Dock = 'Fill'
+        $dashboardCards.BackColor = $colors.Panel
+        $dashboardCards.Padding = [System.Windows.Forms.Padding]::new(18, 12, 18, 10)
+
+        $outputsLabel = [System.Windows.Forms.Label]::new()
+        $outputsLabel.Text = 'SORTIES  —  ALLUMAGE OFF   |   DÉMARREUR OFF'
+        $outputsLabel.Font = $sectionFont
+        $outputsLabel.ForeColor = $colors.Success
+        $outputsLabel.Dock = 'Top'
+        $outputsLabel.Height = 34
+
+        $timerStatusLabel = [System.Windows.Forms.Label]::new()
+        $timerStatusLabel.Text = 'TIMER  —  inactif'
+        $timerStatusLabel.ForeColor = $colors.Muted
+        $timerStatusLabel.Dock = 'Top'
+        $timerStatusLabel.Height = 30
+
+        $eventStatusLabel = [System.Windows.Forms.Label]::new()
+        $eventStatusLabel.Text = 'Dernier événement : aucun'
+        $eventStatusLabel.ForeColor = $colors.Muted
+        $eventStatusLabel.Dock = 'Fill'
+        [void]$dashboardCards.Controls.Add($eventStatusLabel)
+        [void]$dashboardCards.Controls.Add($timerStatusLabel)
+        [void]$dashboardCards.Controls.Add($outputsLabel)
+
+        $sandboxLog = [System.Windows.Forms.RichTextBox]::new()
+        $sandboxLog.Dock = 'Fill'
+        $sandboxLog.ReadOnly = $true
+        $sandboxLog.BackColor = [System.Drawing.Color]::FromArgb(6, 12, 23)
+        $sandboxLog.ForeColor = $colors.Text
+        $sandboxLog.BorderStyle = 'FixedSingle'
+        $sandboxLog.Font = $monoFont
+        $sandboxLog.WordWrap = $true
+        $sandboxLog.Text = "Journal de la session interactive.`r`n"
+
+        [void]$dashboardPanel.Controls.Add($dashboardCards, 0, 0)
+        [void]$dashboardPanel.Controls.Add($sandboxLog, 0, 1)
+        [void]$sandboxContent.Controls.Add($controlsPanel, 0, 0)
+        [void]$sandboxContent.Controls.Add($dashboardPanel, 1, 0)
+        [void]$sandboxForm.Controls.Add($sandboxContent)
+        [void]$sandboxForm.Controls.Add($sandboxHeader)
+
+        $stateNames = @{
+            idle = 'REPOS'
+            authorizing = 'AUTORISATION'
+            preparing = 'PRÉPARATION'
+            cranking = 'DÉMARRAGE'
+            running = 'FONCTIONNEMENT'
+            awaiting_takeover = 'ATTENTE REPRISE CONDUCTEUR'
+            driver_control = 'CONTRÔLE CONDUCTEUR'
+            stopping = 'ARRÊT'
+            fault = 'DÉFAUT'
+        }
+
+        $renderSnapshot = {
+            param($Snapshot)
+            $translatedState = $stateNames[[string]$Snapshot.state]
+            if ([string]::IsNullOrWhiteSpace($translatedState)) {
+                $translatedState = ([string]$Snapshot.state).ToUpperInvariant()
+            }
+            $sandboxTitle.Text = $translatedState
+            $sandboxTitle.ForeColor = if ($Snapshot.state -eq 'fault') {
+                $colors.Failure
+            } elseif ($Snapshot.state -eq 'idle' -or
+                      $Snapshot.state -eq 'driver_control') {
+                $colors.Success
+            } else {
+                $colors.Warning
+            }
+            $sandboxSummary.Text =
+                "Temps $($Snapshot.time_ms) ms  •  défaut $($Snapshot.fault)  •  superviseur $($Snapshot.supervisor_fault)"
+
+            $ignitionText = if ($Snapshot.ignition_active) { 'ON' } else { 'OFF' }
+            $starterText = if ($Snapshot.starter_active) { 'ON' } else { 'OFF' }
+            $outputsLabel.Text =
+                "SORTIES  —  ALLUMAGE $ignitionText   |   DÉMARREUR $starterText"
+            $outputsLabel.ForeColor = if ($Snapshot.supervisor_fault -ne 'none') {
+                $colors.Failure
+            } elseif ($Snapshot.ignition_active -or $Snapshot.starter_active) {
+                $colors.Warning
+            } else {
+                $colors.Success
+            }
+            if ($Snapshot.timer_armed) {
+                $remaining = [int64]$Snapshot.timer_due_ms - [int64]$Snapshot.time_ms
+                $timerStatusLabel.Text =
+                    "TIMER  —  $remaining ms restantes (durée $($Snapshot.timer_duration_ms) ms)"
+            } else {
+                $timerStatusLabel.Text = 'TIMER  —  inactif'
+            }
+            $actions = @($Snapshot.last_actions) -join ', '
+            if ([string]::IsNullOrWhiteSpace($actions)) {
+                $actions = 'aucune'
+            }
+            $eventStatusLabel.Text =
+                "Dernier événement : $($Snapshot.last_event)`r`nActions : $actions  •  diagnostics : $($Snapshot.diagnostic_records)"
+
+            $rpmInput.Value = [decimal]$Snapshot.vehicle.rpm
+            $gearInput.SelectedItem = [string]$Snapshot.vehicle.gear
+            $doorsClosedInput.Checked = [bool]$Snapshot.vehicle.doors_closed
+            $trunkClosedInput.Checked = [bool]$Snapshot.vehicle.trunk_closed
+            $hoodAvailableInput.Checked = [bool]$Snapshot.vehicle.hood_available
+            $hoodClosedInput.Checked = [bool]$Snapshot.vehicle.hood_closed
+            $hoodClosedInput.Enabled = $hoodAvailableInput.Checked
+            $brakeInput.Checked = [bool]$Snapshot.vehicle.brake_pressed
+            $parkingInput.Checked = [bool]$Snapshot.vehicle.parking_applied
+            $criticalInput.Checked = [bool]$Snapshot.vehicle.critical_fault
+            $interlockInput.Checked = [bool]$Snapshot.hardware_start_permitted
+            $hoodModeInput.SelectedIndex = if ($Snapshot.hood_monitoring_required) { 0 } else { 1 }
+        }.GetNewClosure()
+
+        $sandboxProcess = Start-SandboxProcess
+        $sandboxContext = @{
+            Process = $sandboxProcess
+            Closed = $false
+        }
+
+        $sendCommand = {
+            param([string]$Command)
+            try {
+                $sandboxForm.UseWaitCursor = $true
+                [System.Windows.Forms.Application]::DoEvents()
+                $result = Invoke-SandboxCommand $sandboxContext.Process $Command
+                $timestamp = Get-Date -Format 'HH:mm:ss'
+                $sandboxLog.AppendText("`r`n[$timestamp] > $Command`r`n")
+                if ($result.ok) {
+                    $sandboxLog.AppendText(
+                        "  état=$($result.state), défaut=$($result.fault), sorties=$($result.ignition_active)/$($result.starter_active)`r`n")
+                } else {
+                    $sandboxLog.AppendText("  REFUSÉ : $($result.error)`r`n")
+                }
+                $sandboxLog.SelectionStart = $sandboxLog.TextLength
+                $sandboxLog.ScrollToCaret()
+                & $renderSnapshot $result
+                return $result
+            } catch {
+                $sandboxLog.AppendText("`r`nERREUR : $($_.Exception.Message)`r`n")
+                $sandboxTitle.Text = 'ERREUR DU SIMULATEUR'
+                $sandboxTitle.ForeColor = $colors.Failure
+                return $null
+            } finally {
+                $sandboxForm.UseWaitCursor = $false
+            }
+        }.GetNewClosure()
+
+        $hoodAvailableInput.Add_CheckedChanged({
+            $hoodClosedInput.Enabled = $hoodAvailableInput.Checked
+        }.GetNewClosure())
+        $newSessionButton.Add_Click({
+            $mode = if ($hoodModeInput.SelectedIndex -eq 0) { 'required' } else { 'optional' }
+            [void](& $sendCommand "new $mode")
+        }.GetNewClosure())
+        $startRemoteButton.Add_Click({ [void](& $sendCommand 'start') }.GetNewClosure())
+        $timerButton.Add_Click({ [void](& $sendCommand 'timer') }.GetNewClosure())
+        $stopRemoteButton.Add_Click({ [void](& $sendCommand 'stop') }.GetNewClosure())
+        $takeoverButton.Add_Click({ [void](& $sendCommand 'takeover') }.GetNewClosure())
+        $resetButton.Add_Click({ [void](& $sendCommand 'reset') }.GetNewClosure())
+        $watchdogButton.Add_Click({ [void](& $sendCommand 'watchdog') }.GetNewClosure())
+        $applyVehicleButton.Add_Click({
+            $interlock = if ($interlockInput.Checked) { 'on' } else { 'off' }
+            [void](& $sendCommand "interlock $interlock")
+            $hood = if (-not $hoodAvailableInput.Checked) {
+                'unavailable'
+            } elseif ($hoodClosedInput.Checked) {
+                'closed'
+            } else {
+                'open'
+            }
+            $doors = if ($doorsClosedInput.Checked) { 'closed' } else { 'open' }
+            $trunk = if ($trunkClosedInput.Checked) { 'closed' } else { 'open' }
+            $brake = if ($brakeInput.Checked) { 'pressed' } else { 'released' }
+            $parking = if ($parkingInput.Checked) { 'applied' } else { 'released' }
+            $critical = if ($criticalInput.Checked) { 'on' } else { 'off' }
+            $vehicleCommand =
+                "vehicle rpm=$([int]$rpmInput.Value) gear=$($gearInput.SelectedItem) doors=$doors hood=$hood trunk=$trunk brake=$brake parking=$parking critical=$critical"
+            [void](& $sendCommand $vehicleCommand)
+        }.GetNewClosure())
+
+        $sandboxForm.Add_FormClosed({
+            if (-not $sandboxContext.Closed) {
+                $sandboxContext.Closed = $true
+                Stop-SandboxProcess $sandboxContext.Process
+                $sandboxContext.Process = $null
+            }
+        }.GetNewClosure())
+
+        try {
+            [void](& $sendCommand 'status')
+            if (-not [string]::IsNullOrWhiteSpace($PreviewFile)) {
+                $previewFullPath = [System.IO.Path]::GetFullPath($PreviewFile)
+                $previewDirectory = Split-Path -Parent $previewFullPath
+                if (-not (Test-Path -LiteralPath $previewDirectory -PathType Container)) {
+                    throw "Le dossier de prévisualisation n'existe pas : $previewDirectory"
+                }
+                $sandboxForm.Show()
+                $sandboxForm.PerformLayout()
+                $sandboxContent.PerformLayout()
+                $sandboxForm.Refresh()
+                [System.Windows.Forms.Application]::DoEvents()
+                $bitmap = [System.Drawing.Bitmap]::new(
+                    $sandboxForm.ClientSize.Width, $sandboxForm.ClientSize.Height)
+                $sandboxForm.DrawToBitmap($bitmap, $sandboxForm.ClientRectangle)
+                $bitmap.Save(
+                    $previewFullPath,
+                    [System.Drawing.Imaging.ImageFormat]::Png)
+                $bitmap.Dispose()
+                $sandboxForm.Close()
+                Write-Output "sandbox_gui_preview: $previewFullPath"
+            } else {
+                [void]$sandboxForm.ShowDialog($form)
+            }
+        } finally {
+            if (-not $sandboxContext.Closed) {
+                $sandboxContext.Closed = $true
+                Stop-SandboxProcess $sandboxContext.Process
+            }
+            $sandboxForm.Dispose()
+        }
+    }
+
     $scenarioList.Add_SelectedIndexChanged({
         if ($scenarioList.SelectedIndex -lt 0) {
             return
@@ -503,6 +1031,10 @@ try {
     }
     $runButton.Add_Click($runSelectedScenario)
     $scenarioList.Add_DoubleClick($runSelectedScenario)
+
+    $sandboxButton.Add_Click({
+        Show-SandboxWindow
+    })
 
     $configButton.Add_Click({
         $dialog = [System.Windows.Forms.OpenFileDialog]::new()
@@ -542,7 +1074,10 @@ try {
         }
     })
 
-    if (-not [string]::IsNullOrWhiteSpace($PreviewPath)) {
+    if (-not [string]::IsNullOrWhiteSpace($SandboxPreviewPath)) {
+        Show-SandboxWindow $SandboxPreviewPath
+        $form.Dispose()
+    } elseif (-not [string]::IsNullOrWhiteSpace($PreviewPath)) {
         $previewFullPath = [System.IO.Path]::GetFullPath($PreviewPath)
         $previewDirectory = Split-Path -Parent $previewFullPath
         if (-not (Test-Path -LiteralPath $previewDirectory -PathType Container)) {

@@ -19,6 +19,7 @@ Le script reconstruit l'exécutable uniquement si une source est plus récente,
 puis présente :
 
 - les scénarios documentés avec leur description ;
+- un bac à sable persistant pilotant le vrai runtime et son superviseur ;
 - le résultat réussi ou échoué et la sortie technique complète ;
 - la sélection d'un fichier de configuration utilisateur ;
 - l'inspection d'une trace canonique avec contrôle du capot requis ou facultatif ;
@@ -33,7 +34,41 @@ Windows. Son contrat avec la CLI peut être vérifié sans ouvrir de fenêtre :
 ```
 
 Les mainteneurs peuvent également produire une prévisualisation déterministe
-sans interaction avec `-PreviewPath .\build\simulator-gui-preview.png`.
+sans interaction avec `-PreviewPath .\build\simulator-gui-preview.png`. La
+fenêtre du bac à sable utilise l'option équivalente
+`-SandboxPreviewPath .\build\sandbox-gui-preview.png`.
+
+## Bac à sable interactif
+
+Le bouton **Ouvrir le bac à sable** démarre un processus local persistant. Il
+ne simule pas l'interface toute seule : chaque action traverse le vrai
+`Controller`, le `Runtime`, la politique de sécurité, la minuterie et
+`ActuatorSafetySupervisor`. Les sorties allumage et démarreur restent des
+booléens en mémoire.
+
+Un parcours de découverte typique est le suivant :
+
+1. choisir si la surveillance du capot est obligatoire ou facultative, puis
+   créer une nouvelle session ;
+2. cliquer sur **Démarrage distant** : l'état passe à `Preparing` si les
+   conditions sont sûres ;
+3. cliquer sur **Échéance du timer** : le démarreur simulé est engagé ;
+4. saisir par exemple `850` tr/min et appliquer l'état : le contrôleur confirme
+   le moteur en marche et coupe le démarreur ;
+5. décocher **Portes fermées** et appliquer pour tester l'attente de reprise,
+   puis confirmer la reprise ou laisser expirer le timer ;
+6. utiliser **Perdre le heartbeat** pour vérifier la mise en sécurité locale et
+   la propagation du défaut jusqu'à l'application.
+
+Les changements de véhicule sont atomiques. Le capot peut être fermé, ouvert
+ou déclaré indisponible. Si sa surveillance est facultative, son absence est
+ignorée ; si elle est obligatoire, le démarrage est refusé. Une autorisation
+matérielle simulée permet également de tester l'interverrouillage placé devant
+les sorties.
+
+La fenêtre n'accepte pas de texte de commande libre et ne lance aucun shell.
+Ses contrôles produisent uniquement les commandes autorisées du protocole local
+décrit dans [sandbox-protocol.md](sandbox-protocol.md).
 
 ## Console et exécutable
 
@@ -64,6 +99,10 @@ Il peut être lancé directement. Sans argument, il affiche un menu interactif :
 13. décodage de fronts et compteur roulant sur un vecteur CAN fictif ;
 14. séquence d'actionneurs simulés, expiration du heartbeat et retour incohérent ;
 15. chaîne complète contrôleur, runtime et superviseur avec propagation du défaut.
+
+Le mode persistant exploité par la fenêtre graphique est également accessible
+aux outils de test avec `bmw_remote_simulator.exe --sandbox`. Il échange un
+objet JSON par ligne sur l'entrée/sortie standard et n'ouvre aucun port réseau.
 
 ## Lancer un scénario depuis PowerShell
 
