@@ -72,6 +72,7 @@
 - [ ] Implémenter le décodeur véhicule réel en lecture seule
 - [x] Tester perte, retard et corruption des données
 - [x] Implémenter une garde abstraite de provenance, fraîcheur et anti-rejeu
+- [x] Ajouter le pipeline CAN de verrouillage paramétrable et fermé par défaut
 - [ ] Qualifier la provenance BMW des verrouillages et la résistance au rejeu
 - [ ] Implémenter l'adaptateur réel de confirmation de reprise conducteur
 - [x] Ajouter une journalisation bornée et non sensible

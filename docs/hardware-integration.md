@@ -39,11 +39,13 @@ mise en sécurité.
 ## Source de commande distante
 
 Le futur adaptateur BMW doit publier une `LockCommandEvidence` uniquement après
-validation de sa provenance. `LockCommandGate` vérifie ensuite la confiance, la
+validation de sa provenance. `CanLockCommandAdapter` fournit le décodeur borné
+de front et de compteur ; `LockCommandGate` vérifie ensuite la confiance, la
 fraîcheur et l'ordre avant d'alimenter `LockSequenceDetector`, qui peut produire
-une demande après trois impulsions valides. Les identifiants CAN, l'extraction
-des compteurs et les états CAS/JBE restent strictement dans l'infrastructure et
-devront être qualifiés par variante. Voir
+une demande après trois impulsions valides. Les identifiants CAN et les états
+CAS/JBE restent strictement dans la configuration d'infrastructure et devront
+être qualifiés par variante. Voir
+[can-lock-command-adapter.md](can-lock-command-adapter.md) et
 [lock-command-security.md](lock-command-security.md).
 
 De même, l'adaptateur ne produit `DriverTakeoverConfirmed` qu'après satisfaction

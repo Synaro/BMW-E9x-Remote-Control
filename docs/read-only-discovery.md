@@ -133,6 +133,8 @@ Un candidat ne peut entrer dans un décodeur BMW lecture seule que si :
 - les captures inverses confirment le sens du signal ;
 - des contrôles sans événement ne produisent pas le même résultat ;
 - la cadence et la fraîcheur sont mesurées ;
+- le front de commande, l'état sécurisé et le compteur roulant sont distingués ;
+- la largeur, le sens, le rebouclage et les répétitions du compteur sont mesurés ;
 - les valeurs invalides et absentes sont définies ;
 - la variante véhicule concernée est explicitement enregistrée ;
 - les tests de rejeu couvrent perte, retard et corruption.
@@ -140,3 +142,7 @@ Un candidat ne peut entrer dans un décodeur BMW lecture seule que si :
 Même après cela, le profil reste `Candidate` jusqu'à la qualification lecture
 seule complète. Les captures ne doivent jamais être ajoutées au dépôt sans
 anonymisation et revue explicite.
+
+Le format de liaison attendu après cette qualification est décrit dans
+[can-lock-command-adapter.md](can-lock-command-adapter.md). Aucun identifiant du
+vecteur de test ne doit être transféré vers cette configuration.

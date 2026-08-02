@@ -31,7 +31,8 @@ Il peut être lancé directement. Sans argument, il affiche un menu interactif :
 9. chargement et exécution d'un fichier de configuration utilisateur ;
 10. corruption du réglage récent et récupération de la génération précédente ;
 11. liaison de configuration avec autorisation, état occupé et corruption ;
-12. refus des preuves de verrouillage non fiables, anciennes ou rejouées.
+12. refus des preuves de verrouillage non fiables, anciennes ou rejouées ;
+13. décodage de fronts et compteur roulant sur un vecteur CAN fictif.
 
 ## Lancer un scénario depuis PowerShell
 
@@ -49,6 +50,7 @@ Il peut être lancé directement. Sans argument, il affiche un menu interactif :
 .\scripts\simulate.ps1 -Scenario settings-recovery
 .\scripts\simulate.ps1 -Scenario settings-link
 .\scripts\simulate.ps1 -Scenario lock-replay-guard
+.\scripts\simulate.ps1 -Scenario qualified-lock-adapter
 ```
 
 Chaque scénario retourne le code `0` uniquement si le résultat final correspond
@@ -100,6 +102,12 @@ par défaut, puis injecte une source candidate, une preuve périmée, un compteu
 dupliqué et un compteur désordonné. Il termine par trois preuves synthétiques
 explicitement autorisées et strictement croissantes. Voir
 [lock-command-security.md](lock-command-security.md).
+
+Le scénario `qualified-lock-adapter` utilise un identifiant fictif qui
+n'appartient pas à BMW. Il vérifie le refus d'une liaison candidate, l'unicité
+du front lorsque la commande reste active, le rebouclage du compteur,
+l'annulation du geste après rejeu et l'acceptation de trois nouveaux fronts.
+Voir [can-lock-command-adapter.md](can-lock-command-adapter.md).
 
 ## Inspecter une trace
 

@@ -17,6 +17,7 @@
 #include "bmw_remote/domain/reference_profiles.hpp"
 #include "bmw_remote/domain/vehicle_profile.hpp"
 #include "bmw_remote/domain/vehicle_state.hpp"
+#include "bmw_remote/infrastructure/can_lock_command_adapter.hpp"
 #include "bmw_remote/infrastructure/replay_vehicle_gateway.hpp"
 #include "bmw_remote/infrastructure/runtime.hpp"
 #include "bmw_remote/infrastructure/settings_payload.hpp"
@@ -63,7 +64,14 @@ using bmw::remote::domain::VehicleProfile;
 using bmw::remote::domain::VehicleSignal;
 using bmw::remote::domain::VehicleState;
 using bmw::remote::infrastructure::ActuatorPort;
+using bmw::remote::infrastructure::CanBitMatcher;
+using bmw::remote::infrastructure::CanCounterField;
 using bmw::remote::infrastructure::CanFrame;
+using bmw::remote::infrastructure::CanLockCommandAdapter;
+using bmw::remote::infrastructure::CanLockCommandAdapterConfig;
+using bmw::remote::infrastructure::CanLockCommandPipeline;
+using bmw::remote::infrastructure::CanLockDecodeStatus;
+using bmw::remote::infrastructure::CanLockPipelineResult;
 using bmw::remote::infrastructure::DiagnosticJournal;
 using bmw::remote::infrastructure::DiagnosticReason;
 using bmw::remote::infrastructure::DiagnosticRecord;
@@ -135,6 +143,35 @@ LockCommandEvidence verifiedVehicleLock(
         sequence,
         observedAtMs,
         true};
+}
+
+CanLockCommandAdapterConfig testCanLockAdapterConfig(
+    const LockCommandTrust trust = LockCommandTrust::Verified) {
+    CanLockCommandAdapterConfig config{};
+    config.enabled = true;
+    config.trust = trust;
+    config.identifier = 0x321U;
+    config.dataLength = 2U;
+    config.lockCommand = CanBitMatcher{0U, 0x01U, 0x01U};
+    config.vehicleSecured = CanBitMatcher{0U, 0x02U, 0x02U};
+    config.rollingCounter = CanCounterField{1U, 0x0FU};
+    return config;
+}
+
+CanFrame testCanLockFrame(
+    const std::uint32_t timestampMs,
+    const std::uint8_t counter,
+    const bool commandActive,
+    const bool vehicleSecured = true) {
+    CanFrame frame{};
+    frame.timestampMs = timestampMs;
+    frame.identifier = 0x321U;
+    frame.dataLength = 2U;
+    frame.data[0U] = static_cast<std::uint8_t>(
+        (commandActive ? 0x01U : 0x00U) |
+        (vehicleSecured ? 0x02U : 0x00U));
+    frame.data[1U] = static_cast<std::uint8_t>(counter & 0x0FU);
+    return frame;
 }
 
 void advanceToRunning(Controller& controller, VehicleState& vehicle) {
@@ -317,6 +354,166 @@ void testLockGateRejectsInvalidConfigurationAndDebouncedEvidence() {
     CHECK(
         gate.process(verifiedVehicleLock(4U, 3'200U), 3'200U).status ==
         LockCommandStatus::RemoteStartRequested);
+}
+
+void testQualifiedCanLockPipelineRecognizesThreeEdgesAcrossCounterWrap() {
+    CanLockCommandPipeline pipeline{testCanLockAdapterConfig()};
+
+    CHECK(
+        pipeline.process(testCanLockFrame(0U, 14U, false), 0U).decodeStatus ==
+        CanLockDecodeStatus::Primed);
+    const CanLockPipelineResult first =
+        pipeline.process(testCanLockFrame(1'000U, 15U, true), 1'000U);
+    CHECK(first.commandEvaluated);
+    CHECK(first.command.status == LockCommandStatus::PressAccepted);
+
+    CHECK(
+        pipeline.process(testCanLockFrame(1'100U, 0U, false), 1'100U)
+            .decodeStatus == CanLockDecodeStatus::NoCommand);
+    const CanLockPipelineResult second =
+        pipeline.process(testCanLockFrame(1'600U, 1U, true), 1'600U);
+    CHECK(second.command.status == LockCommandStatus::PressAccepted);
+
+    CHECK(
+        pipeline.process(testCanLockFrame(1'700U, 2U, false), 1'700U)
+            .decodeStatus == CanLockDecodeStatus::NoCommand);
+    const CanLockPipelineResult third =
+        pipeline.process(testCanLockFrame(2'200U, 3U, true), 2'200U);
+    CHECK(third.command.status == LockCommandStatus::RemoteStartRequested);
+    CHECK(third.command.remoteStartRequested());
+}
+
+void testCanLockAdapterRequiresRisingEdges() {
+    CanLockCommandPipeline pipeline{testCanLockAdapterConfig()};
+    static_cast<void>(
+        pipeline.process(testCanLockFrame(0U, 0U, false), 0U));
+
+    CHECK(
+        pipeline.process(testCanLockFrame(1'000U, 1U, true), 1'000U)
+            .command.status == LockCommandStatus::PressAccepted);
+    const CanLockPipelineResult held =
+        pipeline.process(testCanLockFrame(1'100U, 2U, true), 1'100U);
+    CHECK(held.decodeStatus == CanLockDecodeStatus::NoCommand);
+    CHECK(!held.commandEvaluated);
+    CHECK(pipeline.pressCount() == 1U);
+
+    static_cast<void>(
+        pipeline.process(testCanLockFrame(1'200U, 3U, true), 1'200U));
+    static_cast<void>(
+        pipeline.process(testCanLockFrame(1'300U, 4U, false), 1'300U));
+    const CanLockPipelineResult secondEdge =
+        pipeline.process(testCanLockFrame(1'600U, 5U, true), 1'600U);
+    CHECK(secondEdge.command.status == LockCommandStatus::PressAccepted);
+    CHECK(pipeline.pressCount() == 2U);
+}
+
+void testCanLockPipelinePreservesCandidateAndSecuredTrustBoundaries() {
+    CanLockCommandPipeline candidatePipeline{
+        testCanLockAdapterConfig(LockCommandTrust::Candidate)};
+    static_cast<void>(candidatePipeline.process(
+        testCanLockFrame(0U, 0U, false), 0U));
+    const CanLockPipelineResult candidate = candidatePipeline.process(
+        testCanLockFrame(1'000U, 1U, true), 1'000U);
+    CHECK(candidate.commandEvaluated);
+    CHECK(
+        candidate.command.status ==
+        LockCommandStatus::RejectedUntrustedSource);
+
+    CanLockCommandPipeline unsecuredPipeline{testCanLockAdapterConfig()};
+    static_cast<void>(unsecuredPipeline.process(
+        testCanLockFrame(0U, 0U, false), 0U));
+    const CanLockPipelineResult unsecured = unsecuredPipeline.process(
+        testCanLockFrame(1'000U, 1U, true, false), 1'000U);
+    CHECK(unsecured.commandEvaluated);
+    CHECK(
+        unsecured.command.status ==
+        LockCommandStatus::RejectedVehicleNotSecured);
+}
+
+void testCanLockPipelineResetsGestureAfterStructuralFrameRejection() {
+    CanLockCommandPipeline pipeline{testCanLockAdapterConfig()};
+    static_cast<void>(
+        pipeline.process(testCanLockFrame(0U, 0U, false), 0U));
+    static_cast<void>(
+        pipeline.process(testCanLockFrame(1'000U, 1U, true), 1'000U));
+    CHECK(pipeline.pressCount() == 1U);
+
+    CanFrame unrelated = testCanLockFrame(1'050U, 1U, true);
+    unrelated.identifier = 0x123U;
+    CHECK(
+        pipeline.process(unrelated, 1'050U).decodeStatus ==
+        CanLockDecodeStatus::Ignored);
+    CHECK(pipeline.pressCount() == 1U);
+
+    const CanLockPipelineResult replay =
+        pipeline.process(testCanLockFrame(1'100U, 1U, true), 1'100U);
+    CHECK(
+        replay.decodeStatus ==
+        CanLockDecodeStatus::RejectedDuplicateCounter);
+    CHECK(!replay.commandEvaluated);
+    CHECK(pipeline.pressCount() == 0U);
+
+    CanFrame malformed = testCanLockFrame(1'200U, 2U, false);
+    malformed.dataLength = 1U;
+    CHECK(
+        pipeline.process(malformed, 1'200U).decodeStatus ==
+        CanLockDecodeStatus::RejectedInvalidFrame);
+    CHECK(pipeline.pressCount() == 0U);
+}
+
+void testCanLockAdapterRejectsInvalidBindingsAndCounterAnomalies() {
+    CanLockCommandAdapter disabled{};
+    CHECK(
+        disabled.process(testCanLockFrame(0U, 0U, false)).status ==
+        CanLockDecodeStatus::Disabled);
+
+    CanLockCommandAdapter activeAtBoot{testCanLockAdapterConfig()};
+    const auto primedActive =
+        activeAtBoot.process(testCanLockFrame(0U, 0U, true));
+    CHECK(primedActive.status == CanLockDecodeStatus::Primed);
+    CHECK(!primedActive.hasEvidence());
+
+    CanLockCommandAdapterConfig invalidConfig = testCanLockAdapterConfig();
+    invalidConfig.rollingCounter.mask = 0x01U;
+    CanLockCommandAdapter invalid{invalidConfig};
+    CHECK(
+        invalid.process(testCanLockFrame(0U, 0U, false)).status ==
+        CanLockDecodeStatus::RejectedInvalidConfiguration);
+
+    invalidConfig = testCanLockAdapterConfig();
+    invalidConfig.rollingCounter = CanCounterField{0U, 0x03U};
+    CanLockCommandAdapter overlappingFields{invalidConfig};
+    CHECK(
+        overlappingFields.process(testCanLockFrame(0U, 0U, false)).status ==
+        CanLockDecodeStatus::RejectedInvalidConfiguration);
+
+    invalidConfig = testCanLockAdapterConfig();
+    invalidConfig.vehicleSecured = CanBitMatcher{0U, 0x01U, 0x01U};
+    CanLockCommandAdapter overlappingPredicates{invalidConfig};
+    CHECK(
+        overlappingPredicates.process(testCanLockFrame(0U, 0U, false)).status ==
+        CanLockDecodeStatus::RejectedInvalidConfiguration);
+
+    CanLockCommandAdapter counterAdapter{testCanLockAdapterConfig()};
+    CHECK(
+        counterAdapter.process(testCanLockFrame(1'000U, 5U, false)).status ==
+        CanLockDecodeStatus::Primed);
+    CHECK(
+        counterAdapter.process(testCanLockFrame(1'100U, 4U, false)).status ==
+        CanLockDecodeStatus::RejectedOutOfOrderCounter);
+    CHECK(
+        counterAdapter.process(testCanLockFrame(2'000U, 6U, false)).status ==
+        CanLockDecodeStatus::Primed);
+    CHECK(
+        counterAdapter.process(testCanLockFrame(1'999U, 7U, false)).status ==
+        CanLockDecodeStatus::RejectedTimestampRegression);
+
+    CanCounterField sparseCounter{0U, 0xA0U};
+    CanFrame sparseFrame{};
+    sparseFrame.dataLength = 1U;
+    sparseFrame.data[0U] = 0x80U;
+    CHECK(sparseCounter.bitCount() == 2U);
+    CHECK(sparseCounter.extract(sparseFrame) == 2U);
 }
 
 void testDefaultUserSettingsAreValidAndPreserved() {
@@ -2575,6 +2772,11 @@ int main() {
         {"lock evidence wraparound", testLockGateAcceptsCounterAndClockWraparound},
         {"lock evidence reset", testLockGateResetsPartialGestureAfterRejectedEvidence},
         {"lock evidence configuration", testLockGateRejectsInvalidConfigurationAndDebouncedEvidence},
+        {"qualified CAN lock edges", testQualifiedCanLockPipelineRecognizesThreeEdgesAcrossCounterWrap},
+        {"CAN lock held command", testCanLockAdapterRequiresRisingEdges},
+        {"CAN lock trust boundaries", testCanLockPipelinePreservesCandidateAndSecuredTrustBoundaries},
+        {"CAN lock structural reset", testCanLockPipelineResetsGestureAfterStructuralFrameRejection},
+        {"CAN lock binding validation", testCanLockAdapterRejectsInvalidBindingsAndCounterAnomalies},
         {"default user settings", testDefaultUserSettingsAreValidAndPreserved},
         {"custom user settings", testUserSettingsConfigureHoodTimersEntryAndLocks},
         {"invalid user settings", testUnsafeUserSettingsAreRejectedFailClosed},
