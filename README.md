@@ -30,9 +30,10 @@ Le premier jalon logiciel est opérationnel :
 - profil de découverte pour l'E90 2009 N47D20C boîte automatique ;
 - absence de capteur de capot déclarée pour ce véhicule de référence, contrôle activable au choix de l'utilisateur ;
 - import PC de journaux `python-can` vers un format canonique strict ;
+- capture PC bornée avec refus des interfaces sans mode silencieux documenté ;
 - sélection explicite d'un profil obligatoire dans le contrôleur ;
 - analyse différentielle hors ligne des octets et bits candidats ;
-- 37 scénarios C++ et 11 tests Python automatisés en intégration continue.
+- 37 scénarios C++ et 21 tests Python automatisés en intégration continue.
 
 Les communications BMW, la commande distante et les sorties physiques restent à
 implémenter lorsque le matériel, les signaux et les critères d'acceptation auront
@@ -155,6 +156,26 @@ Une comparaison synthétique capot fermé / ouvert peut être lancée avec :
 
 Le protocole destiné aux premières observations réelles est décrit dans
 [docs/read-only-discovery.md](docs/read-only-discovery.md).
+
+## Capture CAN passive
+
+Un outil PC peut produire directement une trace canonique depuis une interface
+`python-can` dont le mode silencieux a été intégré explicitement :
+
+```powershell
+.\scripts\capture-can-trace.ps1 `
+  -Interface pcan `
+  -Channel PCAN_USBBUS1 `
+  -Bitrate 500000 `
+  -Duration 10 `
+  -OutputPath .\captures\private\session-01\baseline.cantrace.csv
+```
+
+Le débit ci-dessus est uniquement un exemple et doit être confirmé avant la
+connexion. L'outil ne contient aucun appel d'émission et refuse les pilotes non
+qualifiés. Le câble K+DCAN reste réservé au diagnostic : il n'est pas supposé
+fournir une capture CAN brute. Voir
+[docs/capture-qualification.md](docs/capture-qualification.md).
 
 ## Principes de contribution
 

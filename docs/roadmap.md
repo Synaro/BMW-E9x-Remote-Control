@@ -38,6 +38,7 @@
 - [x] Classement des octets et bits candidats
 - [x] Scénario synthétique capot fermé / ouvert
 - [x] Protocole de collecte répétable en lecture seule
+- [x] Outil de capture bornée pour pilotes au mode silencieux documenté
 - [ ] Qualifier une interface de capture brute compatible E9x
 - [ ] Collecter les premières paires privées sur le véhicule de référence
 
