@@ -8,7 +8,8 @@
 
 namespace bmw::remote::infrastructure {
 
-inline constexpr std::size_t UserSettingsPayloadSize = 24U;
+inline constexpr std::size_t LegacyUserSettingsPayloadSize = 24U;
+inline constexpr std::size_t UserSettingsPayloadSize = 32U;
 using UserSettingsPayload =
     std::array<std::uint8_t, UserSettingsPayloadSize>;
 
@@ -18,6 +19,11 @@ using UserSettingsPayload =
 
 [[nodiscard]] bool decodeUserSettingsPayload(
     const UserSettingsPayload& payload,
+    application::UserSettings& settings) noexcept;
+
+[[nodiscard]] bool decodeUserSettingsPayload(
+    const UserSettingsPayload& payload,
+    std::size_t payloadSize,
     application::UserSettings& settings) noexcept;
 
 [[nodiscard]] bool userSettingsEqual(

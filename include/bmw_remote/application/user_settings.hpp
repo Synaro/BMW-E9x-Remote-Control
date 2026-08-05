@@ -3,6 +3,7 @@
 #include <cstdint>
 
 #include "bmw_remote/application/controller.hpp"
+#include "bmw_remote/application/feature_catalog.hpp"
 #include "bmw_remote/application/lock_sequence_detector.hpp"
 
 namespace bmw::remote::application {
@@ -22,6 +23,7 @@ struct UserSettings final {
     std::uint32_t lockMinimumGapMs{80U};
     std::uint32_t lockMaximumGapMs{1'500U};
     std::uint32_t lockMaximumSequenceMs{3'000U};
+    FeatureRequests features{};
 };
 
 struct UserSettingsLimits final {
@@ -48,6 +50,7 @@ enum class UserSettingsReason : std::uint16_t {
     LockMaximumGapOutOfRange = 1U << 6U,
     LockSequenceTimeOutOfRange = 1U << 7U,
     InconsistentLockTiming = 1U << 8U,
+    InvalidFeatureMask = 1U << 9U,
 };
 
 [[nodiscard]] constexpr std::uint16_t userSettingsMask(

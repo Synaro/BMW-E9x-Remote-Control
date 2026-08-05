@@ -20,6 +20,19 @@ void writeU32(
            (static_cast<std::uint32_t>(source[3]) << 24U);
 }
 
+void writeU64(
+    std::uint8_t* const destination,
+    const std::uint64_t value) noexcept {
+    writeU32(destination, static_cast<std::uint32_t>(value & 0xFFFFFFFFULL));
+    writeU32(destination + 4U, static_cast<std::uint32_t>(value >> 32U));
+}
+
+[[nodiscard]] std::uint64_t readU64(
+    const std::uint8_t* const source) noexcept {
+    return static_cast<std::uint64_t>(readU32(source)) |
+           (static_cast<std::uint64_t>(readU32(source + 4U)) << 32U);
+}
+
 }  // namespace
 
 bool encodeUserSettingsPayload(
@@ -39,12 +52,24 @@ bool encodeUserSettingsPayload(
     writeU32(payload.data() + 12U, settings.lockMinimumGapMs);
     writeU32(payload.data() + 16U, settings.lockMaximumGapMs);
     writeU32(payload.data() + 20U, settings.lockMaximumSequenceMs);
+    writeU64(payload.data() + 24U, settings.features.mask());
     return true;
 }
 
 bool decodeUserSettingsPayload(
     const UserSettingsPayload& payload,
     application::UserSettings& settings) noexcept {
+    return decodeUserSettingsPayload(payload, payload.size(), settings);
+}
+
+bool decodeUserSettingsPayload(
+    const UserSettingsPayload& payload,
+    const std::size_t payloadSize,
+    application::UserSettings& settings) noexcept {
+    if (payloadSize != LegacyUserSettingsPayloadSize &&
+        payloadSize != UserSettingsPayloadSize) {
+        return false;
+    }
     if (payload[0] > 1U) {
         return false;
     }
@@ -61,6 +86,10 @@ bool decodeUserSettingsPayload(
     decoded.lockMinimumGapMs = readU32(payload.data() + 12U);
     decoded.lockMaximumGapMs = readU32(payload.data() + 16U);
     decoded.lockMaximumSequenceMs = readU32(payload.data() + 20U);
+    decoded.features = application::FeatureRequests{
+        payloadSize == UserSettingsPayloadSize
+            ? readU64(payload.data() + 24U)
+            : 0U};
 
     if (!application::validateUserSettings(decoded).valid()) {
         return false;
@@ -81,7 +110,8 @@ bool userSettingsEqual(
            left.lockPressCount == right.lockPressCount &&
            left.lockMinimumGapMs == right.lockMinimumGapMs &&
            left.lockMaximumGapMs == right.lockMaximumGapMs &&
-           left.lockMaximumSequenceMs == right.lockMaximumSequenceMs;
+           left.lockMaximumSequenceMs == right.lockMaximumSequenceMs &&
+           left.features.mask() == right.features.mask();
 }
 
 }  // namespace bmw::remote::infrastructure

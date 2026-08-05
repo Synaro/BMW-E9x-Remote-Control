@@ -178,12 +178,12 @@ SettingsProtocolFrame SettingsProtocolService::handle(
                 SettingsProtocolStatus::UnsupportedMessage);
     }
 
-    const std::uint16_t expectedPayloadSize =
+    const bool payloadSizeValid =
         request.type == SettingsMessageType::WriteRequest
-            ? static_cast<std::uint16_t>(UserSettingsPayloadSize)
-            : 0U;
-    if (request.status != SettingsProtocolStatus::Ok ||
-        request.payloadSize != expectedPayloadSize) {
+            ? (request.payloadSize == UserSettingsPayloadSize ||
+               request.payloadSize == LegacyUserSettingsPayloadSize)
+            : request.payloadSize == 0U;
+    if (request.status != SettingsProtocolStatus::Ok || !payloadSizeValid) {
         return responseFor(
             request,
             responseType,
@@ -235,7 +235,8 @@ SettingsProtocolFrame SettingsProtocolService::handle(
     }
 
     application::UserSettings settings{};
-    if (!decodeUserSettingsPayload(request.payload, settings)) {
+    if (!decodeUserSettingsPayload(
+            request.payload, request.payloadSize, settings)) {
         return responseFor(
             request,
             responseType,

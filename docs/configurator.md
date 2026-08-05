@@ -22,6 +22,10 @@ Le script compile l'outil puis ouvre l'assistant. La cible par défaut est
 `config/user-settings.conf`, ignorée par Git. L'assistant propose les valeurs
 actuelles entre crochets ; appuyer sur Entrée les conserve.
 
+Le dernier écran propose d'éditer le catalogue modulaire. Ce passage est
+facultatif ; s'il est choisi, chacune des 43 fonctionnalités possède sa propre
+question oui/non et reste soumise aux barrières d'implémentation et de sûreté.
+
 Une configuration typique pour le véhicule de référence sans capteur de capot
 peut conserver trois appuis sur verrouillage, choisir `capot désactivé` et régler
 librement la durée moteur entre 1 et 60 minutes.

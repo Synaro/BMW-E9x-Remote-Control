@@ -5,6 +5,7 @@ project(bmw_e9x_remote_control LANGUAGES CXX)
 add_library(bmw_remote_core
     src/infrastructure/actuator_safety_supervisor.cpp
     src/application/controller.cpp
+    src/application/feature_catalog.cpp
     src/application/lock_command_gate.cpp
     src/application/lock_sequence_detector.cpp
     src/application/profile_readiness.cpp

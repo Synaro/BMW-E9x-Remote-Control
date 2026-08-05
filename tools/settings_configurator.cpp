@@ -306,6 +306,42 @@ bool promptDriverEntryMode(DriverEntryMode& mode) {
     }
 }
 
+bool promptFeatureSelection(UserSettings& settings) {
+    bool editFeatures = false;
+    if (!promptBoolean(
+            "Modifier les fonctionnalites modulaires",
+            editFeatures)) {
+        return false;
+    }
+    if (!editFeatures) {
+        return true;
+    }
+
+    std::cout
+        << "\nChaque option exprime une preference. Les fonctions non implementees "
+        << "ou non qualifiees resteront bloquees.\n";
+    const char* previousCategory = nullptr;
+    for (const bmw::remote::application::FeatureDescriptor& feature :
+         bmw::remote::application::featureCatalog()) {
+        const char* const category =
+            bmw::remote::application::toString(feature.category);
+        if (previousCategory == nullptr ||
+            std::string_view{previousCategory} != category) {
+            std::cout << "\n[" << category << "]\n";
+            previousCategory = category;
+        }
+
+        bool enabled = settings.features.enabled(feature.id);
+        if (!promptBoolean(
+                std::string{feature.displayName} + " (" + feature.code + ")",
+                enabled) ||
+            !settings.features.setEnabled(feature.id, enabled)) {
+            return false;
+        }
+    }
+    return true;
+}
+
 bool configureInteractively(UserSettings& settings) {
     constexpr std::uint32_t MillisecondsPerMinute{60'000U};
     constexpr std::uint32_t MillisecondsPerSecond{1'000U};
@@ -364,12 +400,14 @@ bool configureInteractively(UserSettings& settings) {
         settings.lockPressCount = static_cast<std::uint8_t>(pressCount);
 
         if (bmw::remote::application::validateUserSettings(settings).valid()) {
-            return true;
+            break;
         }
         std::cout
             << "\nLes temporisations de verrouillage sont incoherentes. "
             << "Merci de les corriger.\n\n";
     }
+
+    return promptFeatureSelection(settings);
 }
 
 int runInteractive(const Options& options) {

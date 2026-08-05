@@ -89,6 +89,9 @@ UserSettingsValidation validateUserSettings(
         minimumSequenceTime > settings.lockMaximumSequenceMs) {
         validation.add(UserSettingsReason::InconsistentLockTiming);
     }
+    if (!settings.features.valid()) {
+        validation.add(UserSettingsReason::InvalidFeatureMask);
+    }
 
     return validation;
 }

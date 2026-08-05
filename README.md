@@ -23,6 +23,10 @@ Le premier jalon logiciel est opérationnel :
 - garde fermée par défaut sur leur provenance, fraîcheur et ordre ;
 - adaptateur CAN lecture seule désactivé par défaut, avec fronts et compteur roulant ;
 - profil utilisateur validé avant application, sans recompilation du noyau ;
+- catalogue stable de 43 fonctionnalités, toutes activables séparément et
+  désactivées par défaut ;
+- résolution fermée par défaut entre préférence, implémentation, capacités et
+  qualification véhicule ;
 - configurateur Windows interactif avec enregistrement vérifié et remplacement sûr ;
 - protocole binaire de configuration versionné, borné et protégé par CRC ;
 - réception progressive des trames avec resynchronisation et délai inter-octets ;
@@ -51,7 +55,7 @@ Le premier jalon logiciel est opérationnel :
 - campagnes déterministes de perte, retard et corruption des données véhicule ;
 - superviseur logiciel des actionneurs avec heartbeat, séquencement, retours
   d'état et défauts mémorisés ;
-- 119 tests C++, 15 scénarios du simulateur, 3 contrôles du configurateur et
+- 127 tests C++, 15 scénarios du simulateur, 3 contrôles du configurateur et
   21 tests Python automatisés en intégration continue.
 
 L'adaptateur BMW qui observera réellement le verrouillage, qualifiera la reprise
@@ -99,6 +103,8 @@ Le contrat du futur décodeur CAN de verrouillage est défini dans
 [docs/can-lock-command-adapter.md](docs/can-lock-command-adapter.md).
 Les préférences, leurs limites et leur future persistance sont décrites dans
 [docs/user-configuration.md](docs/user-configuration.md).
+Le catalogue modulaire, les niveaux de livraison et la compatibilité iOS/Android
+sont décrits dans [docs/feature-framework.md](docs/feature-framework.md).
 Le journal binaire redondant est spécifié dans
 [docs/settings-persistence.md](docs/settings-persistence.md).
 Le configurateur PC est décrit dans
@@ -231,6 +237,13 @@ Sous Windows, l'exécutable interactif peut être construit avec :
 ```powershell
 .\scripts\build-simulator.ps1
 .\build\bmw_remote_simulator.exe
+```
+
+Le catalogue complet des options et leur niveau de livraison est affichable
+sans lancer de scénario :
+
+```powershell
+.\build\bmw_remote_simulator.exe --list-features
 ```
 
 Quinze scénarios permettent de tester le parcours nominal, le capot obligatoire
