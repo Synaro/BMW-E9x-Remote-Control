@@ -7,6 +7,7 @@
 #include <vector>
 
 #include "bmw_remote/application/controller.hpp"
+#include "bmw_remote/application/feature_catalog.hpp"
 #include "bmw_remote/application/lock_command_gate.hpp"
 #include "bmw_remote/application/safety_policy.hpp"
 #include "bmw_remote/application/user_settings.hpp"
@@ -314,6 +315,20 @@ void printScenarioList() {
         << "supervised-runtime connects controller, runtime and supervisor\n";
 }
 
+void printFeatureList() {
+    std::cout
+        << "code | categorie | classe | jalon | defaut\n"
+        << "-----|-----------|--------|-------|-------\n";
+    for (const application::FeatureDescriptor& feature :
+         application::featureCatalog()) {
+        std::cout << feature.code << " | "
+                  << application::toString(feature.category) << " | "
+                  << application::toString(feature.controlClass) << " | "
+                  << application::toString(feature.releaseTier)
+                  << " | disabled\n";
+    }
+}
+
 void printUsage(const char* const executable) {
     std::cerr
         << "Usage:\n"
@@ -324,6 +339,7 @@ void printUsage(const char* const executable) {
         << "  " << executable
         << " --trace <trace.cantrace.csv> [--hood required|optional]\n"
         << "  " << executable << " --list-scenarios\n"
+        << "  " << executable << " --list-features\n"
         << "  " << executable << " --sandbox\n"
         << "  " << executable << " --help\n"
         << "  " << executable << " <trace.cantrace.csv>  (legacy form)\n";
@@ -342,6 +358,17 @@ void printUserSettings(const application::UserSettings& settings) {
         << "lock_minimum_gap_ms: " << settings.lockMinimumGapMs << '\n'
         << "lock_maximum_gap_ms: " << settings.lockMaximumGapMs << '\n'
         << "lock_sequence_window_ms: " << settings.lockMaximumSequenceMs << '\n';
+
+    std::cout << "enabled_features:";
+    bool hasEnabledFeature = false;
+    for (const application::FeatureDescriptor& feature :
+         application::featureCatalog()) {
+        if (settings.features.enabled(feature.id)) {
+            std::cout << (hasEnabledFeature ? "," : " ") << feature.code;
+            hasEnabledFeature = true;
+        }
+    }
+    std::cout << (hasEnabledFeature ? "\n" : " none\n");
 }
 
 bool loadUserSettings(
@@ -1471,6 +1498,10 @@ int main(const int argumentCount, char* arguments[]) {
     }
     if (command == "--list-scenarios" && argumentCount == 2) {
         printScenarioList();
+        return 0;
+    }
+    if (command == "--list-features" && argumentCount == 2) {
+        printFeatureList();
         return 0;
     }
     if (command == "--sandbox" && argumentCount == 2) {

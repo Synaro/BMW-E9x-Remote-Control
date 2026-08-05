@@ -17,15 +17,20 @@ jusqu'à la validation complète de la nouvelle.
 | Offset | Taille | Contenu |
 |---:|---:|---|
 | 0 | 4 | Signature ASCII `BMRC` |
-| 4 | 2 | Version de schéma, actuellement `1` |
+| 4 | 2 | Version de schéma, actuellement `2` |
 | 6 | 2 | Taille de la charge utile |
 | 8 | 4 | Compteur de génération |
-| 12 | 24 | Valeurs `UserSettings` encodées explicitement |
-| 36 | 4 | CRC-32 de l'en-tête et de la charge utile |
+| 12 | 32 | Valeurs `UserSettings` encodées explicitement |
+| 44 | 4 | CRC-32 de l'en-tête et de la charge utile |
 
-L'enregistrement occupe 40 octets dans chaque emplacement. Les entiers sont
+L'enregistrement V2 occupe 48 octets dans chaque emplacement. Les entiers sont
 encodés explicitement en little-endian ; la disposition mémoire du compilateur
 n'est jamais enregistrée directement.
+
+Les octets 24 à 31 du payload V2 contiennent le masque de fonctionnalités
+modulaires. Le lecteur reconnaît aussi un enregistrement V1 de 40 octets avec un
+payload de 24 octets. Il le migre en mémoire en laissant toutes les nouvelles
+fonctionnalités désactivées ; la prochaine sauvegarde produit une V2.
 
 ## Chargement
 

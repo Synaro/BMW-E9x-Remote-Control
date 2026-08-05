@@ -15,6 +15,7 @@ New-Item -ItemType Directory -Path $buildDirectory -Force | Out-Null
     -Werror `
     -I (Join-Path $projectRoot 'include') `
     -I $projectRoot `
+    (Join-Path $projectRoot 'src/application/feature_catalog.cpp') `
     (Join-Path $projectRoot 'src/application/user_settings.cpp') `
     (Join-Path $projectRoot 'src/infrastructure/settings_identity.cpp') `
     (Join-Path $projectRoot 'src/infrastructure/settings_payload.cpp') `

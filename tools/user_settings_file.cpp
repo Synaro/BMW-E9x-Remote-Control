@@ -16,6 +16,8 @@
 namespace bmw::remote::host {
 namespace {
 
+constexpr std::string_view FeatureKeyPrefix{"feature."};
+
 std::string_view trim(std::string_view text) noexcept {
     while (!text.empty() &&
            std::isspace(static_cast<unsigned char>(text.front())) != 0) {
@@ -125,6 +127,15 @@ bool applySetting(
         return parseScaledDuration(value, 1'000U, settings.driverTakeoverTimeoutMs);
     }
 
+    if (key.size() > FeatureKeyPrefix.size() &&
+        key.substr(0U, FeatureKeyPrefix.size()) == FeatureKeyPrefix) {
+        const application::FeatureDescriptor* const feature =
+            application::findFeature(key.substr(FeatureKeyPrefix.size()));
+        bool enabled = false;
+        return feature != nullptr && parseBoolean(value, enabled) &&
+               settings.features.setEnabled(feature->id, enabled);
+    }
+
     std::uint32_t parsed = 0U;
     if (!parseUnsigned(value, parsed)) {
         return false;
@@ -153,6 +164,11 @@ bool applySetting(
 }
 
 bool knownKey(const std::string_view key) noexcept {
+    if (key.size() > FeatureKeyPrefix.size() &&
+        key.substr(0U, FeatureKeyPrefix.size()) == FeatureKeyPrefix) {
+        return application::findFeature(
+                   key.substr(FeatureKeyPrefix.size())) != nullptr;
+    }
     return key == "remote_start_enabled" ||
            key == "hood_monitoring" ||
            key == "driver_entry_mode" ||
@@ -175,7 +191,8 @@ bool sameSettings(
            left.lockPressCount == right.lockPressCount &&
            left.lockMinimumGapMs == right.lockMinimumGapMs &&
            left.lockMaximumGapMs == right.lockMaximumGapMs &&
-           left.lockMaximumSequenceMs == right.lockMaximumSequenceMs;
+           left.lockMaximumSequenceMs == right.lockMaximumSequenceMs &&
+           left.features.mask() == right.features.mask();
 }
 
 void removeIfPresent(const std::filesystem::path& path) noexcept {
@@ -308,7 +325,15 @@ bool writeUserSettings(
            << "\n"
            << "lock_minimum_gap_ms=" << settings.lockMinimumGapMs << "\n"
            << "lock_maximum_gap_ms=" << settings.lockMaximumGapMs << "\n"
-           << "lock_sequence_window_ms=" << settings.lockMaximumSequenceMs << "\n";
+           << "lock_sequence_window_ms=" << settings.lockMaximumSequenceMs
+           << "\n\n# Fonctionnalites modulaires ; toutes sont desactivees par defaut.\n";
+
+    for (const application::FeatureDescriptor& feature :
+         application::featureCatalog()) {
+        output << FeatureKeyPrefix << feature.code << '='
+               << (settings.features.enabled(feature.id) ? "true" : "false")
+               << "\n";
+    }
 
     if (!output) {
         error = "unable to write configuration";

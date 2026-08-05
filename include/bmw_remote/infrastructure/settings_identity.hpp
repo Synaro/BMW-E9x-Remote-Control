@@ -13,7 +13,7 @@ inline constexpr std::array<std::uint8_t, 4U> SettingsDeviceProductSignature = {
     'E', '9', 'R', 'C'};
 
 inline constexpr std::uint8_t FirmwareVersionMajor = 0U;
-inline constexpr std::uint8_t FirmwareVersionMinor = 1U;
+inline constexpr std::uint8_t FirmwareVersionMinor = 2U;
 inline constexpr std::uint8_t FirmwareVersionPatch = 0U;
 
 enum class SettingsHardwareTarget : std::uint8_t {

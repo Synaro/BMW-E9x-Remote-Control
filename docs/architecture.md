@@ -79,13 +79,19 @@ encode deux générations versionnées avec CRC, sélectionne la plus récente v
 et fournit un retour fail-safe si aucune ne peut être chargée. Voir
 [settings-persistence.md](settings-persistence.md).
 
-Le protocole de configuration transporte le même payload fixe de 24 octets que
+Le protocole de configuration transporte le même payload V2 fixe de 32 octets que
 le journal, sans exposer son format de stockage. Le codec vérifie la version, la
 taille et le CRC avant que `SettingsProtocolService` n'accède au port. Le service
 exige une session déclarée authentifiée et refuse toute écriture lorsque le
 contrôleur n'est pas en `Idle`. L'établissement de cette session appartient au
 futur adaptateur USB, Bluetooth ou réseau. Voir
 [settings-protocol.md](settings-protocol.md).
+
+Le catalogue de fonctionnalités appartient aussi à la couche application. Ses
+identifiants, catégories et besoins de capacités sont indépendants de l'ESP32 et
+des bus BMW. Le résolveur distingue la préférence enregistrée, l'implémentation,
+les capacités présentes et la qualification véhicule avant de déclarer une
+fonction effective. Voir [feature-framework.md](feature-framework.md).
 
 `SettingsStreamReceiver` transforme un flux d'octets en trames complètes sans
 allocation dynamique. Il recherche la magie, borne la longueur dès le header,

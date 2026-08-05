@@ -59,6 +59,20 @@
 - [ ] Qualifier une interface de capture brute compatible E9x
 - [ ] Collecter les premières paires privées sur le véhicule de référence
 
+## Jalon 1.4 — Plateforme fonctionnelle modulaire
+
+- [x] Catalogue stable des 43 fonctionnalités proposées
+- [x] Activation indépendante, désactivée par défaut
+- [x] Classification lecture seule, confort futur et banc uniquement
+- [x] Résolution séparée des préférences, capacités et qualifications
+- [x] Persistance V2 du masque avec migration automatique de la V1
+- [x] Compatibilité de modèle pour compagnons iOS ou Android
+- [ ] Ajouter les comportements V1 de télémétrie en simulation
+- [ ] Concevoir le protocole applicatif commun aux compagnons mobiles
+- [ ] Développer le premier compagnon iOS
+- [ ] Développer ensuite le compagnon Android
+- [ ] Ajouter une interface Web embarquée après choix et revue du modèle d'accès
+
 ## Jalon 2 — Spécification matérielle
 
 - [x] Choisir l'ESP32-S3-DevKitC-1-N8 pour le prototype de banc

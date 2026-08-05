@@ -25,11 +25,11 @@ public:
 
 class JournaledUserSettingsStore final : public UserSettingsStore {
 public:
-    static constexpr std::uint16_t SchemaVersion = 1U;
+    static constexpr std::uint16_t SchemaVersion = 2U;
     static constexpr std::size_t SlotSize = 64U;
     static constexpr std::size_t SlotCount = 2U;
     static constexpr std::size_t RequiredCapacity = SlotSize * SlotCount;
-    static constexpr std::size_t RecordSize = 40U;
+    static constexpr std::size_t RecordSize = 48U;
 
     explicit JournaledUserSettingsStore(
         SettingsByteStorage& storage) noexcept

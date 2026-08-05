@@ -24,6 +24,7 @@ et le configurateur le lit ou l'écrit par USB.
 | `lock_minimum_gap_ms` | 50 à 5 000 | 80 | Filtrage des rebonds |
 | `lock_maximum_gap_ms` | 50 à 5 000 | 1 500 | Intervalle maximal entre deux appuis |
 | `lock_sequence_window_ms` | 500 à 15 000 | 3 000 | Durée totale maximale de la séquence |
+| `feature.<code>` | `true`, `false` | `false` | Demande indépendante d'une fonctionnalité du catalogue |
 
 Les temporisations de verrouillage doivent aussi être cohérentes entre elles.
 Par exemple, l'intervalle minimal ne peut pas dépasser l'intervalle maximal et
@@ -32,6 +33,29 @@ la fenêtre totale doit pouvoir contenir le nombre d'appuis choisi.
 `hood_monitoring=disabled` correspond au véhicule de référence dépourvu de
 capteur. Aucune valeur fictive « capot fermé » n'est créée : le signal est
 réellement retiré de la décision.
+
+## Fonctionnalités modulaires
+
+Le fichier accepte les 43 identifiants stables du catalogue sous la forme :
+
+```ini
+feature.cold_engine_guard=true
+feature.alarm_push_notification=false
+feature.smartphone_voice_assistant=false
+```
+
+Chaque option absente ou à `false` reste désactivée. Une clé inconnue, dupliquée
+ou une valeur autre que `true`/`false` fait rejeter le fichier complet.
+
+Une préférence à `true` exprime une demande ; elle ne contourne ni l'absence
+d'implémentation, ni une capacité matérielle manquante, ni la qualification BMW,
+ni les barrières imposées aux commandes critiques. Les détails et la liste des
+niveaux de livraison sont dans
+[feature-framework.md](feature-framework.md).
+
+Les fonctions génériques liées au téléphone acceptent une future application
+iOS ou Android. Le format de configuration est identique sur les deux
+plateformes ; l'application compagnon n'est pas encore livrée.
 
 ## Créer sa configuration avec l'assistant
 
@@ -45,6 +69,10 @@ Il charge `config/user-settings.conf` s'il existe, sinon il part des valeurs par
 défaut. Entrée conserve la valeur affichée. Le fichier final est relu et validé
 avant de remplacer l'ancienne version ; une saisie interrompue ou invalide ne
 détruit pas la configuration précédente.
+
+À la fin, l'assistant propose facultativement de parcourir le catalogue des 43
+fonctionnalités. Répondre `non` conserve le masque existant ; répondre `oui`
+permet d'activer ou désactiver chaque entrée séparément.
 
 Afficher ou contrôler le fichier sans le modifier :
 

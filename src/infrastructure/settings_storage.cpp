@@ -17,6 +17,7 @@ constexpr std::size_t GenerationOffset = 8U;
 constexpr std::size_t PayloadOffset = 12U;
 constexpr std::size_t PayloadSize = UserSettingsPayloadSize;
 constexpr std::size_t CrcOffset = PayloadOffset + PayloadSize;
+constexpr std::uint16_t LegacySchemaVersion = 1U;
 
 struct DecodedRecord final {
     application::UserSettings settings{};
@@ -103,18 +104,28 @@ void writeU32(
         }
     }
 
-    if (readU16(record.data() + VersionOffset) !=
-            JournaledUserSettingsStore::SchemaVersion ||
-        readU16(record.data() + PayloadSizeOffset) != PayloadSize ||
-        readU32(record.data() + CrcOffset) != crc32(record.data(), CrcOffset)) {
+    const std::uint16_t version = readU16(record.data() + VersionOffset);
+    const std::size_t storedPayloadSize =
+        readU16(record.data() + PayloadSizeOffset);
+    const bool supportedVersion =
+        (version == LegacySchemaVersion &&
+         storedPayloadSize == LegacyUserSettingsPayloadSize) ||
+        (version == JournaledUserSettingsStore::SchemaVersion &&
+         storedPayloadSize == UserSettingsPayloadSize);
+    const std::size_t storedCrcOffset = PayloadOffset + storedPayloadSize;
+    if (!supportedVersion ||
+        storedCrcOffset + sizeof(std::uint32_t) > record.size() ||
+        readU32(record.data() + storedCrcOffset) !=
+            crc32(record.data(), storedCrcOffset)) {
         return decoded;
     }
 
     UserSettingsPayload payload{};
-    for (std::size_t index = 0U; index < payload.size(); ++index) {
+    for (std::size_t index = 0U; index < storedPayloadSize; ++index) {
         payload[index] = record[PayloadOffset + index];
     }
-    if (!decodeUserSettingsPayload(payload, decoded.settings)) {
+    if (!decodeUserSettingsPayload(
+            payload, storedPayloadSize, decoded.settings)) {
         return DecodedRecord{};
     }
 
