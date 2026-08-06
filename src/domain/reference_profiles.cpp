@@ -6,6 +6,10 @@ namespace {
 constexpr std::array<SignalSupport, vehicleSignalCount()> ReferenceSignals = {
     SignalSupport::Candidate,
     SignalSupport::Candidate,
+    SignalSupport::Candidate,
+    SignalSupport::Candidate,
+    SignalSupport::Candidate,
+    SignalSupport::Candidate,
     SignalSupport::Unavailable,
     SignalSupport::Candidate,
     SignalSupport::Candidate,

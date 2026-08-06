@@ -63,6 +63,10 @@ using bmw::remote::application::ProfileReadinessReason;
 using bmw::remote::application::SafetyPolicy;
 using bmw::remote::application::SafetyPolicyConfig;
 using bmw::remote::application::SafetyReason;
+using bmw::remote::application::TelemetryAlertType;
+using bmw::remote::application::TelemetryConditionState;
+using bmw::remote::application::TelemetryMonitor;
+using bmw::remote::application::TelemetryMonitorConfig;
 using bmw::remote::application::UserSettings;
 using bmw::remote::application::UserSettingsReason;
 using bmw::remote::domain::Gear;
@@ -102,8 +106,10 @@ using bmw::remote::infrastructure::VehicleGateway;
 using bmw::remote::simulation::SyntheticBodyState;
 using bmw::remote::simulation::SyntheticCanDecoder;
 using bmw::remote::simulation::SyntheticPowertrainState;
+using bmw::remote::simulation::SyntheticTelemetryState;
 using bmw::remote::simulation::makeSyntheticBodyFrame;
 using bmw::remote::simulation::makeSyntheticPowertrainFrame;
+using bmw::remote::simulation::makeSyntheticTelemetryFrame;
 using bmw::remote::simulation::syntheticVehicleProfile;
 using bmw::remote::host::SandboxSession;
 
@@ -670,6 +676,99 @@ void testFeatureResolverGatesWritesAndSupportsBothPhonePlatforms() {
               .effective());
 }
 
+TelemetryMonitorConfig simulatedTelemetryConfig() {
+    TelemetryMonitorConfig config{};
+    CHECK(config.requestedFeatures.setEnabled(FeatureId::ColdEngineGuard, true));
+    CHECK(config.requestedFeatures.setEnabled(
+        FeatureId::DpfRegenerationIndicator, true));
+    CHECK(config.requestedFeatures.setEnabled(
+        FeatureId::TransmissionOverheatAlert, true));
+    config.runtime.target = FeatureExecutionTarget::Simulation;
+    config.runtime.implementedFeatures = config.requestedFeatures.mask();
+    config.runtime.availableCapabilities =
+        bmw::remote::application::featureCapabilityMask(
+            FeatureCapability::VehicleStateRead);
+    config.runtime.vehicleSignalsQualified = true;
+    return config;
+}
+
+void testTelemetryMonitorIsReadOnlyFeatureGatedAndEdgeTriggered() {
+    VehicleState vehicle = safeAutomaticVehicle();
+    vehicle.engineRpm = Observed<std::uint16_t>::fresh(2'500U);
+    vehicle.coolantTemperatureC = Observed<std::int16_t>::fresh(60);
+    vehicle.engineOilTemperatureC = Observed<std::int16_t>::fresh(55);
+    vehicle.transmissionOilTemperatureC = Observed<std::int16_t>::fresh(111);
+    vehicle.dpfRegenerationActive = Observed<bool>::fresh(true);
+
+    TelemetryMonitor disabled{};
+    const auto disabledReport = disabled.evaluate(vehicle);
+    CHECK(disabledReport.coldEngineGuard == TelemetryConditionState::Disabled);
+    CHECK(disabledReport.dpfRegeneration == TelemetryConditionState::Disabled);
+    CHECK(disabledReport.transmissionOverheat ==
+          TelemetryConditionState::Disabled);
+    CHECK(disabledReport.alertCount == 0U);
+
+    TelemetryMonitor monitor{simulatedTelemetryConfig()};
+    const auto active = monitor.evaluate(vehicle);
+    CHECK(active.coldEngineGuard == TelemetryConditionState::Active);
+    CHECK(active.dpfRegeneration == TelemetryConditionState::Active);
+    CHECK(active.transmissionOverheat == TelemetryConditionState::Active);
+    CHECK(active.contains(TelemetryAlertType::ColdEngineHighRpm));
+    CHECK(active.contains(TelemetryAlertType::DpfRegenerationStarted));
+    CHECK(active.contains(TelemetryAlertType::TransmissionOverheat));
+
+    const auto repeated = monitor.evaluate(vehicle);
+    CHECK(repeated.alertCount == 0U);
+
+    vehicle.engineRpm = Observed<std::uint16_t>::fresh(1'800U);
+    vehicle.dpfRegenerationActive = Observed<bool>::fresh(false);
+    vehicle.transmissionOilTemperatureC = Observed<std::int16_t>::fresh(104);
+    const auto recovered = monitor.evaluate(vehicle);
+    CHECK(recovered.coldEngineGuard == TelemetryConditionState::Normal);
+    CHECK(recovered.dpfRegeneration == TelemetryConditionState::Normal);
+    CHECK(recovered.transmissionOverheat == TelemetryConditionState::Normal);
+    CHECK(recovered.contains(TelemetryAlertType::ColdEngineRecovered));
+    CHECK(recovered.contains(TelemetryAlertType::DpfRegenerationStopped));
+    CHECK(recovered.contains(
+        TelemetryAlertType::TransmissionTemperatureRecovered));
+}
+
+void testTelemetryMonitorRequiresFreshSignalsAndUsesHysteresis() {
+    TelemetryMonitor monitor{simulatedTelemetryConfig()};
+    VehicleState vehicle = safeAutomaticVehicle();
+    vehicle.engineRpm = Observed<std::uint16_t>::fresh(3'000U);
+    vehicle.coolantTemperatureC = {};
+    vehicle.engineOilTemperatureC = {};
+    vehicle.transmissionOilTemperatureC = {};
+    vehicle.dpfRegenerationActive = {};
+
+    const auto unavailable = monitor.evaluate(vehicle);
+    CHECK(unavailable.coldEngineGuard == TelemetryConditionState::Unavailable);
+    CHECK(unavailable.dpfRegeneration == TelemetryConditionState::Unavailable);
+    CHECK(unavailable.transmissionOverheat ==
+          TelemetryConditionState::Unavailable);
+    CHECK(unavailable.alertCount == 0U);
+
+    vehicle.coolantTemperatureC = Observed<std::int16_t>::fresh(80);
+    vehicle.engineOilTemperatureC = Observed<std::int16_t>::fresh(80);
+    vehicle.transmissionOilTemperatureC = Observed<std::int16_t>::fresh(111);
+    vehicle.dpfRegenerationActive = Observed<bool>::fresh(false);
+    CHECK(monitor.evaluate(vehicle).transmissionOverheat ==
+          TelemetryConditionState::Active);
+    vehicle.transmissionOilTemperatureC = Observed<std::int16_t>::fresh(108);
+    CHECK(monitor.evaluate(vehicle).transmissionOverheat ==
+          TelemetryConditionState::Active);
+    vehicle.transmissionOilTemperatureC = Observed<std::int16_t>::fresh(104);
+    CHECK(monitor.evaluate(vehicle).transmissionOverheat ==
+          TelemetryConditionState::Normal);
+
+    TelemetryMonitorConfig invalidConfig = simulatedTelemetryConfig();
+    invalidConfig.temperatureHysteresisC = 0U;
+    TelemetryMonitor invalidMonitor{invalidConfig};
+    CHECK(invalidMonitor.evaluate(vehicle).transmissionOverheat ==
+          TelemetryConditionState::Unavailable);
+}
+
 void testDefaultUserSettingsAreValidAndPreserved() {
     const UserSettings settings{};
     const auto configuration = bmw::remote::application::makeUserConfiguration(
@@ -682,6 +781,10 @@ void testDefaultUserSettingsAreValidAndPreserved() {
     CHECK(configuration.controller.maximumRemoteRunTimeMs == 900'000U);
     CHECK(configuration.controller.driverTakeoverTimeoutMs == 60'000U);
     CHECK(configuration.lockSequence.requiredPresses == 3U);
+    CHECK(configuration.telemetry.coldEngineMaximumRpm == 2'200U);
+    CHECK(configuration.telemetry.engineWarmTemperatureC == 75);
+    CHECK(configuration.telemetry.transmissionOverheatTemperatureC == 110);
+    CHECK(configuration.telemetry.temperatureHysteresisC == 5U);
     CHECK(settings.features.mask() == 0U);
 }
 
@@ -696,6 +799,11 @@ void testUserSettingsConfigureHoodTimersEntryAndLocks() {
     settings.lockMinimumGapMs = 100U;
     settings.lockMaximumGapMs = 2'000U;
     settings.lockMaximumSequenceMs = 6'000U;
+    settings.coldEngineMaximumRpm = 2'500U;
+    settings.engineWarmTemperatureC = 80U;
+    settings.transmissionOverheatTemperatureC = 120U;
+    settings.temperatureAlertHysteresisC = 8U;
+    CHECK(settings.features.setEnabled(FeatureId::ColdEngineGuard, true));
 
     const auto configuration = bmw::remote::application::makeUserConfiguration(
         settings,
@@ -709,6 +817,12 @@ void testUserSettingsConfigureHoodTimersEntryAndLocks() {
     CHECK(configuration.controller.driverTakeoverTimeoutMs == 120'000U);
     CHECK(configuration.lockSequence.requiredPresses == 4U);
     CHECK(configuration.lockSequence.maximumSequenceMs == 6'000U);
+    CHECK(configuration.telemetry.requestedFeatures.enabled(
+        FeatureId::ColdEngineGuard));
+    CHECK(configuration.telemetry.coldEngineMaximumRpm == 2'500U);
+    CHECK(configuration.telemetry.engineWarmTemperatureC == 80);
+    CHECK(configuration.telemetry.transmissionOverheatTemperatureC == 120);
+    CHECK(configuration.telemetry.temperatureHysteresisC == 8U);
 }
 
 void testUnsafeUserSettingsAreRejectedFailClosed() {
@@ -719,6 +833,10 @@ void testUnsafeUserSettingsAreRejectedFailClosed() {
     settings.lockMinimumGapMs = 2'000U;
     settings.lockMaximumGapMs = 500U;
     settings.lockMaximumSequenceMs = 400U;
+    settings.coldEngineMaximumRpm = 500U;
+    settings.engineWarmTemperatureC = 20U;
+    settings.transmissionOverheatTemperatureC = 200U;
+    settings.temperatureAlertHysteresisC = 0U;
 
     const auto configuration = bmw::remote::application::makeUserConfiguration(
         settings,
@@ -733,6 +851,14 @@ void testUnsafeUserSettingsAreRejectedFailClosed() {
         UserSettingsReason::LockPressCountOutOfRange));
     CHECK(configuration.validation.contains(
         UserSettingsReason::InconsistentLockTiming));
+    CHECK(configuration.validation.contains(
+        UserSettingsReason::ColdEngineMaximumRpmOutOfRange));
+    CHECK(configuration.validation.contains(
+        UserSettingsReason::EngineWarmTemperatureOutOfRange));
+    CHECK(configuration.validation.contains(
+        UserSettingsReason::TransmissionOverheatTemperatureOutOfRange));
+    CHECK(configuration.validation.contains(
+        UserSettingsReason::TemperatureAlertHysteresisOutOfRange));
     CHECK(!configuration.controller.remoteStartEnabled);
 }
 
@@ -864,6 +990,10 @@ void testUserSettingsFileWriterRoundTripsEverySetting() {
     original.lockMinimumGapMs = 120U;
     original.lockMaximumGapMs = 2'200U;
     original.lockMaximumSequenceMs = 9'000U;
+    original.coldEngineMaximumRpm = 2'600U;
+    original.engineWarmTemperatureC = 82U;
+    original.transmissionOverheatTemperatureC = 118U;
+    original.temperatureAlertHysteresisC = 7U;
     CHECK(original.features.setEnabled(FeatureId::ColdEngineGuard, true));
     CHECK(original.features.setEnabled(FeatureId::VirtualObdBle, true));
     std::ostringstream output{};
@@ -885,6 +1015,12 @@ void testUserSettingsFileWriterRoundTripsEverySetting() {
     CHECK(loaded.lockMaximumGapMs == original.lockMaximumGapMs);
     CHECK(loaded.lockMaximumSequenceMs == original.lockMaximumSequenceMs);
     CHECK(loaded.features.mask() == original.features.mask());
+    CHECK(loaded.coldEngineMaximumRpm == original.coldEngineMaximumRpm);
+    CHECK(loaded.engineWarmTemperatureC == original.engineWarmTemperatureC);
+    CHECK(loaded.transmissionOverheatTemperatureC ==
+          original.transmissionOverheatTemperatureC);
+    CHECK(loaded.temperatureAlertHysteresisC ==
+          original.temperatureAlertHysteresisC);
     CHECK(output.str().find("feature.cold_engine_guard=true") !=
           std::string::npos);
     CHECK(output.str().find("feature.forced_dpf_regeneration=false") !=
@@ -1065,6 +1201,38 @@ void seedLegacySettingsRecord(
         testSettingsCrc32(storage.bytes.data(), CrcOffset));
 }
 
+void seedFeatureSettingsRecord(
+    MemorySettingsStorage& storage,
+    const UserSettings& settings) {
+    constexpr std::size_t PayloadOffset = 12U;
+    constexpr std::size_t CrcOffset =
+        PayloadOffset +
+        bmw::remote::infrastructure::FeatureUserSettingsPayloadSize;
+    bmw::remote::infrastructure::UserSettingsPayload payload{};
+    CHECK(bmw::remote::infrastructure::encodeUserSettingsPayload(
+        settings, payload));
+
+    storage.bytes.fill(0xFFU);
+    storage.bytes[0U] = 'B';
+    storage.bytes[1U] = 'M';
+    storage.bytes[2U] = 'R';
+    storage.bytes[3U] = 'C';
+    writeTestU16(storage.bytes.data() + 4U, 2U);
+    writeTestU16(
+        storage.bytes.data() + 6U,
+        static_cast<std::uint16_t>(
+            bmw::remote::infrastructure::FeatureUserSettingsPayloadSize));
+    writeTestU32(storage.bytes.data() + 8U, 8U);
+    for (std::size_t index = 0U;
+         index < bmw::remote::infrastructure::FeatureUserSettingsPayloadSize;
+         ++index) {
+        storage.bytes[PayloadOffset + index] = payload[index];
+    }
+    writeTestU32(
+        storage.bytes.data() + CrcOffset,
+        testSettingsCrc32(storage.bytes.data(), CrcOffset));
+}
+
 void testEmptySettingsStorageDisablesRemoteStart() {
     MemorySettingsStorage storage{};
     JournaledUserSettingsStore store{storage};
@@ -1116,6 +1284,30 @@ void testLegacySettingsRecordMigratesToFeatureSchema() {
     CHECK(store.load(reloaded));
     CHECK(reloaded.features.enabled(FeatureId::ColdEngineGuard));
     CHECK(reloaded.maximumRemoteRunTimeMs == 18U * 60U * 1'000U);
+}
+
+void testFeatureSettingsRecordMigratesTelemetryDefaults() {
+    MemorySettingsStorage storage{};
+    UserSettings featureSchema{};
+    CHECK(featureSchema.features.setEnabled(FeatureId::ColdEngineGuard, true));
+    featureSchema.coldEngineMaximumRpm = 3'000U;
+    featureSchema.transmissionOverheatTemperatureC = 130U;
+    seedFeatureSettingsRecord(storage, featureSchema);
+    JournaledUserSettingsStore store{storage};
+
+    UserSettings migrated{};
+    CHECK(store.load(migrated));
+    CHECK(migrated.features.enabled(FeatureId::ColdEngineGuard));
+    CHECK(migrated.coldEngineMaximumRpm == 2'200U);
+    CHECK(migrated.engineWarmTemperatureC == 75U);
+    CHECK(migrated.transmissionOverheatTemperatureC == 110U);
+    CHECK(migrated.temperatureAlertHysteresisC == 5U);
+
+    migrated.coldEngineMaximumRpm = 2'800U;
+    CHECK(store.save(migrated));
+    UserSettings reloaded{};
+    CHECK(store.load(reloaded));
+    CHECK(reloaded.coldEngineMaximumRpm == 2'800U);
 }
 
 void testCorruptedNewestSettingsFallBackToPreviousSlot() {
@@ -1179,6 +1371,10 @@ void testSettingsPayloadRoundTripsEveryField() {
     original.lockMinimumGapMs = 90U;
     original.lockMaximumGapMs = 1'800U;
     original.lockMaximumSequenceMs = 5'000U;
+    original.coldEngineMaximumRpm = 2'700U;
+    original.engineWarmTemperatureC = 80U;
+    original.transmissionOverheatTemperatureC = 120U;
+    original.temperatureAlertHysteresisC = 8U;
     CHECK(original.features.setEnabled(
         FeatureId::TransmissionOverheatAlert, true));
     CHECK(original.features.setEnabled(FeatureId::VirtualObdBle, true));
@@ -1210,6 +1406,16 @@ void testLegacySettingsPayloadMigratesWithFeaturesDisabled() {
     CHECK(migrated.hoodMonitoring == HoodMonitoringMode::Disabled);
     CHECK(migrated.maximumRemoteRunTimeMs == 28U * 60U * 1'000U);
     CHECK(migrated.features.mask() == 0U);
+    CHECK(migrated.coldEngineMaximumRpm == 2'200U);
+    CHECK(migrated.engineWarmTemperatureC == 75U);
+
+    CHECK(bmw::remote::infrastructure::decodeUserSettingsPayload(
+        payload,
+        bmw::remote::infrastructure::FeatureUserSettingsPayloadSize,
+        migrated));
+    CHECK(migrated.features.enabled(FeatureId::ColdEngineGuard));
+    CHECK(migrated.coldEngineMaximumRpm == 2'200U);
+    CHECK(migrated.transmissionOverheatTemperatureC == 110U);
     CHECK(!bmw::remote::infrastructure::decodeUserSettingsPayload(
         payload, 25U, migrated));
 }
@@ -3164,6 +3370,38 @@ void testAssemblerMarksOldSignalsStale() {
     CHECK(stale.criticalFaultPresent.quality == SignalQuality::Stale);
 }
 
+void testSyntheticTelemetryFrameDecodesSignedValuesAndFreshness() {
+    SyntheticTelemetryState telemetry{};
+    telemetry.coolantTemperatureC = -12;
+    telemetry.engineOilTemperatureC = 64;
+    telemetry.transmissionOilTemperatureC = 112;
+    telemetry.dpfRegenerationActive = true;
+    const std::array<CanFrame, 2U> trace = {
+        makeSyntheticPowertrainFrame(0U),
+        makeSyntheticTelemetryFrame(0U, telemetry),
+    };
+    SyntheticCanDecoder decoder{};
+    ReplayVehicleGateway gateway{trace.data(), trace.size(), decoder};
+
+    CHECK(gateway.requestState());
+    const VehicleState fresh = gateway.state();
+    CHECK(fresh.coolantTemperatureC.value == -12);
+    CHECK(fresh.engineOilTemperatureC.value == 64);
+    CHECK(fresh.transmissionOilTemperatureC.value == 112);
+    CHECK(fresh.dpfRegenerationActive.value);
+    CHECK(fresh.coolantTemperatureC.quality == SignalQuality::Fresh);
+
+    CHECK(gateway.setElapsedTime(2'001U));
+    CHECK(gateway.state().coolantTemperatureC.quality == SignalQuality::Stale);
+
+    CanFrame malformed = makeSyntheticTelemetryFrame(0U, telemetry);
+    malformed.data[4] = 1U;
+    VehicleStateAssembler assembler{decoder};
+    CHECK(!assembler.consume(malformed));
+    CHECK(assembler.snapshot(0U).engineOilTemperatureC.quality ==
+          SignalQuality::Unavailable);
+}
+
 void testRecognizedMalformedFrameStopsReplay() {
     CanFrame malformed = makeSyntheticPowertrainFrame(0U);
     malformed.data[7] = 0U;
@@ -3482,6 +3720,46 @@ void testSandboxRejectsInvalidUpdatesAndPropagatesWatchdog() {
     CHECK(!interlock.snapshot.ignitionActive);
 }
 
+void testSandboxTelemetryFeaturesAreOptionalAndProduceAlerts() {
+    SandboxSession session{};
+    CHECK(session.snapshot().telemetry.coldEngineGuard ==
+          TelemetryConditionState::Disabled);
+    CHECK(session.execute("feature cold_engine_guard on").ok);
+    CHECK(session.execute("feature dpf_regeneration_indicator on").ok);
+    CHECK(session.execute("feature transmission_overheat_alert on").ok);
+
+    const auto active = session.execute(
+        "vehicle rpm=2600 coolant=50 oil=55 "
+        "transmission_temperature=112 dpf=on");
+    CHECK(active.ok);
+    CHECK(active.snapshot.telemetry.coldEngineGuard ==
+          TelemetryConditionState::Active);
+    CHECK(active.snapshot.telemetry.dpfRegeneration ==
+          TelemetryConditionState::Active);
+    CHECK(active.snapshot.telemetry.transmissionOverheat ==
+          TelemetryConditionState::Active);
+    CHECK(active.snapshot.telemetry.contains(
+        TelemetryAlertType::ColdEngineHighRpm));
+    CHECK(active.snapshot.telemetry.contains(
+        TelemetryAlertType::DpfRegenerationStarted));
+    CHECK(active.snapshot.telemetry.contains(
+        TelemetryAlertType::TransmissionOverheat));
+
+    const std::string json = bmw::remote::host::encodeSandboxResult(active);
+    CHECK(json.find("\"cold_engine_guard\":\"active\"") !=
+          std::string::npos);
+    CHECK(json.find("\"dpf_regeneration_active\":true") !=
+          std::string::npos);
+    CHECK(json.find("\"transmission_overheat\":\"active\"") !=
+          std::string::npos);
+
+    CHECK(!session.execute("vehicle coolant=-41").ok);
+    CHECK(!session.execute("feature no_such_feature on").ok);
+    CHECK(session.execute("feature cold_engine_guard off")
+              .snapshot.telemetry.coldEngineGuard ==
+          TelemetryConditionState::Disabled);
+}
+
 void testSandboxLineProtocolReturnsOneJsonObjectPerCommand() {
     std::istringstream input{
         "\xEF\xBB\xBF" "status\nstart\nquit\n"};
@@ -3531,6 +3809,8 @@ int main() {
         {"feature request mask", testFeatureRequestsDefaultOffAndRejectUnknownBits},
         {"feature capability resolution", testFeatureResolverSeparatesRequestCapabilityAndQualification},
         {"feature platform and write gates", testFeatureResolverGatesWritesAndSupportsBothPhonePlatforms},
+        {"telemetry feature gates and alerts", testTelemetryMonitorIsReadOnlyFeatureGatedAndEdgeTriggered},
+        {"telemetry freshness and hysteresis", testTelemetryMonitorRequiresFreshSignalsAndUsesHysteresis},
         {"custom user settings", testUserSettingsConfigureHoodTimersEntryAndLocks},
         {"invalid user settings", testUnsafeUserSettingsAreRejectedFailClosed},
         {"invalid feature mask", testUserSettingsRejectUnknownFeatureBits},
@@ -3546,6 +3826,7 @@ int main() {
         {"empty settings storage", testEmptySettingsStorageDisablesRemoteStart},
         {"settings journal round trip", testJournaledSettingsRoundTripUsesLatestGeneration},
         {"legacy settings storage migration", testLegacySettingsRecordMigratesToFeatureSchema},
+        {"feature settings storage migration", testFeatureSettingsRecordMigratesTelemetryDefaults},
         {"settings corruption fallback", testCorruptedNewestSettingsFallBackToPreviousSlot},
         {"settings interrupted write", testInterruptedSettingsWritePreservesLastValidSlot},
         {"invalid settings persistence", testInvalidSettingsAreNeverPersisted},
@@ -3619,6 +3900,7 @@ int main() {
         {"non-monotonic trace", testReplayRejectsNonMonotonicTrace},
         {"time-bounded replay", testReplayOnlyEmitsFramesDueAtCurrentTime},
         {"signal freshness", testAssemblerMarksOldSignalsStale},
+        {"synthetic telemetry frame", testSyntheticTelemetryFrameDecodesSignedValuesAndFreshness},
         {"malformed synthetic frame", testRecognizedMalformedFrameStopsReplay},
         {"unknown frame", testUnknownFrameIsIgnoredWithoutCreatingSignals},
         {"atomic decoded batch", testInvalidDecodedBatchIsAppliedAtomically},
@@ -3637,6 +3919,7 @@ int main() {
         {"sandbox nominal flow", testSandboxNominalInteractiveFlow},
         {"sandbox optional hood takeover", testSandboxOptionalHoodAndDriverTakeover},
         {"sandbox watchdog", testSandboxRejectsInvalidUpdatesAndPropagatesWatchdog},
+        {"sandbox telemetry alerts", testSandboxTelemetryFeaturesAreOptionalAndProduceAlerts},
         {"sandbox line protocol", testSandboxLineProtocolReturnsOneJsonObjectPerCommand},
     };
 

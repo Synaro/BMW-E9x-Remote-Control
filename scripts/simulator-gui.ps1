@@ -578,8 +578,8 @@ try {
         $sandboxForm = [System.Windows.Forms.Form]::new()
         $sandboxForm.Text = 'BMW E9x Remote Control — Bac à sable interactif'
         $sandboxForm.StartPosition = 'CenterParent'
-        $sandboxForm.MinimumSize = [System.Drawing.Size]::new(1080, 720)
-        $sandboxForm.Size = [System.Drawing.Size]::new(1180, 790)
+        $sandboxForm.MinimumSize = [System.Drawing.Size]::new(1180, 820)
+        $sandboxForm.Size = [System.Drawing.Size]::new(1320, 900)
         $sandboxForm.BackColor = $colors.Window
         $sandboxForm.ForeColor = $colors.Text
         $sandboxForm.Font = $uiFont
@@ -621,7 +621,7 @@ try {
         $sandboxContent.BackColor = $colors.Window
         [void]$sandboxContent.ColumnStyles.Add(
             [System.Windows.Forms.ColumnStyle]::new(
-                [System.Windows.Forms.SizeType]::Absolute, 440))
+                [System.Windows.Forms.SizeType]::Absolute, 500))
         [void]$sandboxContent.ColumnStyles.Add(
             [System.Windows.Forms.ColumnStyle]::new(
                 [System.Windows.Forms.SizeType]::Percent, 100))
@@ -633,16 +633,16 @@ try {
 
         $vehicleLayout = [System.Windows.Forms.TableLayoutPanel]::new()
         $vehicleLayout.Dock = 'Top'
-        $vehicleLayout.Height = 356
+        $vehicleLayout.Height = 570
         $vehicleLayout.ColumnCount = 2
-        $vehicleLayout.RowCount = 9
+        $vehicleLayout.RowCount = 15
         [void]$vehicleLayout.ColumnStyles.Add(
             [System.Windows.Forms.ColumnStyle]::new(
                 [System.Windows.Forms.SizeType]::Percent, 50))
         [void]$vehicleLayout.ColumnStyles.Add(
             [System.Windows.Forms.ColumnStyle]::new(
                 [System.Windows.Forms.SizeType]::Percent, 50))
-        foreach ($rowHeight in @(36, 38, 38, 36, 36, 36, 36, 40, 58)) {
+        foreach ($rowHeight in @(36, 38, 38, 38, 38, 36, 36, 36, 38, 36, 36, 36, 36, 40, 58)) {
             [void]$vehicleLayout.RowStyles.Add(
                 [System.Windows.Forms.RowStyle]::new(
                     [System.Windows.Forms.SizeType]::Absolute, $rowHeight))
@@ -687,8 +687,55 @@ try {
         $rpmInput.Dock = 'Fill'
         [void]$vehicleLayout.Controls.Add($rpmInput, 1, 1)
 
+        $coolantLabel = New-SandboxFieldLabel 'Liquide refroidissement (°C)'
+        [void]$vehicleLayout.Controls.Add($coolantLabel, 0, 2)
+        $coolantInput = [System.Windows.Forms.NumericUpDown]::new()
+        $coolantInput.Minimum = -40
+        $coolantInput.Maximum = 215
+        $coolantInput.Value = 20
+        $coolantInput.BackColor = $colors.PanelRaised
+        $coolantInput.ForeColor = $colors.Text
+        $coolantInput.Dock = 'Fill'
+        [void]$vehicleLayout.Controls.Add($coolantInput, 1, 2)
+
+        $oilLabel = New-SandboxFieldLabel 'Huile moteur (°C)'
+        [void]$vehicleLayout.Controls.Add($oilLabel, 0, 3)
+        $oilInput = [System.Windows.Forms.NumericUpDown]::new()
+        $oilInput.Minimum = -40
+        $oilInput.Maximum = 215
+        $oilInput.Value = 20
+        $oilInput.BackColor = $colors.PanelRaised
+        $oilInput.ForeColor = $colors.Text
+        $oilInput.Dock = 'Fill'
+        [void]$vehicleLayout.Controls.Add($oilInput, 1, 3)
+
+        $transmissionTemperatureLabel = New-SandboxFieldLabel 'Huile boîte (°C)'
+        [void]$vehicleLayout.Controls.Add($transmissionTemperatureLabel, 0, 4)
+        $transmissionTemperatureInput = [System.Windows.Forms.NumericUpDown]::new()
+        $transmissionTemperatureInput.Minimum = -40
+        $transmissionTemperatureInput.Maximum = 215
+        $transmissionTemperatureInput.Value = 20
+        $transmissionTemperatureInput.BackColor = $colors.PanelRaised
+        $transmissionTemperatureInput.ForeColor = $colors.Text
+        $transmissionTemperatureInput.Dock = 'Fill'
+        [void]$vehicleLayout.Controls.Add($transmissionTemperatureInput, 1, 4)
+
+        $dpfActiveInput = New-SandboxCheckBox 'Régénération FAP active' $false
+        [void]$vehicleLayout.Controls.Add($dpfActiveInput, 0, 5)
+        $vehicleLayout.SetColumnSpan($dpfActiveInput, 2)
+
+        $coldGuardFeatureInput = New-SandboxCheckBox 'Protection moteur froid' $false
+        $dpfFeatureInput = New-SandboxCheckBox 'Indicateur FAP' $false
+        [void]$vehicleLayout.Controls.Add($coldGuardFeatureInput, 0, 6)
+        [void]$vehicleLayout.Controls.Add($dpfFeatureInput, 1, 6)
+
+        $transmissionAlertFeatureInput =
+            New-SandboxCheckBox 'Alerte surchauffe boîte' $false
+        [void]$vehicleLayout.Controls.Add($transmissionAlertFeatureInput, 0, 7)
+        $vehicleLayout.SetColumnSpan($transmissionAlertFeatureInput, 2)
+
         $gearLabel = New-SandboxFieldLabel 'Rapport de boîte'
-        [void]$vehicleLayout.Controls.Add($gearLabel, 0, 2)
+        [void]$vehicleLayout.Controls.Add($gearLabel, 0, 8)
         $gearInput = [System.Windows.Forms.ComboBox]::new()
         $gearInput.DropDownStyle = 'DropDownList'
         $gearInput.BackColor = $colors.PanelRaised
@@ -696,30 +743,30 @@ try {
         $gearInput.Dock = 'Fill'
         [void]$gearInput.Items.AddRange(@('park', 'neutral', 'reverse', 'drive'))
         $gearInput.SelectedItem = 'park'
-        [void]$vehicleLayout.Controls.Add($gearInput, 1, 2)
+        [void]$vehicleLayout.Controls.Add($gearInput, 1, 8)
 
         $doorsClosedInput = New-SandboxCheckBox 'Portes fermées' $true
         $trunkClosedInput = New-SandboxCheckBox 'Coffre fermé' $true
-        [void]$vehicleLayout.Controls.Add($doorsClosedInput, 0, 3)
-        [void]$vehicleLayout.Controls.Add($trunkClosedInput, 1, 3)
+        [void]$vehicleLayout.Controls.Add($doorsClosedInput, 0, 9)
+        [void]$vehicleLayout.Controls.Add($trunkClosedInput, 1, 9)
 
         $hoodAvailableInput = New-SandboxCheckBox 'Signal capot disponible' $true
         $hoodClosedInput = New-SandboxCheckBox 'Capot fermé' $true
-        [void]$vehicleLayout.Controls.Add($hoodAvailableInput, 0, 4)
-        [void]$vehicleLayout.Controls.Add($hoodClosedInput, 1, 4)
+        [void]$vehicleLayout.Controls.Add($hoodAvailableInput, 0, 10)
+        [void]$vehicleLayout.Controls.Add($hoodClosedInput, 1, 10)
 
         $brakeInput = New-SandboxCheckBox 'Frein appuyé' $false
         $parkingInput = New-SandboxCheckBox 'Frein parking serré' $true
-        [void]$vehicleLayout.Controls.Add($brakeInput, 0, 5)
-        [void]$vehicleLayout.Controls.Add($parkingInput, 1, 5)
+        [void]$vehicleLayout.Controls.Add($brakeInput, 0, 11)
+        [void]$vehicleLayout.Controls.Add($parkingInput, 1, 11)
 
         $criticalInput = New-SandboxCheckBox 'Défaut critique' $false
         $interlockInput = New-SandboxCheckBox 'Autorisation matérielle' $true
-        [void]$vehicleLayout.Controls.Add($criticalInput, 0, 6)
-        [void]$vehicleLayout.Controls.Add($interlockInput, 1, 6)
+        [void]$vehicleLayout.Controls.Add($criticalInput, 0, 12)
+        [void]$vehicleLayout.Controls.Add($interlockInput, 1, 12)
 
         $hoodModeLabel = New-SandboxFieldLabel 'Surveillance du capot'
-        [void]$vehicleLayout.Controls.Add($hoodModeLabel, 0, 7)
+        [void]$vehicleLayout.Controls.Add($hoodModeLabel, 0, 13)
         $hoodModeInput = [System.Windows.Forms.ComboBox]::new()
         $hoodModeInput.DropDownStyle = 'DropDownList'
         $hoodModeInput.BackColor = $colors.PanelRaised
@@ -727,10 +774,10 @@ try {
         $hoodModeInput.Dock = 'Fill'
         [void]$hoodModeInput.Items.AddRange(@('Obligatoire', 'Facultative'))
         $hoodModeInput.SelectedIndex = 0
-        [void]$vehicleLayout.Controls.Add($hoodModeInput, 1, 7)
+        [void]$vehicleLayout.Controls.Add($hoodModeInput, 1, 13)
 
         $applyVehicleButton = New-FlatButton "APPLIQUER L'ÉTAT" $colors.Accent
-        [void]$vehicleLayout.Controls.Add($applyVehicleButton, 0, 8)
+        [void]$vehicleLayout.Controls.Add($applyVehicleButton, 0, 14)
         $vehicleLayout.SetColumnSpan($applyVehicleButton, 2)
 
         $actionsLayout = [System.Windows.Forms.TableLayoutPanel]::new()
@@ -778,7 +825,7 @@ try {
                 [System.Windows.Forms.SizeType]::Percent, 100))
         [void]$dashboardPanel.RowStyles.Add(
             [System.Windows.Forms.RowStyle]::new(
-                [System.Windows.Forms.SizeType]::Absolute, 142))
+                [System.Windows.Forms.SizeType]::Absolute, 194))
         [void]$dashboardPanel.RowStyles.Add(
             [System.Windows.Forms.RowStyle]::new(
                 [System.Windows.Forms.SizeType]::Percent, 100))
@@ -801,11 +848,18 @@ try {
         $timerStatusLabel.Dock = 'Top'
         $timerStatusLabel.Height = 30
 
+        $telemetryStatusLabel = [System.Windows.Forms.Label]::new()
+        $telemetryStatusLabel.Text = 'TÉLÉMÉTRIE  —  options désactivées'
+        $telemetryStatusLabel.ForeColor = $colors.Muted
+        $telemetryStatusLabel.Dock = 'Top'
+        $telemetryStatusLabel.Height = 52
+
         $eventStatusLabel = [System.Windows.Forms.Label]::new()
         $eventStatusLabel.Text = 'Dernier événement : aucun'
         $eventStatusLabel.ForeColor = $colors.Muted
         $eventStatusLabel.Dock = 'Fill'
         [void]$dashboardCards.Controls.Add($eventStatusLabel)
+        [void]$dashboardCards.Controls.Add($telemetryStatusLabel)
         [void]$dashboardCards.Controls.Add($timerStatusLabel)
         [void]$dashboardCards.Controls.Add($outputsLabel)
 
@@ -837,6 +891,10 @@ try {
             stopping = 'ARRÊT'
             fault = 'DÉFAUT'
         }
+        $sandboxFailureColor = $colors.Failure
+        $sandboxSuccessColor = $colors.Success
+        $sandboxWarningColor = $colors.Warning
+        $sandboxMutedColor = $colors.Muted
 
         $renderSnapshot = {
             param($Snapshot)
@@ -846,12 +904,12 @@ try {
             }
             $sandboxTitle.Text = $translatedState
             $sandboxTitle.ForeColor = if ($Snapshot.state -eq 'fault') {
-                $colors.Failure
+                $sandboxFailureColor
             } elseif ($Snapshot.state -eq 'idle' -or
                       $Snapshot.state -eq 'driver_control') {
-                $colors.Success
+                $sandboxSuccessColor
             } else {
-                $colors.Warning
+                $sandboxWarningColor
             }
             $sandboxSummary.Text =
                 "Temps $($Snapshot.time_ms) ms  •  défaut $($Snapshot.fault)  •  superviseur $($Snapshot.supervisor_fault)"
@@ -861,11 +919,11 @@ try {
             $outputsLabel.Text =
                 "SORTIES  —  ALLUMAGE $ignitionText   |   DÉMARREUR $starterText"
             $outputsLabel.ForeColor = if ($Snapshot.supervisor_fault -ne 'none') {
-                $colors.Failure
+                $sandboxFailureColor
             } elseif ($Snapshot.ignition_active -or $Snapshot.starter_active) {
-                $colors.Warning
+                $sandboxWarningColor
             } else {
-                $colors.Success
+                $sandboxSuccessColor
             }
             if ($Snapshot.timer_armed) {
                 $remaining = [int64]$Snapshot.timer_due_ms - [int64]$Snapshot.time_ms
@@ -882,6 +940,18 @@ try {
                 "Dernier événement : $($Snapshot.last_event)`r`nActions : $actions  •  diagnostics : $($Snapshot.diagnostic_records)"
 
             $rpmInput.Value = [decimal]$Snapshot.vehicle.rpm
+            $coolantInput.Value = [decimal]$Snapshot.vehicle.coolant_temperature_c
+            $oilInput.Value = [decimal]$Snapshot.vehicle.engine_oil_temperature_c
+            $transmissionTemperatureInput.Value =
+                [decimal]$Snapshot.vehicle.transmission_oil_temperature_c
+            $dpfActiveInput.Checked =
+                [bool]$Snapshot.vehicle.dpf_regeneration_active
+            $coldGuardFeatureInput.Checked =
+                [bool]$Snapshot.features.cold_engine_guard
+            $dpfFeatureInput.Checked =
+                [bool]$Snapshot.features.dpf_regeneration_indicator
+            $transmissionAlertFeatureInput.Checked =
+                [bool]$Snapshot.features.transmission_overheat_alert
             $gearInput.SelectedItem = [string]$Snapshot.vehicle.gear
             $doorsClosedInput.Checked = [bool]$Snapshot.vehicle.doors_closed
             $trunkClosedInput.Checked = [bool]$Snapshot.vehicle.trunk_closed
@@ -893,6 +963,22 @@ try {
             $criticalInput.Checked = [bool]$Snapshot.vehicle.critical_fault
             $interlockInput.Checked = [bool]$Snapshot.hardware_start_permitted
             $hoodModeInput.SelectedIndex = if ($Snapshot.hood_monitoring_required) { 0 } else { 1 }
+
+            $telemetryAlerts = @($Snapshot.telemetry.alerts) -join ', '
+            if ([string]::IsNullOrWhiteSpace($telemetryAlerts)) {
+                $telemetryAlerts = 'aucune nouvelle alerte'
+            }
+            $telemetryStatusLabel.Text =
+                "TÉLÉMÉTRIE  —  froid=$($Snapshot.telemetry.cold_engine_guard)  |  FAP=$($Snapshot.telemetry.dpf_regeneration)  |  boîte=$($Snapshot.telemetry.transmission_overheat)`r`nAlertes : $telemetryAlerts"
+            $telemetryStatusLabel.ForeColor = if (
+                $Snapshot.telemetry.cold_engine_guard -eq 'active' -or
+                $Snapshot.telemetry.transmission_overheat -eq 'active') {
+                $sandboxFailureColor
+            } elseif ($Snapshot.telemetry.dpf_regeneration -eq 'active') {
+                $sandboxWarningColor
+            } else {
+                $sandboxMutedColor
+            }
         }.GetNewClosure()
 
         $sandboxProcess = Start-SandboxProcess
@@ -900,13 +986,15 @@ try {
             Process = $sandboxProcess
             Closed = $false
         }
+        $invokeSandboxCommand = ${function:Invoke-SandboxCommand}
+        $stopSandboxProcess = ${function:Stop-SandboxProcess}
 
         $sendCommand = {
             param([string]$Command)
             try {
                 $sandboxForm.UseWaitCursor = $true
                 [System.Windows.Forms.Application]::DoEvents()
-                $result = Invoke-SandboxCommand $sandboxContext.Process $Command
+                $result = & $invokeSandboxCommand $sandboxContext.Process $Command
                 $timestamp = Get-Date -Format 'HH:mm:ss'
                 $sandboxLog.AppendText("`r`n[$timestamp] > $Command`r`n")
                 if ($result.ok) {
@@ -920,9 +1008,13 @@ try {
                 & $renderSnapshot $result
                 return $result
             } catch {
-                $sandboxLog.AppendText("`r`nERREUR : $($_.Exception.Message)`r`n")
+                $sandboxError = $_.Exception.Message
+                $sandboxLog.AppendText("`r`nERREUR : $sandboxError`r`n")
                 $sandboxTitle.Text = 'ERREUR DU SIMULATEUR'
-                $sandboxTitle.ForeColor = $colors.Failure
+                $sandboxTitle.ForeColor = [System.Drawing.Color]::Red
+                if (-not [string]::IsNullOrWhiteSpace($PreviewFile)) {
+                    throw "Echec du rendu du bac a sable : $sandboxError"
+                }
                 return $null
             } finally {
                 $sandboxForm.UseWaitCursor = $false
@@ -943,6 +1035,19 @@ try {
         $resetButton.Add_Click({ [void](& $sendCommand 'reset') }.GetNewClosure())
         $watchdogButton.Add_Click({ [void](& $sendCommand 'watchdog') }.GetNewClosure())
         $applyVehicleButton.Add_Click({
+            $requestedRpm = [int]$rpmInput.Value
+            $requestedCoolant = [int]$coolantInput.Value
+            $requestedOil = [int]$oilInput.Value
+            $requestedTransmissionTemperature =
+                [int]$transmissionTemperatureInput.Value
+            $requestedDpf = if ($dpfActiveInput.Checked) { 'on' } else { 'off' }
+            $requestedColdGuard = if ($coldGuardFeatureInput.Checked) { 'on' } else { 'off' }
+            $requestedDpfFeature = if ($dpfFeatureInput.Checked) { 'on' } else { 'off' }
+            $requestedTransmissionAlert =
+                if ($transmissionAlertFeatureInput.Checked) { 'on' } else { 'off' }
+            [void](& $sendCommand "feature cold_engine_guard $requestedColdGuard")
+            [void](& $sendCommand "feature dpf_regeneration_indicator $requestedDpfFeature")
+            [void](& $sendCommand "feature transmission_overheat_alert $requestedTransmissionAlert")
             $interlock = if ($interlockInput.Checked) { 'on' } else { 'off' }
             [void](& $sendCommand "interlock $interlock")
             $hood = if (-not $hoodAvailableInput.Checked) {
@@ -958,14 +1063,14 @@ try {
             $parking = if ($parkingInput.Checked) { 'applied' } else { 'released' }
             $critical = if ($criticalInput.Checked) { 'on' } else { 'off' }
             $vehicleCommand =
-                "vehicle rpm=$([int]$rpmInput.Value) gear=$($gearInput.SelectedItem) doors=$doors hood=$hood trunk=$trunk brake=$brake parking=$parking critical=$critical"
+                "vehicle rpm=$requestedRpm coolant=$requestedCoolant oil=$requestedOil transmission_temperature=$requestedTransmissionTemperature dpf=$requestedDpf gear=$($gearInput.SelectedItem) doors=$doors hood=$hood trunk=$trunk brake=$brake parking=$parking critical=$critical"
             [void](& $sendCommand $vehicleCommand)
         }.GetNewClosure())
 
         $sandboxForm.Add_FormClosed({
             if (-not $sandboxContext.Closed) {
                 $sandboxContext.Closed = $true
-                Stop-SandboxProcess $sandboxContext.Process
+                & $stopSandboxProcess $sandboxContext.Process
                 $sandboxContext.Process = $null
             }
         }.GetNewClosure())
@@ -998,7 +1103,7 @@ try {
         } finally {
             if (-not $sandboxContext.Closed) {
                 $sandboxContext.Closed = $true
-                Stop-SandboxProcess $sandboxContext.Process
+                & $stopSandboxProcess $sandboxContext.Process
             }
             $sandboxForm.Dispose()
         }

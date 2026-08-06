@@ -8,6 +8,10 @@ namespace bmw::remote::domain {
 enum class VehicleSignal : std::uint8_t {
     BatteryMillivolts,
     EngineRpm,
+    CoolantTemperatureC,
+    EngineOilTemperatureC,
+    TransmissionOilTemperatureC,
+    DpfRegenerationActive,
     HoodClosed,
     DoorsClosed,
     TrunkClosed,

@@ -92,6 +92,31 @@ UserSettingsValidation validateUserSettings(
     if (!settings.features.valid()) {
         validation.add(UserSettingsReason::InvalidFeatureMask);
     }
+    if (outside(
+            settings.coldEngineMaximumRpm,
+            UserSettingsLimits::MinimumColdEngineMaximumRpm,
+            UserSettingsLimits::MaximumColdEngineMaximumRpm)) {
+        validation.add(UserSettingsReason::ColdEngineMaximumRpmOutOfRange);
+    }
+    if (outside(
+            settings.engineWarmTemperatureC,
+            UserSettingsLimits::MinimumEngineWarmTemperatureC,
+            UserSettingsLimits::MaximumEngineWarmTemperatureC)) {
+        validation.add(UserSettingsReason::EngineWarmTemperatureOutOfRange);
+    }
+    if (outside(
+            settings.transmissionOverheatTemperatureC,
+            UserSettingsLimits::MinimumTransmissionOverheatTemperatureC,
+            UserSettingsLimits::MaximumTransmissionOverheatTemperatureC)) {
+        validation.add(
+            UserSettingsReason::TransmissionOverheatTemperatureOutOfRange);
+    }
+    if (outside(
+            settings.temperatureAlertHysteresisC,
+            UserSettingsLimits::MinimumTemperatureAlertHysteresisC,
+            UserSettingsLimits::MaximumTemperatureAlertHysteresisC)) {
+        validation.add(UserSettingsReason::TemperatureAlertHysteresisOutOfRange);
+    }
 
     return validation;
 }
@@ -122,6 +147,15 @@ UserConfiguration makeUserConfiguration(
     configuration.lockSequence.maximumGapMs = settings.lockMaximumGapMs;
     configuration.lockSequence.maximumSequenceMs =
         settings.lockMaximumSequenceMs;
+    configuration.telemetry.requestedFeatures = settings.features;
+    configuration.telemetry.coldEngineMaximumRpm =
+        settings.coldEngineMaximumRpm;
+    configuration.telemetry.engineWarmTemperatureC =
+        static_cast<std::int16_t>(settings.engineWarmTemperatureC);
+    configuration.telemetry.transmissionOverheatTemperatureC =
+        static_cast<std::int16_t>(settings.transmissionOverheatTemperatureC);
+    configuration.telemetry.temperatureHysteresisC =
+        static_cast<std::uint8_t>(settings.temperatureAlertHysteresisC);
     return configuration;
 }
 

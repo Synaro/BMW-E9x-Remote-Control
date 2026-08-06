@@ -24,6 +24,10 @@ et le configurateur le lit ou l'écrit par USB.
 | `lock_minimum_gap_ms` | 50 à 5 000 | 80 | Filtrage des rebonds |
 | `lock_maximum_gap_ms` | 50 à 5 000 | 1 500 | Intervalle maximal entre deux appuis |
 | `lock_sequence_window_ms` | 500 à 15 000 | 3 000 | Durée totale maximale de la séquence |
+| `cold_engine_maximum_rpm` | 1 000 à 4 500 | 2 200 | Régime d'alerte lorsque le moteur est froid |
+| `engine_warm_temperature_c` | 40 à 110 | 75 | Seuil moteur considéré chaud |
+| `transmission_overheat_temperature_c` | 80 à 150 | 110 | Seuil d'alerte de l'huile de boîte |
+| `temperature_alert_hysteresis_c` | 1 à 20 | 5 | Marge de retour à l'état normal |
 | `feature.<code>` | `true`, `false` | `false` | Demande indépendante d'une fonctionnalité du catalogue |
 
 Les temporisations de verrouillage doivent aussi être cohérentes entre elles.
@@ -112,7 +116,7 @@ Exécuter le parcours configuré :
   -ConfigPath .\config\user-settings.conf
 ```
 
-Le menu interactif du simulateur propose la même fonction au choix `6`.
+Le menu interactif du simulateur propose la même fonction au choix `9`.
 
 Le configurateur ne transmet aucune commande au véhicule. Il peut transmettre
 uniquement `UserSettings` au prototype par USB, puis relire la valeur persistée.

@@ -123,6 +123,11 @@ public:
     domain::VehicleState vehicle{};
     vehicle.batteryMillivolts = domain::Observed<std::uint16_t>::fresh(12'500U);
     vehicle.engineRpm = domain::Observed<std::uint16_t>::fresh(0U);
+    vehicle.coolantTemperatureC = domain::Observed<std::int16_t>::fresh(20);
+    vehicle.engineOilTemperatureC = domain::Observed<std::int16_t>::fresh(20);
+    vehicle.transmissionOilTemperatureC =
+        domain::Observed<std::int16_t>::fresh(20);
+    vehicle.dpfRegenerationActive = domain::Observed<bool>::fresh(false);
     vehicle.hoodClosed = domain::Observed<bool>::fresh(true);
     vehicle.doorsClosed = domain::Observed<bool>::fresh(true);
     vehicle.trunkClosed = domain::Observed<bool>::fresh(true);
@@ -201,6 +206,38 @@ public:
     return true;
 }
 
+[[nodiscard]] bool parseSigned(
+    const std::string& value,
+    const std::int32_t minimum,
+    const std::int32_t maximum,
+    std::int32_t& result) noexcept {
+    if (value.empty()) {
+        return false;
+    }
+    std::size_t index = 0U;
+    bool negative = false;
+    if (value[0] == '-') {
+        negative = true;
+        index = 1U;
+    }
+    if (index == value.size()) {
+        return false;
+    }
+    std::int32_t parsed = 0;
+    for (; index < value.size(); ++index) {
+        const char character = value[index];
+        if (character < '0' || character > '9') {
+            return false;
+        }
+        parsed = parsed * 10 + static_cast<std::int32_t>(character - '0');
+        if (parsed > 1'000) {
+            return false;
+        }
+    }
+    result = negative ? -parsed : parsed;
+    return result >= minimum && result <= maximum;
+}
+
 [[nodiscard]] const char* gearToString(const domain::Gear gear) noexcept {
     switch (gear) {
         case domain::Gear::Park: return "park";
@@ -260,13 +297,13 @@ public:
         lastEvent_ = application::EventType::VehicleStateUpdated;
         lastDecision_ = {};
 
-        application::UserSettings settings{};
-        settings.hoodMonitoring = requireHood
+        settings_ = {};
+        settings_.hoodMonitoring = requireHood
                                       ? application::HoodMonitoringMode::Required
                                       : application::HoodMonitoringMode::Disabled;
         const application::UserConfiguration userConfiguration =
             application::makeUserConfiguration(
-                settings, &simulation::syntheticVehicleProfile());
+                settings_, &simulation::syntheticVehicleProfile());
         supervisor_ = std::make_unique<infrastructure::ActuatorSafetySupervisor>(driver_);
         runtime_ = std::make_unique<infrastructure::Runtime>(
             application::Controller{userConfiguration.controller},
@@ -278,6 +315,7 @@ public:
         static_cast<void>(supervisor_->heartbeat(0U));
         static_cast<void>(supervisor_->poll(
             0U, hardwareStartPermitted_, driver_.feedback()));
+        rebuildTelemetryMonitor();
     }
 
     [[nodiscard]] SandboxResult execute(const std::string& rawCommand) {
@@ -380,6 +418,9 @@ public:
         if (verb == "vehicle") {
             return updateVehicle(input);
         }
+        if (verb == "feature") {
+            return updateFeature(input);
+        }
         return failure("unknown command: " + verb);
     }
 
@@ -397,6 +438,8 @@ public:
         result.hardwareStartPermitted = hardwareStartPermitted_;
         result.hoodMonitoringRequired = hoodMonitoringRequired_;
         result.vehicle = vehicle_;
+        result.requestedFeatures = settings_.features;
+        result.telemetry = telemetryReport_;
         result.lastEvent = lastEvent_;
         result.lastDecision = lastDecision_;
         result.diagnosticRecords = journal_.size();
@@ -404,6 +447,28 @@ public:
     }
 
 private:
+    void rebuildTelemetryMonitor() {
+        application::UserConfiguration configuration =
+            application::makeUserConfiguration(
+                settings_, &simulation::syntheticVehicleProfile());
+        configuration.telemetry.runtime.target =
+            application::FeatureExecutionTarget::Simulation;
+        configuration.telemetry.runtime.implementedFeatures =
+            (std::uint64_t{1U} << static_cast<std::size_t>(
+                 application::FeatureId::ColdEngineGuard)) |
+            (std::uint64_t{1U} << static_cast<std::size_t>(
+                 application::FeatureId::DpfRegenerationIndicator)) |
+            (std::uint64_t{1U} << static_cast<std::size_t>(
+                 application::FeatureId::TransmissionOverheatAlert));
+        configuration.telemetry.runtime.availableCapabilities =
+            application::featureCapabilityMask(
+                application::FeatureCapability::VehicleStateRead);
+        configuration.telemetry.runtime.vehicleSignalsQualified = true;
+        telemetryMonitor_ =
+            std::make_unique<application::TelemetryMonitor>(configuration.telemetry);
+        telemetryReport_ = telemetryMonitor_->evaluate(vehicle_);
+    }
+
     [[nodiscard]] SandboxResult success() const {
         return {true, {}, snapshot()};
     }
@@ -482,6 +547,7 @@ private:
             const std::string value = token.substr(separator + 1U);
             bool booleanValue = false;
             std::uint32_t numericValue = 0U;
+            std::int32_t signedValue = 0;
 
             if (key == "rpm") {
                 if (!parseUnsigned(value, 8'000U, numericValue)) {
@@ -496,6 +562,34 @@ private:
                 }
                 candidate.batteryMillivolts = domain::Observed<std::uint16_t>::fresh(
                     static_cast<std::uint16_t>(numericValue));
+            } else if (key == "coolant") {
+                if (!parseSigned(value, -40, 215, signedValue)) {
+                    return failure("coolant must be between -40 and 215 C");
+                }
+                candidate.coolantTemperatureC =
+                    domain::Observed<std::int16_t>::fresh(
+                        static_cast<std::int16_t>(signedValue));
+            } else if (key == "oil") {
+                if (!parseSigned(value, -40, 215, signedValue)) {
+                    return failure("oil must be between -40 and 215 C");
+                }
+                candidate.engineOilTemperatureC =
+                    domain::Observed<std::int16_t>::fresh(
+                        static_cast<std::int16_t>(signedValue));
+            } else if (key == "transmission_temperature") {
+                if (!parseSigned(value, -40, 215, signedValue)) {
+                    return failure(
+                        "transmission_temperature must be between -40 and 215 C");
+                }
+                candidate.transmissionOilTemperatureC =
+                    domain::Observed<std::int16_t>::fresh(
+                        static_cast<std::int16_t>(signedValue));
+            } else if (key == "dpf") {
+                if (!parseOnOff(value, booleanValue)) {
+                    return failure("dpf must be on or off");
+                }
+                candidate.dpfRegenerationActive =
+                    domain::Observed<bool>::fresh(booleanValue);
             } else if (key == "doors") {
                 if (!parseClosedOpen(value, booleanValue)) {
                     return failure("doors must be closed or open");
@@ -567,6 +661,28 @@ private:
         if (runtime_->state() != application::ControllerState::Fault) {
             dispatch(application::Event{application::EventType::VehicleStateUpdated});
         }
+        telemetryReport_ = telemetryMonitor_->evaluate(vehicle_);
+        return success();
+    }
+
+    [[nodiscard]] SandboxResult updateFeature(std::istringstream& input) {
+        std::string code{};
+        std::string value{};
+        std::string extra{};
+        bool enabled = false;
+        if (!(input >> code >> value) || (input >> extra) ||
+            !parseOnOff(value, enabled)) {
+            return failure("usage: feature <code> on|off");
+        }
+        const application::FeatureDescriptor* const feature =
+            application::findFeature(code);
+        if (feature == nullptr) {
+            return failure("unknown feature: " + code);
+        }
+        if (!settings_.features.setEnabled(feature->id, enabled)) {
+            return failure("feature cannot be represented");
+        }
+        rebuildTelemetryMonitor();
         return success();
     }
 
@@ -579,6 +695,9 @@ private:
     std::unique_ptr<infrastructure::ActuatorSafetySupervisor> supervisor_{};
     std::unique_ptr<infrastructure::Runtime> runtime_{};
     application::Decision lastDecision_{};
+    application::UserSettings settings_{};
+    std::unique_ptr<application::TelemetryMonitor> telemetryMonitor_{};
+    application::TelemetryReport telemetryReport_{};
     application::EventType lastEvent_{application::EventType::VehicleStateUpdated};
     std::uint32_t nowMs_{0U};
     std::uint32_t lastSupervisorServiceMs_{0U};
@@ -625,6 +744,14 @@ std::string encodeSandboxResult(const SandboxResult& result) {
            << ",\"vehicle\":{"
            << "\"battery_mv\":" << vehicle.batteryMillivolts.value
            << ",\"rpm\":" << vehicle.engineRpm.value
+           << ",\"coolant_temperature_c\":"
+           << vehicle.coolantTemperatureC.value
+           << ",\"engine_oil_temperature_c\":"
+           << vehicle.engineOilTemperatureC.value
+           << ",\"transmission_oil_temperature_c\":"
+           << vehicle.transmissionOilTemperatureC.value
+           << ",\"dpf_regeneration_active\":"
+           << vehicle.dpfRegenerationActive.value
            << ",\"hood_available\":"
            << (vehicle.hoodClosed.quality != domain::SignalQuality::Unavailable)
            << ",\"hood_closed\":" << vehicle.hoodClosed.value
@@ -635,6 +762,36 @@ std::string encodeSandboxResult(const SandboxResult& result) {
            << ",\"gear\":\"" << gearToString(vehicle.gear.value) << "\""
            << ",\"critical_fault\":" << vehicle.criticalFaultPresent.value
            << "}"
+           << ",\"features\":{"
+           << "\"cold_engine_guard\":"
+           << snapshot.requestedFeatures.enabled(
+                  application::FeatureId::ColdEngineGuard)
+           << ",\"dpf_regeneration_indicator\":"
+           << snapshot.requestedFeatures.enabled(
+                  application::FeatureId::DpfRegenerationIndicator)
+           << ",\"transmission_overheat_alert\":"
+           << snapshot.requestedFeatures.enabled(
+                  application::FeatureId::TransmissionOverheatAlert)
+           << "}"
+           << ",\"telemetry\":{"
+           << "\"cold_engine_guard\":\""
+           << application::toString(snapshot.telemetry.coldEngineGuard)
+           << "\",\"dpf_regeneration\":\""
+           << application::toString(snapshot.telemetry.dpfRegeneration)
+           << "\",\"transmission_overheat\":\""
+           << application::toString(snapshot.telemetry.transmissionOverheat)
+           << "\",\"alerts\":[";
+    for (std::size_t index = 0U;
+         index < snapshot.telemetry.alertCount;
+         ++index) {
+        if (index != 0U) {
+            output << ',';
+        }
+        output << '\"'
+               << application::toString(snapshot.telemetry.alerts[index].type)
+               << '\"';
+    }
+    output << "]}"
            << ",\"last_event\":\"" << application::toString(snapshot.lastEvent)
            << "\""
            << ",\"safety_reasons\":" << snapshot.lastDecision.safety.reasons

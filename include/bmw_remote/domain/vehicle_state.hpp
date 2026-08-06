@@ -41,6 +41,10 @@ enum class Gear : std::uint8_t {
 struct VehicleState final {
     Observed<std::uint16_t> batteryMillivolts{};
     Observed<std::uint16_t> engineRpm{};
+    Observed<std::int16_t> coolantTemperatureC{};
+    Observed<std::int16_t> engineOilTemperatureC{};
+    Observed<std::int16_t> transmissionOilTemperatureC{};
+    Observed<bool> dpfRegenerationActive{};
     Observed<bool> hoodClosed{};
     Observed<bool> doorsClosed{};
     Observed<bool> trunkClosed{};

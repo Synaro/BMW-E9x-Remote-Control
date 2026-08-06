@@ -4,7 +4,7 @@ namespace bmw::remote::infrastructure {
 
 bool DecodedSignalBatch::add(
     const domain::VehicleSignal signal,
-    const std::uint32_t value) noexcept {
+    const std::int32_t value) noexcept {
     if (count >= signals.size()) {
         return false;
     }
@@ -51,6 +51,14 @@ domain::VehicleState VehicleStateAssembler::snapshot(const std::uint32_t nowMs) 
     vehicle.batteryMillivolts = observe(
         batteryMillivolts_, nowMs, freshness_.batteryMaximumAgeMs);
     vehicle.engineRpm = observe(engineRpm_, nowMs, freshness_.engineRpmMaximumAgeMs);
+    vehicle.coolantTemperatureC = observe(
+        coolantTemperatureC_, nowMs, freshness_.telemetryMaximumAgeMs);
+    vehicle.engineOilTemperatureC = observe(
+        engineOilTemperatureC_, nowMs, freshness_.telemetryMaximumAgeMs);
+    vehicle.transmissionOilTemperatureC = observe(
+        transmissionOilTemperatureC_, nowMs, freshness_.telemetryMaximumAgeMs);
+    vehicle.dpfRegenerationActive = observe(
+        dpfRegenerationActive_, nowMs, freshness_.telemetryMaximumAgeMs);
     vehicle.hoodClosed = observe(hoodClosed_, nowMs, freshness_.bodyMaximumAgeMs);
     vehicle.doorsClosed = observe(doorsClosed_, nowMs, freshness_.bodyMaximumAgeMs);
     vehicle.trunkClosed = observe(trunkClosed_, nowMs, freshness_.bodyMaximumAgeMs);
@@ -69,6 +77,10 @@ void VehicleStateAssembler::reset() noexcept {
     statistics_ = {};
     batteryMillivolts_ = {};
     engineRpm_ = {};
+    coolantTemperatureC_ = {};
+    engineOilTemperatureC_ = {};
+    transmissionOilTemperatureC_ = {};
+    dpfRegenerationActive_ = {};
     hoodClosed_ = {};
     doorsClosed_ = {};
     trunkClosed_ = {};
@@ -101,10 +113,18 @@ bool VehicleStateAssembler::validateBatch(const DecodedSignalBatch& batch) const
 bool VehicleStateAssembler::validateSignal(const DecodedSignal& signal) const noexcept {
     switch (signal.signal) {
         case domain::VehicleSignal::BatteryMillivolts:
-            return signal.value <= 20'000U;
+            return signal.value >= 0 && signal.value <= 20'000;
 
         case domain::VehicleSignal::EngineRpm:
-            return signal.value <= 10'000U;
+            return signal.value >= 0 && signal.value <= 10'000;
+
+        case domain::VehicleSignal::CoolantTemperatureC:
+        case domain::VehicleSignal::EngineOilTemperatureC:
+        case domain::VehicleSignal::TransmissionOilTemperatureC:
+            return signal.value >= -40 && signal.value <= 215;
+
+        case domain::VehicleSignal::DpfRegenerationActive:
+            return signal.value >= 0 && signal.value <= 1;
 
         case domain::VehicleSignal::HoodClosed:
         case domain::VehicleSignal::DoorsClosed:
@@ -112,13 +132,16 @@ bool VehicleStateAssembler::validateSignal(const DecodedSignal& signal) const no
         case domain::VehicleSignal::BrakePressed:
         case domain::VehicleSignal::ParkingBrakeApplied:
         case domain::VehicleSignal::CriticalFaultPresent:
-            return signal.value <= 1U;
+            return signal.value >= 0 && signal.value <= 1;
 
         case domain::VehicleSignal::Transmission:
-            return signal.value <= static_cast<std::uint32_t>(domain::Transmission::Manual);
+            return signal.value >= 0 &&
+                   signal.value <= static_cast<std::int32_t>(
+                       domain::Transmission::Manual);
 
         case domain::VehicleSignal::Gear:
-            return signal.value <= static_cast<std::uint32_t>(domain::Gear::Drive);
+            return signal.value >= 0 &&
+                   signal.value <= static_cast<std::int32_t>(domain::Gear::Drive);
 
         case domain::VehicleSignal::Count:
             return false;
@@ -147,24 +170,44 @@ void VehicleStateAssembler::applySignal(
             engineRpm_ = {static_cast<std::uint16_t>(signal.value), timestampMs, true};
             break;
 
+        case domain::VehicleSignal::CoolantTemperatureC:
+            coolantTemperatureC_ = {
+                static_cast<std::int16_t>(signal.value), timestampMs, true};
+            break;
+
+        case domain::VehicleSignal::EngineOilTemperatureC:
+            engineOilTemperatureC_ = {
+                static_cast<std::int16_t>(signal.value), timestampMs, true};
+            break;
+
+        case domain::VehicleSignal::TransmissionOilTemperatureC:
+            transmissionOilTemperatureC_ = {
+                static_cast<std::int16_t>(signal.value), timestampMs, true};
+            break;
+
+        case domain::VehicleSignal::DpfRegenerationActive:
+            dpfRegenerationActive_ = {
+                signal.value != 0, timestampMs, true};
+            break;
+
         case domain::VehicleSignal::HoodClosed:
-            hoodClosed_ = {signal.value != 0U, timestampMs, true};
+            hoodClosed_ = {signal.value != 0, timestampMs, true};
             break;
 
         case domain::VehicleSignal::DoorsClosed:
-            doorsClosed_ = {signal.value != 0U, timestampMs, true};
+            doorsClosed_ = {signal.value != 0, timestampMs, true};
             break;
 
         case domain::VehicleSignal::TrunkClosed:
-            trunkClosed_ = {signal.value != 0U, timestampMs, true};
+            trunkClosed_ = {signal.value != 0, timestampMs, true};
             break;
 
         case domain::VehicleSignal::BrakePressed:
-            brakePressed_ = {signal.value != 0U, timestampMs, true};
+            brakePressed_ = {signal.value != 0, timestampMs, true};
             break;
 
         case domain::VehicleSignal::ParkingBrakeApplied:
-            parkingBrakeApplied_ = {signal.value != 0U, timestampMs, true};
+            parkingBrakeApplied_ = {signal.value != 0, timestampMs, true};
             break;
 
         case domain::VehicleSignal::Transmission:
@@ -177,7 +220,7 @@ void VehicleStateAssembler::applySignal(
             break;
 
         case domain::VehicleSignal::CriticalFaultPresent:
-            criticalFaultPresent_ = {signal.value != 0U, timestampMs, true};
+            criticalFaultPresent_ = {signal.value != 0, timestampMs, true};
             break;
 
         case domain::VehicleSignal::Count:

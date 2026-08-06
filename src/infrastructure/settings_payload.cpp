@@ -3,6 +3,21 @@
 namespace bmw::remote::infrastructure {
 namespace {
 
+void writeU16(
+    std::uint8_t* const destination,
+    const std::uint16_t value) noexcept {
+    destination[0] = static_cast<std::uint8_t>(value & 0xFFU);
+    destination[1] = static_cast<std::uint8_t>((value >> 8U) & 0xFFU);
+}
+
+[[nodiscard]] std::uint16_t readU16(
+    const std::uint8_t* const source) noexcept {
+    return static_cast<std::uint16_t>(
+        static_cast<std::uint16_t>(source[0]) |
+        static_cast<std::uint16_t>(
+            static_cast<std::uint16_t>(source[1]) << 8U));
+}
+
 void writeU32(
     std::uint8_t* const destination,
     const std::uint32_t value) noexcept {
@@ -53,6 +68,12 @@ bool encodeUserSettingsPayload(
     writeU32(payload.data() + 16U, settings.lockMaximumGapMs);
     writeU32(payload.data() + 20U, settings.lockMaximumSequenceMs);
     writeU64(payload.data() + 24U, settings.features.mask());
+    writeU16(payload.data() + 32U, settings.coldEngineMaximumRpm);
+    writeU16(payload.data() + 34U, settings.engineWarmTemperatureC);
+    writeU16(
+        payload.data() + 36U,
+        settings.transmissionOverheatTemperatureC);
+    writeU16(payload.data() + 38U, settings.temperatureAlertHysteresisC);
     return true;
 }
 
@@ -67,6 +88,7 @@ bool decodeUserSettingsPayload(
     const std::size_t payloadSize,
     application::UserSettings& settings) noexcept {
     if (payloadSize != LegacyUserSettingsPayloadSize &&
+        payloadSize != FeatureUserSettingsPayloadSize &&
         payloadSize != UserSettingsPayloadSize) {
         return false;
     }
@@ -87,9 +109,16 @@ bool decodeUserSettingsPayload(
     decoded.lockMaximumGapMs = readU32(payload.data() + 16U);
     decoded.lockMaximumSequenceMs = readU32(payload.data() + 20U);
     decoded.features = application::FeatureRequests{
-        payloadSize == UserSettingsPayloadSize
+        payloadSize >= FeatureUserSettingsPayloadSize
             ? readU64(payload.data() + 24U)
             : 0U};
+    if (payloadSize == UserSettingsPayloadSize) {
+        decoded.coldEngineMaximumRpm = readU16(payload.data() + 32U);
+        decoded.engineWarmTemperatureC = readU16(payload.data() + 34U);
+        decoded.transmissionOverheatTemperatureC =
+            readU16(payload.data() + 36U);
+        decoded.temperatureAlertHysteresisC = readU16(payload.data() + 38U);
+    }
 
     if (!application::validateUserSettings(decoded).valid()) {
         return false;
@@ -111,7 +140,13 @@ bool userSettingsEqual(
            left.lockMinimumGapMs == right.lockMinimumGapMs &&
            left.lockMaximumGapMs == right.lockMaximumGapMs &&
            left.lockMaximumSequenceMs == right.lockMaximumSequenceMs &&
-           left.features.mask() == right.features.mask();
+           left.features.mask() == right.features.mask() &&
+           left.coldEngineMaximumRpm == right.coldEngineMaximumRpm &&
+           left.engineWarmTemperatureC == right.engineWarmTemperatureC &&
+           left.transmissionOverheatTemperatureC ==
+               right.transmissionOverheatTemperatureC &&
+           left.temperatureAlertHysteresisC ==
+               right.temperatureAlertHysteresisC;
 }
 
 }  // namespace bmw::remote::infrastructure

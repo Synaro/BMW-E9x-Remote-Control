@@ -14,6 +14,7 @@ namespace bmw::remote::simulation {
 struct SyntheticCanProtocol final {
     static constexpr std::uint32_t PowertrainFrameIdentifier = 0x1FFFFF00U;
     static constexpr std::uint32_t BodyFrameIdentifier = 0x1FFFFF01U;
+    static constexpr std::uint32_t TelemetryFrameIdentifier = 0x1FFFFF02U;
     static constexpr std::uint8_t Signature = 0xA5U;
 };
 
@@ -33,6 +34,13 @@ struct SyntheticBodyState final {
     bool parkingBrakeApplied{true};
 };
 
+struct SyntheticTelemetryState final {
+    std::int16_t coolantTemperatureC{20};
+    std::int16_t engineOilTemperatureC{20};
+    std::int16_t transmissionOilTemperatureC{20};
+    bool dpfRegenerationActive{false};
+};
+
 class SyntheticCanDecoder final : public infrastructure::CanFrameDecoder {
 public:
     [[nodiscard]] infrastructure::DecodeResult decode(
@@ -49,5 +57,9 @@ public:
 [[nodiscard]] infrastructure::CanFrame makeSyntheticBodyFrame(
     std::uint32_t timestampMs,
     SyntheticBodyState state = {}) noexcept;
+
+[[nodiscard]] infrastructure::CanFrame makeSyntheticTelemetryFrame(
+    std::uint32_t timestampMs,
+    SyntheticTelemetryState state = {}) noexcept;
 
 }  // namespace bmw::remote::simulation

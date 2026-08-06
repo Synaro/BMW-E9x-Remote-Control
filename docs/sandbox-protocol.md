@@ -30,6 +30,7 @@ Chaque réponse contient notamment :
 - le temps monotone et l'état du timer ;
 - les sorties simulées d'allumage et de démarreur ;
 - l'état véhicule complet ;
+- les fonctionnalités demandées, les états de télémétrie et les alertes de transition ;
 - le dernier événement, les actions produites et la taille du journal.
 
 ## Commandes autorisées
@@ -47,6 +48,7 @@ Chaque réponse contient notamment :
 | `watchdog` | Suspend volontairement le heartbeat au-delà de sa limite. |
 | `interlock on\|off` | Modifie l'autorisation matérielle synthétique. |
 | `vehicle ...` | Applique atomiquement une ou plusieurs valeurs véhicule. |
+| `feature CODE on\|off` | Active ou désactive une préférence du catalogue dans la session. |
 | `quit` | Retourne l'instantané puis ferme le processus. |
 
 Les champs acceptés par `vehicle` sont :
@@ -54,6 +56,10 @@ Les champs acceptés par `vehicle` sont :
 ```text
 rpm=0..8000
 battery=9000..16000
+coolant=-40..215
+oil=-40..215
+transmission_temperature=-40..215
+dpf=on|off
 doors=closed|open
 hood=closed|open|unavailable
 trunk=closed|open
@@ -66,6 +72,20 @@ critical=on|off
 Une ligne peut contenir plusieurs champs. Ils sont d'abord tous analysés dans
 une copie de l'état ; une clé inconnue ou une valeur hors limites refuse la
 commande entière, sans modification partielle.
+
+Exemple de déclenchement simultané des trois alertes V1 :
+
+```text
+feature cold_engine_guard on
+feature dpf_regeneration_indicator on
+feature transmission_overheat_alert on
+vehicle rpm=2600 coolant=50 oil=55 transmission_temperature=112 dpf=on
+```
+
+Le tableau `telemetry.alerts` contient uniquement les transitions produites par
+la dernière commande. Les champs `telemetry.cold_engine_guard`,
+`telemetry.dpf_regeneration` et `telemetry.transmission_overheat` conservent
+l'état courant.
 
 ## Temps et superviseur
 

@@ -10,6 +10,7 @@ add_library(bmw_remote_core
     src/application/lock_sequence_detector.cpp
     src/application/profile_readiness.cpp
     src/application/safety_policy.cpp
+    src/application/telemetry_monitor.cpp
     src/application/user_settings.cpp
     src/domain/reference_profiles.cpp
     src/domain/vehicle_profile.cpp
