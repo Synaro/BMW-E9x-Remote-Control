@@ -605,6 +605,15 @@ try {
         $sandboxSummary.Location = [System.Drawing.Point]::new(23, 54)
         [void]$sandboxHeader.Controls.Add($sandboxSummary)
 
+        $sandboxGuide = [System.Windows.Forms.Label]::new()
+        $sandboxGuide.Text =
+            "Étape suivante : laissez le régime à 0 tr/min puis demandez le démarrage distant."
+        $sandboxGuide.Font = $smallFont
+        $sandboxGuide.ForeColor = $colors.Warning
+        $sandboxGuide.AutoSize = $true
+        $sandboxGuide.Location = [System.Drawing.Point]::new(23, 78)
+        [void]$sandboxHeader.Controls.Add($sandboxGuide)
+
         $sandboxSafety = [System.Windows.Forms.Label]::new()
         $sandboxSafety.Text = '●  PROCESSUS LOCAL — aucune connexion au véhicule'
         $sandboxSafety.Font = $smallFont
@@ -798,7 +807,7 @@ try {
         }
         $newSessionButton = New-FlatButton 'Nouvelle session'
         $startRemoteButton = New-FlatButton 'Démarrage distant' $colors.Success
-        $timerButton = New-FlatButton 'Échéance du timer'
+        $timerButton = New-FlatButton 'Fin de préparation / timer'
         $stopRemoteButton = New-FlatButton 'Arrêt distant' $colors.Failure
         $takeoverButton = New-FlatButton 'Confirmer la reprise'
         $resetButton = New-FlatButton 'Réarmer le défaut'
@@ -913,6 +922,39 @@ try {
             }
             $sandboxSummary.Text =
                 "Temps $($Snapshot.time_ms) ms  •  défaut $($Snapshot.fault)  •  superviseur $($Snapshot.supervisor_fault)"
+
+            $sandboxGuide.Text = switch ([string]$Snapshot.state) {
+                'idle' {
+                    "Étape 1 : laissez le régime à 0 tr/min puis cliquez sur Démarrage distant."
+                }
+                'preparing' {
+                    "Étape 2 : cliquez sur Fin de préparation / timer avant de régler le moteur à 850 tr/min."
+                }
+                'cranking' {
+                    "Étape 3 : réglez le régime à 850 tr/min puis cliquez sur APPLIQUER L'ÉTAT."
+                }
+                'running' {
+                    "Moteur simulé en fonctionnement. Vous pouvez maintenant tester les autres événements."
+                }
+                'fault' {
+                    if (([int]$Snapshot.safety_reasons -band 256) -ne 0) {
+                        "Défaut expliqué : le moteur a été déclaré en marche avant la phase DÉMARRAGE. Réarmez puis respectez les étapes 1 à 3."
+                    } else {
+                        "Un défaut est actif. Consultez le journal puis cliquez sur Réarmer le défaut."
+                    }
+                }
+                default {
+                    "Suivez l'état affiché et consultez le journal pour connaître la dernière action."
+                }
+            }
+            $sandboxGuide.ForeColor = if ($Snapshot.state -eq 'fault') {
+                $sandboxFailureColor
+            } elseif ($Snapshot.state -eq 'running' -or
+                      $Snapshot.state -eq 'driver_control') {
+                $sandboxSuccessColor
+            } else {
+                $sandboxWarningColor
+            }
 
             $ignitionText = if ($Snapshot.ignition_active) { 'ON' } else { 'OFF' }
             $starterText = if ($Snapshot.starter_active) { 'ON' } else { 'OFF' }
