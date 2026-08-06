@@ -56,6 +56,12 @@ Les candidats du catalogue sont :
 signal BMW est déjà identifié. La qualification de chaque donnée reste
 obligatoire.
 
+La protection moteur froid, l'indicateur de régénération FAP et l'alerte de
+surchauffe de boîte possèdent maintenant leur comportement complet dans le
+simulateur. Ils restent `unavailable` sur une cible réelle tant que leurs
+signaux BMW ne sont pas qualifiés. Voir
+[telemetry-alerts.md](telemetry-alerts.md).
+
 ### Confort futur
 
 Les automatismes de confort et sorties externes sont classés
@@ -89,9 +95,10 @@ ne doivent jamais être réordonnés ni réutilisés après publication. Le cata
 compte actuellement 43 entrées, laissant 21 emplacements compatibles sans
 allocation dynamique.
 
-La configuration binaire V2 ajoute ce masque au payload. Une configuration V1
-de 24 octets est toujours acceptée et migrée avec toutes les nouvelles options
-désactivées. La sauvegarde suivante l'écrit au format V2.
+La configuration binaire V2 a ajouté ce masque au payload. La V3 ajoute les
+seuils de télémétrie. Les configurations V1 de 24 octets et V2 de 32 octets
+restent acceptées ; les champs absents prennent leurs valeurs sûres par défaut.
+La sauvegarde suivante les écrit au format V3.
 
 ## Inspection
 

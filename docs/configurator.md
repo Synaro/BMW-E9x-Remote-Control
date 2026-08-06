@@ -28,7 +28,9 @@ question oui/non et reste soumise aux barrières d'implémentation et de sûret�
 
 Une configuration typique pour le véhicule de référence sans capteur de capot
 peut conserver trois appuis sur verrouillage, choisir `capot désactivé` et régler
-librement la durée moteur entre 1 et 60 minutes.
+librement la durée moteur entre 1 et 60 minutes. Les seuils de protection moteur
+froid et de température de boîte sont proposés avec leurs bornes avant le
+catalogue des fonctionnalités.
 
 ## Contrôler et simuler
 

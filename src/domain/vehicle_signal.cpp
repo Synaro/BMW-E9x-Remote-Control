@@ -6,6 +6,12 @@ const char* toString(const VehicleSignal signal) noexcept {
     switch (signal) {
         case VehicleSignal::BatteryMillivolts: return "battery_millivolts";
         case VehicleSignal::EngineRpm: return "engine_rpm";
+        case VehicleSignal::CoolantTemperatureC: return "coolant_temperature_c";
+        case VehicleSignal::EngineOilTemperatureC: return "engine_oil_temperature_c";
+        case VehicleSignal::TransmissionOilTemperatureC:
+            return "transmission_oil_temperature_c";
+        case VehicleSignal::DpfRegenerationActive:
+            return "dpf_regeneration_active";
         case VehicleSignal::HoodClosed: return "hood_closed";
         case VehicleSignal::DoorsClosed: return "doors_closed";
         case VehicleSignal::TrunkClosed: return "trunk_closed";

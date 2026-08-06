@@ -9,7 +9,8 @@
 namespace bmw::remote::infrastructure {
 
 inline constexpr std::size_t LegacyUserSettingsPayloadSize = 24U;
-inline constexpr std::size_t UserSettingsPayloadSize = 32U;
+inline constexpr std::size_t FeatureUserSettingsPayloadSize = 32U;
+inline constexpr std::size_t UserSettingsPayloadSize = 40U;
 using UserSettingsPayload =
     std::array<std::uint8_t, UserSettingsPayloadSize>;
 

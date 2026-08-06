@@ -7,6 +7,8 @@
 #include <string>
 
 #include "bmw_remote/application/controller.hpp"
+#include "bmw_remote/application/feature_catalog.hpp"
+#include "bmw_remote/application/telemetry_monitor.hpp"
 #include "bmw_remote/domain/vehicle_state.hpp"
 #include "bmw_remote/infrastructure/actuator_safety_supervisor.hpp"
 
@@ -26,6 +28,8 @@ struct SandboxSnapshot final {
     bool hardwareStartPermitted{true};
     bool hoodMonitoringRequired{true};
     domain::VehicleState vehicle{};
+    application::FeatureRequests requestedFeatures{};
+    application::TelemetryReport telemetry{};
     application::EventType lastEvent{application::EventType::VehicleStateUpdated};
     application::Decision lastDecision{};
     std::size_t diagnosticRecords{0U};

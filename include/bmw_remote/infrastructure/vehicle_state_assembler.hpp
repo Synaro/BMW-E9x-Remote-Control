@@ -12,7 +12,7 @@ namespace bmw::remote::infrastructure {
 
 struct DecodedSignal final {
     domain::VehicleSignal signal{domain::VehicleSignal::BatteryMillivolts};
-    std::uint32_t value{0U};
+    std::int32_t value{0};
 };
 
 struct DecodedSignalBatch final {
@@ -21,7 +21,7 @@ struct DecodedSignalBatch final {
     std::array<DecodedSignal, MaximumSignals> signals{};
     std::size_t count{0U};
 
-    [[nodiscard]] bool add(domain::VehicleSignal signal, std::uint32_t value) noexcept;
+    [[nodiscard]] bool add(domain::VehicleSignal signal, std::int32_t value) noexcept;
 };
 
 enum class DecodeResult : std::uint8_t {
@@ -41,6 +41,7 @@ public:
 struct SignalFreshnessConfig final {
     std::uint32_t batteryMaximumAgeMs{2'000U};
     std::uint32_t engineRpmMaximumAgeMs{500U};
+    std::uint32_t telemetryMaximumAgeMs{2'000U};
     std::uint32_t bodyMaximumAgeMs{2'000U};
     std::uint32_t transmissionMaximumAgeMs{1'000U};
     std::uint32_t faultMaximumAgeMs{2'000U};
@@ -103,6 +104,10 @@ private:
     AssemblyStatistics statistics_{};
     StoredSignal<std::uint16_t> batteryMillivolts_{};
     StoredSignal<std::uint16_t> engineRpm_{};
+    StoredSignal<std::int16_t> coolantTemperatureC_{};
+    StoredSignal<std::int16_t> engineOilTemperatureC_{};
+    StoredSignal<std::int16_t> transmissionOilTemperatureC_{};
+    StoredSignal<bool> dpfRegenerationActive_{};
     StoredSignal<bool> hoodClosed_{};
     StoredSignal<bool> doorsClosed_{};
     StoredSignal<bool> trunkClosed_{};

@@ -181,6 +181,7 @@ SettingsProtocolFrame SettingsProtocolService::handle(
     const bool payloadSizeValid =
         request.type == SettingsMessageType::WriteRequest
             ? (request.payloadSize == UserSettingsPayloadSize ||
+               request.payloadSize == FeatureUserSettingsPayloadSize ||
                request.payloadSize == LegacyUserSettingsPayloadSize)
             : request.payloadSize == 0U;
     if (request.status != SettingsProtocolStatus::Ok || !payloadSizeValid) {

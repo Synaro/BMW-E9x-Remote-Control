@@ -16,6 +16,10 @@ constexpr std::array<domain::SignalSupport, domain::vehicleSignalCount()> Verifi
     domain::SignalSupport::Verified,
     domain::SignalSupport::Verified,
     domain::SignalSupport::Verified,
+    domain::SignalSupport::Verified,
+    domain::SignalSupport::Verified,
+    domain::SignalSupport::Verified,
+    domain::SignalSupport::Verified,
 };
 
 constexpr domain::VehicleProfile SyntheticProfile = {
@@ -49,6 +53,21 @@ void encodeLittleEndian16(
     high = static_cast<std::uint8_t>((value >> 8U) & 0xFFU);
 }
 
+[[nodiscard]] constexpr bool validSyntheticTemperature(
+    const std::int16_t temperatureC) noexcept {
+    return temperatureC >= -40 && temperatureC <= 215;
+}
+
+[[nodiscard]] constexpr std::uint8_t encodeSyntheticTemperature(
+    const std::int16_t temperatureC) noexcept {
+    return static_cast<std::uint8_t>(temperatureC + 40);
+}
+
+[[nodiscard]] constexpr std::int32_t decodeSyntheticTemperature(
+    const std::uint8_t encoded) noexcept {
+    return static_cast<std::int32_t>(encoded) - 40;
+}
+
 [[nodiscard]] bool addPowertrainSignals(
     const infrastructure::CanFrame& frame,
     infrastructure::DecodedSignalBatch& output) noexcept {
@@ -78,6 +97,24 @@ void encodeLittleEndian16(
            output.add(VehicleSignal::ParkingBrakeApplied, (flags >> 4U) & 0x01U);
 }
 
+[[nodiscard]] bool addTelemetrySignals(
+    const infrastructure::CanFrame& frame,
+    infrastructure::DecodedSignalBatch& output) noexcept {
+    using domain::VehicleSignal;
+    return output.add(
+               VehicleSignal::CoolantTemperatureC,
+               decodeSyntheticTemperature(frame.data[0])) &&
+           output.add(
+               VehicleSignal::EngineOilTemperatureC,
+               decodeSyntheticTemperature(frame.data[1])) &&
+           output.add(
+               VehicleSignal::TransmissionOilTemperatureC,
+               decodeSyntheticTemperature(frame.data[2])) &&
+           output.add(
+               VehicleSignal::DpfRegenerationActive,
+               static_cast<std::int32_t>(frame.data[3] & 0x01U));
+}
+
 }  // namespace
 
 const domain::VehicleProfile& syntheticVehicleProfile() noexcept {
@@ -90,7 +127,8 @@ infrastructure::DecodeResult SyntheticCanDecoder::decode(
     using infrastructure::DecodeResult;
 
     if (frame.identifier != SyntheticCanProtocol::PowertrainFrameIdentifier &&
-        frame.identifier != SyntheticCanProtocol::BodyFrameIdentifier) {
+        frame.identifier != SyntheticCanProtocol::BodyFrameIdentifier &&
+        frame.identifier != SyntheticCanProtocol::TelemetryFrameIdentifier) {
         return DecodeResult::Ignored;
     }
 
@@ -102,6 +140,20 @@ infrastructure::DecodeResult SyntheticCanDecoder::decode(
 
     if (frame.identifier == SyntheticCanProtocol::PowertrainFrameIdentifier) {
         return addPowertrainSignals(frame, output)
+                   ? DecodeResult::Decoded
+                   : DecodeResult::Invalid;
+    }
+
+    if (frame.identifier == SyntheticCanProtocol::TelemetryFrameIdentifier) {
+        if ((frame.data[3] & 0xFEU) != 0U) {
+            return DecodeResult::Invalid;
+        }
+        for (std::size_t index = 4U; index < 7U; ++index) {
+            if (frame.data[index] != 0U) {
+                return DecodeResult::Invalid;
+            }
+        }
+        return addTelemetrySignals(frame, output)
                    ? DecodeResult::Decoded
                    : DecodeResult::Invalid;
     }
@@ -151,6 +203,27 @@ infrastructure::CanFrame makeSyntheticBodyFrame(
         (state.trunkClosed ? 1U << 2U : 0U) |
         (state.brakePressed ? 1U << 3U : 0U) |
         (state.parkingBrakeApplied ? 1U << 4U : 0U));
+    frame.data[7] = SyntheticCanProtocol::Signature;
+    return frame;
+}
+
+infrastructure::CanFrame makeSyntheticTelemetryFrame(
+    const std::uint32_t timestampMs,
+    const SyntheticTelemetryState state) noexcept {
+    infrastructure::CanFrame frame{};
+    frame.timestampMs = timestampMs;
+    frame.identifier = SyntheticCanProtocol::TelemetryFrameIdentifier;
+    frame.extended = true;
+    frame.dataLength = infrastructure::CanFrame::MaximumDataLength;
+    if (!validSyntheticTemperature(state.coolantTemperatureC) ||
+        !validSyntheticTemperature(state.engineOilTemperatureC) ||
+        !validSyntheticTemperature(state.transmissionOilTemperatureC)) {
+        return {};
+    }
+    frame.data[0] = encodeSyntheticTemperature(state.coolantTemperatureC);
+    frame.data[1] = encodeSyntheticTemperature(state.engineOilTemperatureC);
+    frame.data[2] = encodeSyntheticTemperature(state.transmissionOilTemperatureC);
+    frame.data[3] = state.dpfRegenerationActive ? 1U : 0U;
     frame.data[7] = SyntheticCanProtocol::Signature;
     return frame;
 }

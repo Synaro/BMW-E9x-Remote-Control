@@ -19,6 +19,7 @@ namespace {
 using bmw::remote::application::DriverEntryMode;
 using bmw::remote::application::HoodMonitoringMode;
 using bmw::remote::application::UserSettings;
+using bmw::remote::application::UserSettingsLimits;
 
 enum class Mode : std::uint8_t {
     Interactive,
@@ -406,6 +407,43 @@ bool configureInteractively(UserSettings& settings) {
             << "\nLes temporisations de verrouillage sont incoherentes. "
             << "Merci de les corriger.\n\n";
     }
+
+    std::uint32_t coldMaximumRpm = settings.coldEngineMaximumRpm;
+    std::uint32_t warmTemperature = settings.engineWarmTemperatureC;
+    std::uint32_t transmissionOverheat =
+        settings.transmissionOverheatTemperatureC;
+    std::uint32_t temperatureHysteresis =
+        settings.temperatureAlertHysteresisC;
+    if (!promptNumber(
+            "Alerte moteur froid au-dessus de (tr/min)",
+            UserSettingsLimits::MinimumColdEngineMaximumRpm,
+            UserSettingsLimits::MaximumColdEngineMaximumRpm,
+            coldMaximumRpm) ||
+        !promptNumber(
+            "Temperature moteur consideree chaude (C)",
+            UserSettingsLimits::MinimumEngineWarmTemperatureC,
+            UserSettingsLimits::MaximumEngineWarmTemperatureC,
+            warmTemperature) ||
+        !promptNumber(
+            "Alerte temperature huile de boite (C)",
+            UserSettingsLimits::MinimumTransmissionOverheatTemperatureC,
+            UserSettingsLimits::MaximumTransmissionOverheatTemperatureC,
+            transmissionOverheat) ||
+        !promptNumber(
+            "Hysteresis des alertes de temperature (C)",
+            UserSettingsLimits::MinimumTemperatureAlertHysteresisC,
+            UserSettingsLimits::MaximumTemperatureAlertHysteresisC,
+            temperatureHysteresis)) {
+        return false;
+    }
+    settings.coldEngineMaximumRpm =
+        static_cast<std::uint16_t>(coldMaximumRpm);
+    settings.engineWarmTemperatureC =
+        static_cast<std::uint16_t>(warmTemperature);
+    settings.transmissionOverheatTemperatureC =
+        static_cast<std::uint16_t>(transmissionOverheat);
+    settings.temperatureAlertHysteresisC =
+        static_cast<std::uint16_t>(temperatureHysteresis);
 
     return promptFeatureSelection(settings);
 }

@@ -160,6 +160,27 @@ bool applySetting(
         settings.lockMaximumSequenceMs = parsed;
         return true;
     }
+    if (parsed > std::numeric_limits<std::uint16_t>::max()) {
+        return false;
+    }
+    if (key == "cold_engine_maximum_rpm") {
+        settings.coldEngineMaximumRpm = static_cast<std::uint16_t>(parsed);
+        return true;
+    }
+    if (key == "engine_warm_temperature_c") {
+        settings.engineWarmTemperatureC = static_cast<std::uint16_t>(parsed);
+        return true;
+    }
+    if (key == "transmission_overheat_temperature_c") {
+        settings.transmissionOverheatTemperatureC =
+            static_cast<std::uint16_t>(parsed);
+        return true;
+    }
+    if (key == "temperature_alert_hysteresis_c") {
+        settings.temperatureAlertHysteresisC =
+            static_cast<std::uint16_t>(parsed);
+        return true;
+    }
     return false;
 }
 
@@ -177,7 +198,11 @@ bool knownKey(const std::string_view key) noexcept {
            key == "lock_press_count" ||
            key == "lock_minimum_gap_ms" ||
            key == "lock_maximum_gap_ms" ||
-           key == "lock_sequence_window_ms";
+           key == "lock_sequence_window_ms" ||
+           key == "cold_engine_maximum_rpm" ||
+           key == "engine_warm_temperature_c" ||
+           key == "transmission_overheat_temperature_c" ||
+           key == "temperature_alert_hysteresis_c";
 }
 
 bool sameSettings(
@@ -192,7 +217,13 @@ bool sameSettings(
            left.lockMinimumGapMs == right.lockMinimumGapMs &&
            left.lockMaximumGapMs == right.lockMaximumGapMs &&
            left.lockMaximumSequenceMs == right.lockMaximumSequenceMs &&
-           left.features.mask() == right.features.mask();
+           left.features.mask() == right.features.mask() &&
+           left.coldEngineMaximumRpm == right.coldEngineMaximumRpm &&
+           left.engineWarmTemperatureC == right.engineWarmTemperatureC &&
+           left.transmissionOverheatTemperatureC ==
+               right.transmissionOverheatTemperatureC &&
+           left.temperatureAlertHysteresisC ==
+               right.temperatureAlertHysteresisC;
 }
 
 void removeIfPresent(const std::filesystem::path& path) noexcept {
@@ -326,6 +357,14 @@ bool writeUserSettings(
            << "lock_minimum_gap_ms=" << settings.lockMinimumGapMs << "\n"
            << "lock_maximum_gap_ms=" << settings.lockMaximumGapMs << "\n"
            << "lock_sequence_window_ms=" << settings.lockMaximumSequenceMs
+           << "\n\n# Seuils de telemetrie en lecture seule.\n"
+           << "cold_engine_maximum_rpm=" << settings.coldEngineMaximumRpm
+           << "\nengine_warm_temperature_c="
+           << settings.engineWarmTemperatureC
+           << "\ntransmission_overheat_temperature_c="
+           << settings.transmissionOverheatTemperatureC
+           << "\ntemperature_alert_hysteresis_c="
+           << settings.temperatureAlertHysteresisC
            << "\n\n# Fonctionnalites modulaires ; toutes sont desactivees par defaut.\n";
 
     for (const application::FeatureDescriptor& feature :

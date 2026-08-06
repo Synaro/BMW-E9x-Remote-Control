@@ -357,7 +357,14 @@ void printUserSettings(const application::UserSettings& settings) {
         << "lock_press_count: " << static_cast<unsigned>(settings.lockPressCount) << '\n'
         << "lock_minimum_gap_ms: " << settings.lockMinimumGapMs << '\n'
         << "lock_maximum_gap_ms: " << settings.lockMaximumGapMs << '\n'
-        << "lock_sequence_window_ms: " << settings.lockMaximumSequenceMs << '\n';
+        << "lock_sequence_window_ms: " << settings.lockMaximumSequenceMs << '\n'
+        << "cold_engine_maximum_rpm: " << settings.coldEngineMaximumRpm << '\n'
+        << "engine_warm_temperature_c: "
+        << settings.engineWarmTemperatureC << '\n'
+        << "transmission_overheat_temperature_c: "
+        << settings.transmissionOverheatTemperatureC << '\n'
+        << "temperature_alert_hysteresis_c: "
+        << settings.temperatureAlertHysteresisC << '\n';
 
     std::cout << "enabled_features:";
     bool hasEnabledFeature = false;

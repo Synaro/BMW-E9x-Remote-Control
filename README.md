@@ -39,6 +39,9 @@ Le premier jalon logiciel est opérationnel :
 - protocole CAN synthétique réservé aux simulations hors véhicule ;
 - simulateur interactif avec parcours nominal et injection d'un défaut de sécurité ;
 - interface graphique Windows locale avec scénarios et bac à sable interactif ;
+- moteur de télémétrie V1 strictement en lecture seule avec protection moteur
+  froid, indicateur FAP et alerte de température de boîte ;
+- injection graphique des températures et alertes de transition avec hystérésis ;
 - session distante limitée à 15 minutes et reprise conducteur bornée à 60 secondes ;
 - profils véhicule extensibles avec qualification fermée par défaut ;
 - profil de découverte pour l'E90 2009 N47D20C boîte automatique ;
@@ -55,7 +58,7 @@ Le premier jalon logiciel est opérationnel :
 - campagnes déterministes de perte, retard et corruption des données véhicule ;
 - superviseur logiciel des actionneurs avec heartbeat, séquencement, retours
   d'état et défauts mémorisés ;
-- 127 tests C++, 15 scénarios du simulateur, 3 contrôles du configurateur et
+- 132 tests C++, 15 scénarios du simulateur, 3 contrôles du configurateur et
   21 tests Python automatisés en intégration continue.
 
 L'adaptateur BMW qui observera réellement le verrouillage, qualifiera la reprise
@@ -105,6 +108,8 @@ Les préférences, leurs limites et leur future persistance sont décrites dans
 [docs/user-configuration.md](docs/user-configuration.md).
 Le catalogue modulaire, les niveaux de livraison et la compatibilité iOS/Android
 sont décrits dans [docs/feature-framework.md](docs/feature-framework.md).
+Le premier moteur de télémétrie et ses alertes sont décrits dans
+[docs/telemetry-alerts.md](docs/telemetry-alerts.md).
 Le journal binaire redondant est spécifié dans
 [docs/settings-persistence.md](docs/settings-persistence.md).
 Le configurateur PC est décrit dans
@@ -229,7 +234,9 @@ plus récentes, permet de choisir un scénario, un fichier de configuration ou
 une trace, puis affiche et copie le rapport. Le bouton **Ouvrir le bac à sable**
 garde une session vivante : l'utilisateur peut modifier les portes, le capot,
 le frein, le rapport et le régime moteur, déclencher les timers et observer en
-direct l'état, les sorties simulées et les défauts. Elle reste entièrement
+direct l'état, les sorties simulées et les défauts. Les températures moteur et
+boîte, la régénération FAP et leurs trois fonctions V1 peuvent également être
+injectées ou désactivées séparément. Elle reste entièrement
 locale et ne se connecte à aucun véhicule.
 
 Sous Windows, l'exécutable interactif peut être construit avec :

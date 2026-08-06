@@ -103,6 +103,9 @@ Il peut être lancé directement. Sans argument, il affiche un menu interactif :
 Le mode persistant exploité par la fenêtre graphique est également accessible
 aux outils de test avec `bmw_remote_simulator.exe --sandbox`. Il échange un
 objet JSON par ligne sur l'entrée/sortie standard et n'ouvre aucun port réseau.
+Le bac à sable permet aussi d'activer séparément la protection moteur froid,
+l'indicateur FAP et l'alerte de température de boîte, puis d'injecter leurs
+valeurs de télémétrie. Voir [telemetry-alerts.md](telemetry-alerts.md).
 
 ## Lancer un scénario depuis PowerShell
 

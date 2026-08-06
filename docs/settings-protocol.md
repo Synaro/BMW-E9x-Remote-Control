@@ -8,7 +8,7 @@ préférences `UserSettings`. Il ne transporte aucune commande moteur, aucun ord
 d'actionneur et aucun contournement d'antidémarrage.
 
 L'implémentation utilise des tableaux de taille fixe, n'alloue pas dynamiquement
-et limite une trame à 48 octets.
+et limite une trame à 56 octets.
 
 ## Trame version 1
 
@@ -22,8 +22,8 @@ Tous les entiers multi-octets sont encodés en little-endian.
 | 6 | 1 | statut, `0` dans une requête valide |
 | 7 | 1 | réservé, obligatoirement `0` |
 | 8–9 | 2 | identifiant de requête |
-| 10–11 | 2 | taille du payload, de 0 à 32 |
-| 12… | 0–32 | payload |
+| 10–11 | 2 | taille du payload, de 0 à 40 |
+| 12… | 0–40 | payload |
 | fin−4…fin−1 | 4 | CRC‑32 du header et du payload |
 
 Le CRC utilise le polynôme reflété `0xEDB88320`, une valeur initiale et un XOR
@@ -35,9 +35,9 @@ pas une protection cryptographique.
 | Valeur | Message | Payload |
 |---:|---|---:|
 | `0x01` | lecture des réglages | 0 |
-| `0x02` | écriture des réglages | 32, ou 24 pour migration V1 |
+| `0x02` | écriture des réglages | 40, ou 24/32 pour migration V1/V2 |
 | `0x03` | identification du boîtier | 0 |
-| `0x81` | réponse de lecture | 32 si succès |
+| `0x81` | réponse de lecture | 40 si succès |
 | `0x82` | réponse d'écriture | 0 |
 | `0x83` | réponse d'identification | 12 si succès |
 | `0xFF` | message non pris en charge | 0 |
@@ -80,13 +80,17 @@ Le payload fixe est partagé par le journal persistant et le protocole :
 | 16–19 | intervalle maximal des appuis en millisecondes |
 | 20–23 | fenêtre totale des appuis en millisecondes |
 | 24–31 | masque 64 bits des fonctionnalités modulaires |
+| 32–33 | régime maximal lorsque le moteur est froid |
+| 34–35 | température moteur considérée chaude en °C |
+| 36–37 | température d'alerte de l'huile de boîte en °C |
+| 38–39 | hystérésis des alertes de température en °C |
 
 Le décodage ne suffit pas à accepter ces valeurs :
 `validateUserSettings()` doit aussi accepter l'ensemble.
 
-Le décodeur accepte encore l'ancien payload de 24 octets. Les fonctionnalités
-ajoutées en V2 sont alors toutes désactivées. Les lectures et nouvelles
-écritures utilisent toujours le payload de 32 octets.
+Le décodeur accepte encore les payloads V1 de 24 octets et V2 de 32 octets. Les
+champs absents prennent leurs valeurs par défaut. Les lectures et nouvelles
+écritures utilisent toujours le payload de 40 octets.
 
 ## Statuts applicatifs
 
@@ -128,7 +132,7 @@ Le CRC seul ne fournit aucune de ces propriétés.
 
 `SettingsStreamReceiver` accepte les octets un par un. Avant synchronisation, il
 ignore le bruit et recherche la séquence `BMCF`. Après le header, il refuse
-immédiatement un payload supérieur à 32 octets. Une trame complète passe ensuite
+immédiatement un payload supérieur à 40 octets. Une trame complète passe ensuite
 par toutes les vérifications du codec.
 
 Le délai inter-octets est de 250 ms par défaut et reste configurable par
@@ -138,6 +142,6 @@ lors du retour à zéro d'un compteur monotone 32 bits.
 
 `SettingsProtocolEndpoint` assemble le récepteur, le service et
 `SettingsTransportPort`. Une trame invalide ou expirée ne produit aucune réponse.
-Une requête valide produit au plus une réponse de 48 octets. Une panne d'envoi
+Une requête valide produit au plus une réponse de 56 octets. Une panne d'envoi
 est signalée à l'adaptateur et ne déclenche aucune boucle de réessai dans le
 noyau.

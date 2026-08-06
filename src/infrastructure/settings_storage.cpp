@@ -18,6 +18,7 @@ constexpr std::size_t PayloadOffset = 12U;
 constexpr std::size_t PayloadSize = UserSettingsPayloadSize;
 constexpr std::size_t CrcOffset = PayloadOffset + PayloadSize;
 constexpr std::uint16_t LegacySchemaVersion = 1U;
+constexpr std::uint16_t FeatureSchemaVersion = 2U;
 
 struct DecodedRecord final {
     application::UserSettings settings{};
@@ -110,6 +111,8 @@ void writeU32(
     const bool supportedVersion =
         (version == LegacySchemaVersion &&
          storedPayloadSize == LegacyUserSettingsPayloadSize) ||
+        (version == FeatureSchemaVersion &&
+         storedPayloadSize == FeatureUserSettingsPayloadSize) ||
         (version == JournaledUserSettingsStore::SchemaVersion &&
          storedPayloadSize == UserSettingsPayloadSize);
     const std::size_t storedCrcOffset = PayloadOffset + storedPayloadSize;

@@ -5,6 +5,7 @@
 #include "bmw_remote/application/controller.hpp"
 #include "bmw_remote/application/feature_catalog.hpp"
 #include "bmw_remote/application/lock_sequence_detector.hpp"
+#include "bmw_remote/application/telemetry_monitor.hpp"
 
 namespace bmw::remote::application {
 
@@ -24,6 +25,10 @@ struct UserSettings final {
     std::uint32_t lockMaximumGapMs{1'500U};
     std::uint32_t lockMaximumSequenceMs{3'000U};
     FeatureRequests features{};
+    std::uint16_t coldEngineMaximumRpm{2'200U};
+    std::uint16_t engineWarmTemperatureC{75U};
+    std::uint16_t transmissionOverheatTemperatureC{110U};
+    std::uint16_t temperatureAlertHysteresisC{5U};
 };
 
 struct UserSettingsLimits final {
@@ -37,6 +42,26 @@ struct UserSettingsLimits final {
     static constexpr std::uint32_t MaximumLockGapMs{5'000U};
     static constexpr std::uint32_t MinimumLockSequenceMs{500U};
     static constexpr std::uint32_t MaximumLockSequenceMs{15'000U};
+    static constexpr std::uint16_t MinimumColdEngineMaximumRpm{
+        TelemetryMonitorLimits::MinimumColdEngineMaximumRpm};
+    static constexpr std::uint16_t MaximumColdEngineMaximumRpm{
+        TelemetryMonitorLimits::MaximumColdEngineMaximumRpm};
+    static constexpr std::uint16_t MinimumEngineWarmTemperatureC{
+        static_cast<std::uint16_t>(
+            TelemetryMonitorLimits::MinimumEngineWarmTemperatureC)};
+    static constexpr std::uint16_t MaximumEngineWarmTemperatureC{
+        static_cast<std::uint16_t>(
+            TelemetryMonitorLimits::MaximumEngineWarmTemperatureC)};
+    static constexpr std::uint16_t MinimumTransmissionOverheatTemperatureC{
+        static_cast<std::uint16_t>(
+            TelemetryMonitorLimits::MinimumTransmissionOverheatTemperatureC)};
+    static constexpr std::uint16_t MaximumTransmissionOverheatTemperatureC{
+        static_cast<std::uint16_t>(
+            TelemetryMonitorLimits::MaximumTransmissionOverheatTemperatureC)};
+    static constexpr std::uint16_t MinimumTemperatureAlertHysteresisC{
+        TelemetryMonitorLimits::MinimumTemperatureHysteresisC};
+    static constexpr std::uint16_t MaximumTemperatureAlertHysteresisC{
+        TelemetryMonitorLimits::MaximumTemperatureHysteresisC};
 };
 
 enum class UserSettingsReason : std::uint16_t {
@@ -51,6 +76,10 @@ enum class UserSettingsReason : std::uint16_t {
     LockSequenceTimeOutOfRange = 1U << 7U,
     InconsistentLockTiming = 1U << 8U,
     InvalidFeatureMask = 1U << 9U,
+    ColdEngineMaximumRpmOutOfRange = 1U << 10U,
+    EngineWarmTemperatureOutOfRange = 1U << 11U,
+    TransmissionOverheatTemperatureOutOfRange = 1U << 12U,
+    TemperatureAlertHysteresisOutOfRange = 1U << 13U,
 };
 
 [[nodiscard]] constexpr std::uint16_t userSettingsMask(
@@ -79,6 +108,7 @@ struct UserConfiguration final {
     UserSettingsValidation validation{};
     ControllerConfig controller{};
     LockSequenceConfig lockSequence{};
+    TelemetryMonitorConfig telemetry{};
 };
 
 [[nodiscard]] UserSettingsValidation validateUserSettings(

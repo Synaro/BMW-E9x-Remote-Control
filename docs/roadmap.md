@@ -67,7 +67,8 @@
 - [x] Résolution séparée des préférences, capacités et qualifications
 - [x] Persistance V2 du masque avec migration automatique de la V1
 - [x] Compatibilité de modèle pour compagnons iOS ou Android
-- [ ] Ajouter les comportements V1 de télémétrie en simulation
+- [x] Ajouter le premier moteur V1 lecture seule : moteur froid, FAP et huile de boîte
+- [ ] Ajouter les autres comportements V1 de télémétrie en simulation
 - [ ] Concevoir le protocole applicatif commun aux compagnons mobiles
 - [ ] Développer le premier compagnon iOS
 - [ ] Développer ensuite le compagnon Android

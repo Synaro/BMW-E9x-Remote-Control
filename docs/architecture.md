@@ -79,7 +79,7 @@ encode deux générations versionnées avec CRC, sélectionne la plus récente v
 et fournit un retour fail-safe si aucune ne peut être chargée. Voir
 [settings-persistence.md](settings-persistence.md).
 
-Le protocole de configuration transporte le même payload V2 fixe de 32 octets que
+Le protocole de configuration transporte le même payload V3 fixe de 40 octets que
 le journal, sans exposer son format de stockage. Le codec vérifie la version, la
 taille et le CRC avant que `SettingsProtocolService` n'accède au port. Le service
 exige une session déclarée authentifiée et refuse toute écriture lorsque le
