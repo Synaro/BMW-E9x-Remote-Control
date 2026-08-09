@@ -1,0 +1,103 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://bmw-e9x-remote-control.invalid/vehicle-data/schema/cas-kl50-timing-observation.schema.json",
+  "title": "Phase 3D bounded CAS KL50 timing evidence",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version", "artifact_type", "observation_id", "profile_ref", "evidence_index",
+    "evidence_ref", "source", "signal", "timestamp_basis", "boundary_samples",
+    "consecutive_on_samples", "sampling_period_approx_ms", "sampling_frequency_approx_hz",
+    "duration_min_ms", "duration_max_ms", "duration_estimate_ms",
+    "timestamp_resolution_approx_ms", "duration_status", "qualification",
+    "rpm_alignment_status", "raw_trace_available_in_repository", "forbidden_inferences", "notes"
+  ],
+  "properties": {
+    "schema_version": {"const": 1},
+    "artifact_type": {"const": "CAS_KL50_TIMING_OBSERVATION"},
+    "observation_id": {"type": "string", "minLength": 1},
+    "profile_ref": {"type": "string", "minLength": 1},
+    "evidence_index": {"type": "string", "minLength": 1},
+    "evidence_ref": {"type": "string", "minLength": 1},
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["tool", "artifact", "sgbd_prg", "job", "field", "trace_level", "recorded_at", "session"],
+      "properties": {
+        "tool": {"const": "EDIABAS IFH trace"},
+        "artifact": {"const": "ifh.trc"},
+        "sgbd_prg": {"const": "CAS.PRG"},
+        "job": {"const": "status_fzg_zustand"},
+        "field": {"const": "KLEMMENSTATUS bits 4-5"},
+        "trace_level": {"const": 3},
+        "recorded_at": {"type": "string", "format": "date-time"},
+        "session": {"type": "string", "minLength": 1}
+      }
+    },
+    "signal": {"const": "CAS.KLEMMENSTATUS.KL50"},
+    "timestamp_basis": {"const": "SOURCE_ABSOLUTE_LOCAL"},
+    "boundary_samples": {
+      "type": "array",
+      "minItems": 4,
+      "maxItems": 4,
+      "prefixItems": [
+        {"$ref": "#/$defs/lastOffBefore"},
+        {"$ref": "#/$defs/firstOn"},
+        {"$ref": "#/$defs/lastOn"},
+        {"$ref": "#/$defs/firstOffAfter"}
+      ],
+      "items": false
+    },
+    "consecutive_on_samples": {"type": "integer", "minimum": 2},
+    "sampling_period_approx_ms": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["minimum", "maximum", "nominal"],
+      "properties": {
+        "minimum": {"type": "integer", "minimum": 1},
+        "maximum": {"type": "integer", "minimum": 1},
+        "nominal": {"type": "integer", "minimum": 1}
+      }
+    },
+    "sampling_frequency_approx_hz": {"type": "number", "exclusiveMinimum": 0},
+    "duration_min_ms": {"type": "integer", "minimum": 0},
+    "duration_max_ms": {"type": "integer", "minimum": 0},
+    "duration_estimate_ms": {"type": "integer", "minimum": 0},
+    "timestamp_resolution_approx_ms": {"type": "integer", "minimum": 1},
+    "duration_status": {"const": "OBSERVED_BOUNDED"},
+    "qualification": {"const": "CONFIRMED_FROM_LEVEL3_TRACE"},
+    "rpm_alignment_status": {"const": "PENDING"},
+    "raw_trace_available_in_repository": {"const": false},
+    "forbidden_inferences": {
+      "type": "array", "uniqueItems": true,
+      "items": {"enum": ["EXACT_DURATION", "CAN_IDENTIFIER", "CAS_COMMAND", "KL50_COMMAND", "TRANSMISSION_PATH", "IMMOBILIZER_BYPASS", "REMOTE_START_ACTUATION", "OEM_START_REQUEST", "OEM_START_AUTHORIZATION"]}
+    },
+    "notes": {"type": "string", "minLength": 1}
+  },
+  "$defs": {
+    "rawValue": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["decimal", "hexadecimal"],
+      "properties": {
+        "decimal": {"type": "integer", "minimum": 0, "maximum": 255},
+        "hexadecimal": {"type": "string", "pattern": "^0x[0-9A-F]{2}$"}
+      }
+    },
+    "sample": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["role", "timestamp", "raw_value", "interpreted_value"],
+      "properties": {
+        "role": {"type": "string"},
+        "timestamp": {"type": "string", "format": "date-time"},
+        "raw_value": {"$ref": "#/$defs/rawValue"},
+        "interpreted_value": {"enum": ["KL50_OFF", "KL50_ON"]}
+      }
+    },
+    "lastOffBefore": {"allOf": [{"$ref": "#/$defs/sample"}, {"properties": {"role": {"const": "LAST_OFF_BEFORE_ACTIVATION"}, "interpreted_value": {"const": "KL50_OFF"}}}]},
+    "firstOn": {"allOf": [{"$ref": "#/$defs/sample"}, {"properties": {"role": {"const": "FIRST_ON"}, "interpreted_value": {"const": "KL50_ON"}}}]},
+    "lastOn": {"allOf": [{"$ref": "#/$defs/sample"}, {"properties": {"role": {"const": "LAST_ON"}, "interpreted_value": {"const": "KL50_ON"}}}]},
+    "firstOffAfter": {"allOf": [{"$ref": "#/$defs/sample"}, {"properties": {"role": {"const": "FIRST_OFF_AFTER_ACTIVATION"}, "interpreted_value": {"const": "KL50_OFF"}}}]}
+  }
+}

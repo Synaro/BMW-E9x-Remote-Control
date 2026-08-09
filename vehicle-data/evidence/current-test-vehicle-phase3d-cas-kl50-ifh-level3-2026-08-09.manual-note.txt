@@ -1,0 +1,35 @@
+Observation réelle anonymisée — durée KL50 bornée par trace IFH Level 3
+
+Source : EDIABAS IFH Trace Level 3
+SGBD/PRG : CAS.PRG
+Job : status_fzg_zustand
+Signal lu : KLEMMENSTATUS, bits 4-5 (KL50)
+Session : PHASE3D_CAS_KL50_IFH_LEVEL3_2026_08_09
+
+Échantillons frontières communiqués :
+
+- 2026-08-09 20:47:20.578 : dernier KL50 OFF avant activation, 65 / 0x41 ;
+- 2026-08-09 20:47:20.632 : premier KL50 ON, 85 / 0x55 ;
+- 2026-08-09 20:47:21.352 : dernier KL50 ON, 85 / 0x55 ;
+- 2026-08-09 20:47:21.405 : premier KL50 OFF après activation, 69 / 0x45.
+
+Quinze échantillons consécutifs KL50 ON ont été observés. La période locale
+d'échantillonnage autour des transitions est approximativement comprise entre
+46 et 58 ms, soit environ 20 Hz et une résolution nominale d'environ 50 ms.
+
+Durée KL50 conservée comme intervalle d'observation :
+
+- durée minimale directement observée : 720 ms ;
+- borne maximale compte tenu des intervalles d'échantillonnage : 827 ms ;
+- estimation au milieu des intervalles : 774 ms, arrondie et non exacte.
+
+Qualification :
+
+- duration_status = OBSERVED_BOUNDED ;
+- qualification = CONFIRMED_FROM_LEVEL3_TRACE ;
+- alignement temporel KL50/RPM = PENDING.
+
+Cette transcription n'est pas le fichier ifh.trc brut. Elle ne prouve aucune
+commande CAS ou KL50, aucun identifiant CAN, aucune demande ou autorisation de
+démarrage, aucun mécanisme d'actionnement remote-start et aucun contournement
+de l'antidémarrage.

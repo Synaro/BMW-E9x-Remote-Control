@@ -74,10 +74,21 @@ EDIABAS réel de niveau 1. Le trace contient 64/`0x40`, 65/`0x41`, plusieurs
 lectures consécutives à 85/`0x55`, puis un retour à 69/`0x45`. Elle n'est donc
 pas traitée comme un artefact visuel de Tool32.
 
-Le fichier brut `ifh.trc` n'est pas versionné et les timestamps individuels ne
-sont pas disponibles. La durée KL50 reste `PENDING_LEVEL3_TRACE` et
-l'alignement KL50/RPM reste `PENDING`. Aucune durée n'est reconstruite à partir
-de l'ordre des lignes du trace Level 1.
+Le fichier brut `ifh.trc` n'est pas versionné. Le trace Level 1 reste dépourvu
+de timestamps individuels et ne porte donc aucune durée.
+
+Une transcription distincte du trace IFH Level 3 conserve maintenant quatre
+échantillons frontières : dernier OFF à `20:47:20.578` (`0x41`), premier ON à
+`20:47:20.632` (`0x55`), dernier ON à `20:47:21.352` (`0x55`) et premier OFF à
+`20:47:21.405` (`0x45`). Quinze échantillons ON consécutifs sont rapportés,
+avec une période locale approximative de 46 à 58 ms, soit environ 20 Hz.
+
+La durée est qualifiée `OBSERVED_BOUNDED / CONFIRMED_FROM_LEVEL3_TRACE` : le
+minimum directement observé est 720 ms et la borne maximale liée aux
+intervalles d'échantillonnage est 827 ms. La valeur 774 ms est uniquement le
+milieu arrondi de ces bornes, avec une résolution approximative de 50 ms ; elle
+n'est jamais stockée ou décrite comme une durée exacte. L'alignement KL50/RPM
+reste `PENDING` faute de base temporelle commune.
 
 Cette qualification est `READ_ONLY_SIGNAL` et reste `PROHIBITED` comme
 précondition. Elle ne prouve ni la source de demande OEM, ni une commande de
@@ -154,7 +165,7 @@ timestamps synchronisés explicitement fournis.
 - signification fonctionnelle des bits MSA observés : `UNKNOWN` ;
 - état Terminal 50 : `CONFIRMED` en lecture via KLEMMENSTATUS ;
 - transition OEM KL50 OFF/ON/OFF : `CONFIRMED` par Tool32 et trace IFH ;
-- durée KL50 : `PENDING_LEVEL3_TRACE` ;
+- durée KL50 : `OBSERVED_BOUNDED / CONFIRMED_FROM_LEVEL3_TRACE`, entre 720 et 827 ms ;
 - alignement temporel KL50/RPM : `PENDING` ;
 - source de demande de démarrage OEM : `UNKNOWN` ;
 - bouton START / demande de démarrage CAS : `UNKNOWN` ;

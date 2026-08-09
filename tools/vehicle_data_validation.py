@@ -30,6 +30,7 @@ QUALIFICATION_LEVELS = {"UNKNOWN", "OBSERVED", "CONFIRMED", "UNTRUSTED", "BLOCKE
 CHECKLIST_STATUSES = {
     "UNKNOWN",
     "OBSERVED",
+    "OBSERVED_BOUNDED",
     "CONFIRMED",
     "UNTRUSTED",
     "NOT_YET_VALIDATED",
@@ -759,6 +760,170 @@ def validate_cas_kl50_observation(document: Mapping[str, Any], evidence_ids: set
     _require_nonempty_string(document["notes"], "cas_kl50_observation.notes")
 
 
+def validate_cas_kl50_timing_observation(
+    document: Mapping[str, Any], evidence_ids: set[str]
+) -> None:
+    _required(
+        document,
+        {
+            "schema_version",
+            "artifact_type",
+            "observation_id",
+            "profile_ref",
+            "evidence_index",
+            "evidence_ref",
+            "source",
+            "signal",
+            "timestamp_basis",
+            "boundary_samples",
+            "consecutive_on_samples",
+            "sampling_period_approx_ms",
+            "sampling_frequency_approx_hz",
+            "duration_min_ms",
+            "duration_max_ms",
+            "duration_estimate_ms",
+            "timestamp_resolution_approx_ms",
+            "duration_status",
+            "qualification",
+            "rpm_alignment_status",
+            "raw_trace_available_in_repository",
+            "forbidden_inferences",
+            "notes",
+        },
+        "cas_kl50_timing_observation",
+    )
+    _require_schema_v1(document, "cas_kl50_timing_observation")
+    if document["artifact_type"] != "CAS_KL50_TIMING_OBSERVATION":
+        raise ValidationError("cas_kl50_timing_observation.artifact_type: unsupported type")
+    for field in ("observation_id", "profile_ref", "evidence_index"):
+        _require_nonempty_string(document[field], f"cas_kl50_timing_observation.{field}")
+    _validate_evidence_ref(
+        document["evidence_ref"], evidence_ids, "cas_kl50_timing_observation.evidence_ref"
+    )
+
+    source = _require_object(document["source"], "cas_kl50_timing_observation.source")
+    _required(
+        source,
+        {"tool", "artifact", "sgbd_prg", "job", "field", "trace_level", "recorded_at", "session"},
+        "cas_kl50_timing_observation.source",
+    )
+    expected_source = {
+        "tool": "EDIABAS IFH trace",
+        "artifact": "ifh.trc",
+        "sgbd_prg": "CAS.PRG",
+        "job": "status_fzg_zustand",
+        "field": "KLEMMENSTATUS bits 4-5",
+        "trace_level": 3,
+    }
+    for field, expected in expected_source.items():
+        if source[field] != expected:
+            raise ValidationError(
+                f"cas_kl50_timing_observation.source.{field}: expected {expected!r}"
+            )
+    _require_timestamp(source["recorded_at"], "cas_kl50_timing_observation.source.recorded_at")
+    _require_nonempty_string(source["session"], "cas_kl50_timing_observation.source.session")
+    if document["signal"] != "CAS.KLEMMENSTATUS.KL50":
+        raise ValidationError("cas_kl50_timing_observation.signal: unexpected signal")
+    if document["timestamp_basis"] != "SOURCE_ABSOLUTE_LOCAL":
+        raise ValidationError("cas_kl50_timing_observation.timestamp_basis: expected Level 3 timestamps")
+
+    samples = _require_array(
+        document["boundary_samples"], "cas_kl50_timing_observation.boundary_samples"
+    )
+    if len(samples) != 4:
+        raise ValidationError("cas_kl50_timing_observation.boundary_samples: exactly four required")
+    expected_roles = [
+        "LAST_OFF_BEFORE_ACTIVATION",
+        "FIRST_ON",
+        "LAST_ON",
+        "FIRST_OFF_AFTER_ACTIVATION",
+    ]
+    expected_states = ["KL50_OFF", "KL50_ON", "KL50_ON", "KL50_OFF"]
+    expected_values = [0x41, 0x55, 0x55, 0x45]
+    timestamps: list[datetime] = []
+    for index, raw_sample in enumerate(samples):
+        location = f"cas_kl50_timing_observation.boundary_samples[{index}]"
+        sample = _require_object(raw_sample, location)
+        _required(sample, {"role", "timestamp", "raw_value", "interpreted_value"}, location)
+        if sample["role"] != expected_roles[index] or sample["interpreted_value"] != expected_states[index]:
+            raise ValidationError(f"{location}: unexpected boundary role or KL50 state")
+        value = _validate_raw_byte(sample["raw_value"], f"{location}.raw_value")
+        if value != expected_values[index]:
+            raise ValidationError(f"{location}.raw_value: unexpected reported Level 3 value")
+        decoded_on = ((value >> 4) & 0b11) == 0b01
+        if decoded_on != (sample["interpreted_value"] == "KL50_ON"):
+            raise ValidationError(f"{location}: raw KL50 bits disagree with interpreted state")
+        _require_timestamp(sample["timestamp"], f"{location}.timestamp")
+        timestamps.append(datetime.fromisoformat(sample["timestamp"].replace("Z", "+00:00")))
+    if timestamps != sorted(timestamps) or len(set(timestamps)) != len(timestamps):
+        raise ValidationError("cas_kl50_timing_observation.boundary_samples: timestamps must increase")
+
+    on_samples = document["consecutive_on_samples"]
+    if not isinstance(on_samples, int) or isinstance(on_samples, bool) or on_samples < 2:
+        raise ValidationError("cas_kl50_timing_observation.consecutive_on_samples: expected at least two")
+    sampling = _require_object(
+        document["sampling_period_approx_ms"],
+        "cas_kl50_timing_observation.sampling_period_approx_ms",
+    )
+    _required(sampling, {"minimum", "maximum", "nominal"}, "cas_kl50_timing_observation.sampling_period_approx_ms")
+    period_values = [sampling[name] for name in ("minimum", "nominal", "maximum")]
+    if any(not isinstance(value, int) or isinstance(value, bool) or value <= 0 for value in period_values):
+        raise ValidationError("cas_kl50_timing_observation.sampling_period_approx_ms: positive integers required")
+    if not sampling["minimum"] <= sampling["nominal"] <= sampling["maximum"]:
+        raise ValidationError("cas_kl50_timing_observation.sampling_period_approx_ms: invalid bounds")
+    frequency = document["sampling_frequency_approx_hz"]
+    if not isinstance(frequency, (int, float)) or isinstance(frequency, bool) or frequency <= 0:
+        raise ValidationError("cas_kl50_timing_observation.sampling_frequency_approx_hz: positive number required")
+    if abs(frequency - 1000.0 / sampling["nominal"]) > 1.0:
+        raise ValidationError("cas_kl50_timing_observation: sampling period and frequency disagree")
+
+    observed_min_ms = round((timestamps[2] - timestamps[1]).total_seconds() * 1000)
+    observed_max_ms = round((timestamps[3] - timestamps[0]).total_seconds() * 1000)
+    observed_estimate_ms = round((observed_min_ms + observed_max_ms) / 2)
+    if document["duration_min_ms"] != observed_min_ms:
+        raise ValidationError("cas_kl50_timing_observation.duration_min_ms: inconsistent with timestamps")
+    if document["duration_max_ms"] != observed_max_ms:
+        raise ValidationError("cas_kl50_timing_observation.duration_max_ms: inconsistent with timestamps")
+    if document["duration_estimate_ms"] != observed_estimate_ms:
+        raise ValidationError("cas_kl50_timing_observation.duration_estimate_ms: expected rounded midpoint")
+    resolution = document["timestamp_resolution_approx_ms"]
+    if not isinstance(resolution, int) or isinstance(resolution, bool) or resolution <= 0:
+        raise ValidationError("cas_kl50_timing_observation.timestamp_resolution_approx_ms: positive integer required")
+    if document["duration_status"] != "OBSERVED_BOUNDED":
+        raise ValidationError("cas_kl50_timing_observation.duration_status: expected OBSERVED_BOUNDED")
+    if document["qualification"] != "CONFIRMED_FROM_LEVEL3_TRACE":
+        raise ValidationError("cas_kl50_timing_observation.qualification: expected Level 3 qualification")
+    if document["rpm_alignment_status"] != "PENDING":
+        raise ValidationError("cas_kl50_timing_observation.rpm_alignment_status: expected PENDING")
+    if document["raw_trace_available_in_repository"] is not False:
+        raise ValidationError("cas_kl50_timing_observation.raw_trace_available_in_repository: expected false")
+    if "duration_exact_ms" in document:
+        raise ValidationError("cas_kl50_timing_observation: exact KL50 duration must not be claimed")
+
+    required_forbidden = {
+        "EXACT_DURATION",
+        "CAN_IDENTIFIER",
+        "CAS_COMMAND",
+        "KL50_COMMAND",
+        "TRANSMISSION_PATH",
+        "IMMOBILIZER_BYPASS",
+        "REMOTE_START_ACTUATION",
+        "OEM_START_REQUEST",
+        "OEM_START_AUTHORIZATION",
+    }
+    forbidden = set(
+        _require_array(
+            document["forbidden_inferences"],
+            "cas_kl50_timing_observation.forbidden_inferences",
+        )
+    )
+    if not required_forbidden.issubset(forbidden):
+        raise ValidationError(
+            "cas_kl50_timing_observation: exact timing, commands, transport and authorization must remain forbidden"
+        )
+    _require_nonempty_string(document["notes"], "cas_kl50_timing_observation.notes")
+
+
 def validate_synchronized_start_observation(document: Mapping[str, Any], evidence_ids: set[str]) -> None:
     _required(
         document,
@@ -991,6 +1156,7 @@ def validate_prerequisites(document: Mapping[str, Any], evidence_ids: set[str]) 
         _require_timestamp(item["updated_at"], f"{location}.updated_at")
         if status in {
             "OBSERVED",
+            "OBSERVED_BOUNDED",
             "CONFIRMED",
             "UNTRUSTED",
             "NOT_YET_VALIDATED",
@@ -1006,7 +1172,13 @@ def validate_prerequisites(document: Mapping[str, Any], evidence_ids: set[str]) 
             _require_nonempty_string(blocker, f"{location}.blocker_reason")
         elif blocker is not None:
             raise ValidationError(f"{location}.blocker_reason: only valid for BLOCKED")
-        if status in {"UNTRUSTED", "NOT_YET_VALIDATED", "PENDING", "PENDING_LEVEL3_TRACE"}:
+        if status in {
+            "OBSERVED_BOUNDED",
+            "UNTRUSTED",
+            "NOT_YET_VALIDATED",
+            "PENDING",
+            "PENDING_LEVEL3_TRACE",
+        }:
             _require_nonempty_string(item["notes"], f"{location}.notes")
 
 
@@ -1076,6 +1248,7 @@ def _parse_arguments() -> argparse.Namespace:
     parser.add_argument("--signal-sources", action="append", default=[], type=Path)
     parser.add_argument("--synchronized-start", action="append", default=[], type=Path)
     parser.add_argument("--kl50-observation", action="append", default=[], type=Path)
+    parser.add_argument("--kl50-timing-observation", action="append", default=[], type=Path)
     return parser.parse_args()
 
 
@@ -1102,6 +1275,8 @@ def main() -> int:
         validate_synchronized_start_observation(load_json_object(path), evidence_ids)
     for path in arguments.kl50_observation:
         validate_cas_kl50_observation(load_json_object(path), evidence_ids)
+    for path in arguments.kl50_timing_observation:
+        validate_cas_kl50_timing_observation(load_json_object(path), evidence_ids)
     print("Phase 3C/3D vehicle data: VALID")
     return 0
 

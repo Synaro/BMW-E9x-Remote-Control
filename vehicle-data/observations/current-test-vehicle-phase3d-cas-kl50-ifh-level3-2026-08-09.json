@@ -1,0 +1,63 @@
+{
+  "schema_version": 1,
+  "artifact_type": "CAS_KL50_TIMING_OBSERVATION",
+  "observation_id": "CURRENT_TEST_VEHICLE_PHASE3D_CAS_KL50_IFH_LEVEL3_2026_08_09",
+  "profile_ref": "../profiles/current-test-vehicle.vehicle-profile.json",
+  "evidence_index": "../evidence/current-test-vehicle.evidence-index.json",
+  "evidence_ref": "CURRENT_TEST_VEHICLE_PHASE3D_CAS_KL50_IFH_LEVEL3_2026_08_09",
+  "source": {
+    "tool": "EDIABAS IFH trace",
+    "artifact": "ifh.trc",
+    "sgbd_prg": "CAS.PRG",
+    "job": "status_fzg_zustand",
+    "field": "KLEMMENSTATUS bits 4-5",
+    "trace_level": 3,
+    "recorded_at": "2026-08-09T20:47:20.578+02:00",
+    "session": "PHASE3D_CAS_KL50_IFH_LEVEL3_2026_08_09"
+  },
+  "signal": "CAS.KLEMMENSTATUS.KL50",
+  "timestamp_basis": "SOURCE_ABSOLUTE_LOCAL",
+  "boundary_samples": [
+    {
+      "role": "LAST_OFF_BEFORE_ACTIVATION",
+      "timestamp": "2026-08-09T20:47:20.578+02:00",
+      "raw_value": {"decimal": 65, "hexadecimal": "0x41"},
+      "interpreted_value": "KL50_OFF"
+    },
+    {
+      "role": "FIRST_ON",
+      "timestamp": "2026-08-09T20:47:20.632+02:00",
+      "raw_value": {"decimal": 85, "hexadecimal": "0x55"},
+      "interpreted_value": "KL50_ON"
+    },
+    {
+      "role": "LAST_ON",
+      "timestamp": "2026-08-09T20:47:21.352+02:00",
+      "raw_value": {"decimal": 85, "hexadecimal": "0x55"},
+      "interpreted_value": "KL50_ON"
+    },
+    {
+      "role": "FIRST_OFF_AFTER_ACTIVATION",
+      "timestamp": "2026-08-09T20:47:21.405+02:00",
+      "raw_value": {"decimal": 69, "hexadecimal": "0x45"},
+      "interpreted_value": "KL50_OFF"
+    }
+  ],
+  "consecutive_on_samples": 15,
+  "sampling_period_approx_ms": {"minimum": 46, "maximum": 58, "nominal": 50},
+  "sampling_frequency_approx_hz": 20,
+  "duration_min_ms": 720,
+  "duration_max_ms": 827,
+  "duration_estimate_ms": 774,
+  "timestamp_resolution_approx_ms": 50,
+  "duration_status": "OBSERVED_BOUNDED",
+  "qualification": "CONFIRMED_FROM_LEVEL3_TRACE",
+  "rpm_alignment_status": "PENDING",
+  "raw_trace_available_in_repository": false,
+  "forbidden_inferences": [
+    "EXACT_DURATION", "CAN_IDENTIFIER", "CAS_COMMAND", "KL50_COMMAND",
+    "TRANSMISSION_PATH", "IMMOBILIZER_BYPASS", "REMOTE_START_ACTUATION",
+    "OEM_START_REQUEST", "OEM_START_AUTHORIZATION"
+  ],
+  "notes": "The 774 ms value is only the rounded midpoint of the 720-827 ms observation bounds. It is not an exact KL50 duration. No RPM-aligned timestamp basis or actuation mechanism is inferred."
+}

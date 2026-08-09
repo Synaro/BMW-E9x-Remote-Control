@@ -71,7 +71,8 @@ est détaillé dans
 - [x] Interdire la promotion automatique d'une corrélation vers une sémantique fonctionnelle
 - [x] Confirmer l'état KL50 en lecture sans inférer son mécanisme d'activation
 - [x] Corroborer la transition KL50 par un trace IFH Level 1
-- [ ] Mesurer la durée KL50 et l'alignement RPM avec un trace IFH Level 3
+- [x] Borner la durée KL50 avec les timestamps d'un trace IFH Level 3
+- [ ] Aligner temporellement KL50 et RPM sur une base commune
 - [ ] Valider l'algorithme de détection moteur tournant sur plusieurs captures structurées
 - [ ] Identifier Terminal 50, la demande START et l'autorisation OEM par preuves séparées
 

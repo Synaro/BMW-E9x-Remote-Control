@@ -74,8 +74,8 @@
       "precondition_eligibility": "PROHIBITED",
       "allowed_interpretations": ["KL50_OFF", "KL50_ON"],
       "forbidden_inferences": ["REMOTE_START_COMMAND_MECHANISM", "OEM_START_REQUEST_SOURCE", "START_AUTHORIZATION", "CAN_IDENTIFIER", "DIAGNOSTIC_COMMAND", "IMMOBILIZER_BYPASS"],
-      "evidence_refs": ["CURRENT_TEST_VEHICLE_PHASE3D_CAS_KL50_2026_08_09", "CURRENT_TEST_VEHICLE_PHASE3D_CAS_KL50_IFH_LEVEL1_2026_08_09"],
-      "notes": "Job-Info documents bits 4-5 and one real OEM start produced 69/0x45 -> 85/0x55 -> 69/0x45, decoded as KL50 OFF -> ON -> OFF. The transition is corroborated by repeated 85 readings and return to 69 in a real IFH Level 1 trace. Confirmed as read-only terminal state only; no duration inferred."
+      "evidence_refs": ["CURRENT_TEST_VEHICLE_PHASE3D_CAS_KL50_2026_08_09", "CURRENT_TEST_VEHICLE_PHASE3D_CAS_KL50_IFH_LEVEL1_2026_08_09", "CURRENT_TEST_VEHICLE_PHASE3D_CAS_KL50_IFH_LEVEL3_2026_08_09"],
+      "notes": "Job-Info documents bits 4-5 and one real OEM start produced 69/0x45 -> 85/0x55 -> 69/0x45, decoded as KL50 OFF -> ON -> OFF. IFH Level 1 corroborates the transition; IFH Level 3 bounds the observed ON interval to 720-827 ms. Confirmed as a read-only terminal signal only; the 774 ms midpoint is not exact and no actuation meaning is inferred."
     },
     {
       "qualification_id": "cas.tool32.klemmenstatus_engine_running",

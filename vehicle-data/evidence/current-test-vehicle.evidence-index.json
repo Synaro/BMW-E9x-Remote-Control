@@ -68,6 +68,17 @@
       "sha256": null,
       "contains_personal_data": false,
       "description": "Manual transcription of a real IFH Trace Level 1 corroborating repeated KLEMMENSTATUS 85 followed by 69; raw ifh.trc is not stored in the repository."
+    },
+    {
+      "evidence_id": "CURRENT_TEST_VEHICLE_PHASE3D_CAS_KL50_IFH_LEVEL3_2026_08_09",
+      "kind": "MANUAL_NOTE",
+      "relative_path": "current-test-vehicle-phase3d-cas-kl50-ifh-level3-2026-08-09.manual-note.txt",
+      "captured_at": "2026-08-09T20:47:20.578+02:00",
+      "tool_name": "EDIABAS IFH Trace",
+      "tool_version": null,
+      "sha256": null,
+      "contains_personal_data": false,
+      "description": "Manual transcription of a real IFH Trace Level 3 bounding KL50 ON between 720 and 827 ms from timestamped samples; raw ifh.trc is not stored in the repository."
     }
   ]
 }

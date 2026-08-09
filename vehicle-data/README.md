@@ -45,6 +45,13 @@ un trace IFH. Un trace Level 1 sans timestamps doit conserver
 `duration_status: PENDING_LEVEL3_TRACE`. Une transcription ne doit jamais être
 présentée comme le fichier `ifh.trc` brut.
 
+Un trace Level 3 horodaté utilise l'artefact distinct
+`CAS_KL50_TIMING_OBSERVATION`. Il conserve les quatre échantillons frontières,
+le nombre de lectures ON consécutives, la cadence approximative et une durée
+bornée. `duration_estimate_ms` est uniquement le milieu arrondi des bornes : le
+validateur interdit de le présenter comme une durée exacte. Cette preuve reste
+en lecture seule et ne qualifie ni demande, ni autorisation, ni actionnement.
+
 ## Règles pour les données réelles
 
 1. Placer d'abord les exports bruts et captures dans un sous-dossier `private/`.
@@ -69,6 +76,8 @@ Les validateurs Phase 3D acceptent en plus `--signal-sources` et
 `--synchronized-start` pour contrôler la qualification par usage et les
 bitfields des timelines synchronisées. `--kl50-observation` valide la preuve
 KL50 read-only et interdit toute durée issue d'un trace Level 1.
+`--kl50-timing-observation` valide séparément les bornes calculées depuis les
+timestamps du trace Level 3.
 
 Les preuves acceptées sont : capture ISTA, export TestO, sortie INPA, sortie
 Tool32, future capture CAN et note manuelle. La catégorie « future capture CAN »

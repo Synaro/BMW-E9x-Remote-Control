@@ -65,7 +65,7 @@
       "additionalProperties": false,
       "required": ["status", "evidence_refs", "updated_at", "notes", "blocker_reason"],
       "properties": {
-        "status": {"enum": ["UNKNOWN", "OBSERVED", "CONFIRMED", "UNTRUSTED", "NOT_YET_VALIDATED", "PENDING", "PENDING_LEVEL3_TRACE", "VALIDATED", "BLOCKED"]},
+        "status": {"enum": ["UNKNOWN", "OBSERVED", "OBSERVED_BOUNDED", "CONFIRMED", "UNTRUSTED", "NOT_YET_VALIDATED", "PENDING", "PENDING_LEVEL3_TRACE", "VALIDATED", "BLOCKED"]},
         "evidence_refs": {
           "type": "array", "uniqueItems": true,
           "items": {"type": "string", "minLength": 1, "maxLength": 96}

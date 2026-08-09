@@ -16,6 +16,7 @@ from vehicle_data_validation import (
     load_json_object,
     validate_engine_run_timeline,
     validate_cas_kl50_observation,
+    validate_cas_kl50_timing_observation,
     validate_evidence_index,
     validate_prerequisites,
     validate_qualified_observations,
@@ -35,6 +36,7 @@ REAL_TIMELINE_PATH = DATA / "observations" / "current-test-vehicle-testo-oem-sta
 SIGNAL_SOURCES_PATH = DATA / "observations" / "current-test-vehicle-phase3d-signal-source-qualification-2026-08-09.json"
 SYNCHRONIZED_START_PATH = DATA / "observations" / "current-test-vehicle-phase3d-synchronized-rpm-msa-start-2026-08-09.json"
 KL50_IFH_PATH = DATA / "observations" / "current-test-vehicle-phase3d-cas-kl50-ifh-level1-2026-08-09.json"
+KL50_IFH_LEVEL3_PATH = DATA / "observations" / "current-test-vehicle-phase3d-cas-kl50-ifh-level3-2026-08-09.json"
 EXAMPLE_EVIDENCE_PATH = DATA / "evidence" / "EXAMPLE_ONLY.evidence-index.json"
 EXAMPLE_ENGINE_INPUT = DATA / "imports" / "EXAMPLE_ONLY.engine-speed.csv"
 EXAMPLE_ENGINE_MAPPING = DATA / "imports" / "EXAMPLE_ONLY.engine-speed.mapping.json"
@@ -54,6 +56,7 @@ class Phase3DVehicleDataTests(unittest.TestCase):
         self.signal_sources = load_json_object(SIGNAL_SOURCES_PATH)
         self.synchronized_start = load_json_object(SYNCHRONIZED_START_PATH)
         self.kl50_ifh = load_json_object(KL50_IFH_PATH)
+        self.kl50_ifh_level3 = load_json_object(KL50_IFH_LEVEL3_PATH)
         self.status_by_id = {
             observation["observation_id"]: observation
             for observation in self.status["observations"]
@@ -72,6 +75,7 @@ class Phase3DVehicleDataTests(unittest.TestCase):
         validate_signal_source_qualifications(self.signal_sources, self.evidence_ids)
         validate_synchronized_start_observation(self.synchronized_start, self.evidence_ids)
         validate_cas_kl50_observation(self.kl50_ifh, self.evidence_ids)
+        validate_cas_kl50_timing_observation(self.kl50_ifh_level3, self.evidence_ids)
 
     def test_identification_values_are_preserved_as_reported(self):
         expected = {
@@ -184,6 +188,54 @@ class Phase3DVehicleDataTests(unittest.TestCase):
         with self.assertRaisesRegex(ValidationError, "command and bypass inferences"):
             validate_cas_kl50_observation(modified, self.evidence_ids)
 
+    def test_ifh_level3_preserves_bounded_kl50_duration(self):
+        observation = self.kl50_ifh_level3
+        self.assertEqual("CAS_KL50_TIMING_OBSERVATION", observation["artifact_type"])
+        self.assertEqual(3, observation["source"]["trace_level"])
+        self.assertEqual(
+            [
+                "2026-08-09T20:47:20.578+02:00",
+                "2026-08-09T20:47:20.632+02:00",
+                "2026-08-09T20:47:21.352+02:00",
+                "2026-08-09T20:47:21.405+02:00",
+            ],
+            [sample["timestamp"] for sample in observation["boundary_samples"]],
+        )
+        self.assertEqual([65, 85, 85, 69], [sample["raw_value"]["decimal"] for sample in observation["boundary_samples"]])
+        self.assertEqual(15, observation["consecutive_on_samples"])
+        self.assertEqual({"minimum": 46, "maximum": 58, "nominal": 50}, observation["sampling_period_approx_ms"])
+        self.assertEqual(20, observation["sampling_frequency_approx_hz"])
+        self.assertEqual(720, observation["duration_min_ms"])
+        self.assertEqual(827, observation["duration_max_ms"])
+        self.assertEqual(774, observation["duration_estimate_ms"])
+        self.assertEqual(50, observation["timestamp_resolution_approx_ms"])
+        self.assertEqual("OBSERVED_BOUNDED", observation["duration_status"])
+        self.assertEqual("CONFIRMED_FROM_LEVEL3_TRACE", observation["qualification"])
+        self.assertEqual("PENDING", observation["rpm_alignment_status"])
+
+    def test_ifh_level3_duration_bounds_are_recomputed_from_timestamps(self):
+        for field, value in (
+            ("duration_min_ms", 721),
+            ("duration_max_ms", 826),
+            ("duration_estimate_ms", 773),
+        ):
+            modified = copy.deepcopy(self.kl50_ifh_level3)
+            modified[field] = value
+            with self.assertRaisesRegex(ValidationError, field):
+                validate_cas_kl50_timing_observation(modified, self.evidence_ids)
+
+    def test_ifh_level3_estimate_cannot_be_promoted_to_exact_duration(self):
+        modified = copy.deepcopy(self.kl50_ifh_level3)
+        modified["duration_exact_ms"] = 774
+        with self.assertRaisesRegex(ValidationError, "exact KL50 duration"):
+            validate_cas_kl50_timing_observation(modified, self.evidence_ids)
+
+    def test_ifh_level3_cannot_drop_non_actuation_inferences(self):
+        modified = copy.deepcopy(self.kl50_ifh_level3)
+        modified["forbidden_inferences"].remove("OEM_START_REQUEST")
+        with self.assertRaisesRegex(ValidationError, "authorization must remain forbidden"):
+            validate_cas_kl50_timing_observation(modified, self.evidence_ids)
+
     def test_tool32_egs_prnd_mapping_is_confirmed(self):
         for position in ("p", "r", "n", "d"):
             observation = self.status_by_id[f"egs.tool32.position.{position}"]
@@ -272,7 +324,7 @@ class Phase3DVehicleDataTests(unittest.TestCase):
             "kl15": "CONFIRMED",
             "kl50": "CONFIRMED",
             "kl50_oem_start_transition": "CONFIRMED",
-            "kl50_duration": "PENDING_LEVEL3_TRACE",
+            "kl50_duration": "OBSERVED_BOUNDED",
             "kl50_rpm_temporal_alignment": "PENDING",
             "engine_speed": "CONFIRMED",
             "stopped_cranking_running_observations": "CONFIRMED",
