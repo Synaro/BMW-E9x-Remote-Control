@@ -1,0 +1,26 @@
+Extrait brut critique — TestO 2.0 CAS puis DDE, une session EDIABAS
+
+Le payload texte complet fourni dans la tâche porte le SHA-256 :
+0eeed9deb95ab65d6f45142a7a0df4f3de9f9502f1cf51cb85eeef3033da4399
+
+Le fichier original nommé « Texte collé(1).txt » n'est pas versionné comme
+fichier distinct. Cet extrait conserve sans réécriture les objets JSON utiles
+à la corrélation. L'analyse a récupéré 291 objets sur 300 ; les lignes 168,
+172, 180, 183, 191, 196, 199, 202 et 204 sont entremêlées dans le texte fourni.
+
+[21:21:19] [JS] {"sample":8,"casTimestampMs":1786303279262,"ddeTimestampMs":1786303279314,"endTimestampMs":1786303279519,"klemmenstatus":"69","rpm":"0.000000E+000","casOk":true,"ddeOk":true}
+[21:21:19] [JS] {"sample":9,"casTimestampMs":1786303279519,"ddeTimestampMs":1786303279572,"endTimestampMs":1786303279776,"klemmenstatus":"69","rpm":"0.000000E+000","casOk":true,"ddeOk":true}
+[21:21:20] [JS] {"sample":10,"casTimestampMs":1786303279776,"ddeTimestampMs":1786303279829,"endTimestampMs":1786303280089,"klemmenstatus":"85","rpm":"1.310000E+002","casOk":true,"ddeOk":true}
+[21:21:20] [JS] {"sample":11,"casTimestampMs":1786303280089,"ddeTimestampMs":1786303280142,"endTimestampMs":1786303280347,"klemmenstatus":"85","rpm":"2.245000E+002","casOk":true,"ddeOk":true}
+[21:21:20] [JS] {"sample":12,"casTimestampMs":1786303280347,"ddeTimestampMs":1786303280399,"endTimestampMs":1786303280653,"klemmenstatus":"85","rpm":"8.630000E+002","casOk":true,"ddeOk":true}
+[21:21:20] [JS] {"sample":13,"casTimestampMs":1786303280653,"ddeTimestampMs":1786303280706,"endTimestampMs":1786303280912,"klemmenstatus":"69","rpm":"9.815000E+002","casOk":true,"ddeOk":true}
+[21:21:21] [JS] {"sample":14,"casTimestampMs":1786303280912,"ddeTimestampMs":1786303280964,"endTimestampMs":1786303281167,"klemmenstatus":"69","rpm":"9.160000E+002","casOk":true,"ddeOk":true}
+[21:21:21] [JS] {"sample":15,"casTimestampMs":1786303281167,"ddeTimestampMs":1786303281220,"endTimestampMs":1786303281424,"klemmenstatus":"69","rpm":"8.875000E+002","casOk":true,"ddeOk":true}
+[21:21:21] [JS] {"sample":16,"casTimestampMs":1786303281424,"ddeTimestampMs":1786303281476,"endTimestampMs":1786303281681,"klemmenstatus":"69","rpm":"8.635000E+002","casOk":true,"ddeOk":true}
+[21:21:21] [JS] {"sample":17,"casTimestampMs":1786303281681,"ddeTimestampMs":1786303281732,"endTimestampMs":1786303281987,"klemmenstatus":"69","rpm":"8.390000E+002","casOk":true,"ddeOk":true}
+[21:21:22] [JS] {"sample":18,"casTimestampMs":1786303281987,"ddeTimestampMs":1786303282040,"endTimestampMs":1786303282297,"klemmenstatus":"69","rpm":"8.075000E+002","casOk":true,"ddeOk":true}
+[21:21:22] [JS] {"sample":19,"casTimestampMs":1786303282297,"ddeTimestampMs":1786303282350,"endTimestampMs":1786303282555,"klemmenstatus":"69","rpm":"7.790000E+002","casOk":true,"ddeOk":true}
+[21:21:22] [JS] {"sample":20,"casTimestampMs":1786303282555,"ddeTimestampMs":1786303282607,"endTimestampMs":1786303282810,"klemmenstatus":"69","rpm":"7.800000E+002","casOk":true,"ddeOk":true}
+
+Lecture uniquement. Aucune commande CAS/DDE/KL50, aucun identifiant ou payload
+CAN et aucun mécanisme d'actionnement ne sont déduits de cet extrait.

@@ -72,7 +72,8 @@ est détaillé dans
 - [x] Confirmer l'état KL50 en lecture sans inférer son mécanisme d'activation
 - [x] Corroborer la transition KL50 par un trace IFH Level 1
 - [x] Borner la durée KL50 avec les timestamps d'un trace IFH Level 3
-- [ ] Aligner temporellement KL50 et RPM sur une base commune
+- [x] Archiver une corrélation diagnostique CAS/DDE sur une horloge commune
+- [ ] Résoudre l'ordre physique KL50/RPM avec une acquisition non ambiguë
 - [ ] Valider l'algorithme de détection moteur tournant sur plusieurs captures structurées
 - [ ] Identifier Terminal 50, la demande START et l'autorisation OEM par preuves séparées
 

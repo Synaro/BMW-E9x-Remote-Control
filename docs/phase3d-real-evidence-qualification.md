@@ -87,8 +87,52 @@ La durée est qualifiée `OBSERVED_BOUNDED / CONFIRMED_FROM_LEVEL3_TRACE` : le
 minimum directement observé est 720 ms et la borne maximale liée aux
 intervalles d'échantillonnage est 827 ms. La valeur 774 ms est uniquement le
 milieu arrondi de ces bornes, avec une résolution approximative de 50 ms ; elle
-n'est jamais stockée ou décrite comme une durée exacte. L'alignement KL50/RPM
-reste `PENDING` faute de base temporelle commune.
+n'est jamais stockée ou décrite comme une durée exacte. Cette preuve IFH seule
+ne fournit pas de base temporelle commune avec le régime DDE ; elle ne permet
+donc aucun alignement KL50/RPM.
+
+### Corrélation diagnostique TestO 2.0 CAS / DDE
+
+Une acquisition supplémentaire emploie un seul processus TestO 2.0 et une
+seule session EDIABAS. Chaque boucle lit d'abord
+`CAS.PRG/STATUS_FZG_ZUSTAND/KLEMMENSTATUS`, puis
+`D71N47C0.PRG/STATUS_MOTORDREHZAHL/STAT_MOTORDREHZAHL_WERT`. Les timestamps
+`Date.now()` appartiennent à la même horloge, mais les deux valeurs ne sont pas
+échantillonnées simultanément.
+
+Le texte fourni annonce 300 échantillons. L'analyse a récupéré 291 objets JSON
+complets et monotones ; neuf lignes sont entremêlées dans la sortie textuelle.
+Les échantillons critiques 9 à 13 sont intacts et donnent :
+
+- sample 9 : CAS `0x45` / KL50 OFF à `1786303279519`, puis DDE 0 rpm à
+  `1786303279572` ;
+- sample 10 : CAS `0x55` / KL50 ON à `1786303279776`, puis DDE 131 rpm à
+  `1786303279829` ;
+- sample 11 : KL50 ON, puis 224,5 rpm ;
+- sample 12 : KL50 ON à `1786303280347`, puis 863 rpm à `1786303280399` ;
+- sample 13 : KL50 OFF à `1786303280653`, puis 981,5 rpm à
+  `1786303280706`.
+
+Les seules bornes soutenues par l'échantillonnage sont :
+
+- passage KL50 OFF vers ON après `1786303279519` et au plus tard à
+  `1786303279776`, fenêtre de 257 ms ;
+- passage RPM 0 vers non nul après `1786303279572` et au plus tard à
+  `1786303279829`, fenêtre de 257 ms ;
+- passage KL50 ON vers OFF après `1786303280347` et au plus tard à
+  `1786303280653`, fenêtre de 306 ms ;
+- durée KL50 ON de cette acquisition bornée entre 571 et 1134 ms.
+
+Les fenêtres KL50 ON et RPM non nul se recouvrent. Les écarts de 53, 52 et
+53 ms observés dans les samples 10, 12 et 13 sont des écarts de lectures
+diagnostiques CAS-puis-DDE, pas des délais physiques. La corrélation est donc
+`CONFIRMED_DIAGNOSTIC_CORRELATION`, l'alignement devient
+`OBSERVED_BOUNDED`, mais l'ordre physique reste `UNKNOWN`.
+
+Sur les 272 échantillons récupérables de 19 à 299, le régime est compris entre
+773 et 786,5 rpm, avec une médiane de 781 rpm et une moyenne de 780,557 rpm.
+Cette statistique décrit la stabilisation observée et ne définit aucun seuil
+final de détection moteur tournant.
 
 Cette qualification est `READ_ONLY_SIGNAL` et reste `PROHIBITED` comme
 précondition. Elle ne prouve ni la source de demande OEM, ni une commande de
@@ -166,7 +210,8 @@ timestamps synchronisés explicitement fournis.
 - état Terminal 50 : `CONFIRMED` en lecture via KLEMMENSTATUS ;
 - transition OEM KL50 OFF/ON/OFF : `CONFIRMED` par Tool32 et trace IFH ;
 - durée KL50 : `OBSERVED_BOUNDED / CONFIRMED_FROM_LEVEL3_TRACE`, entre 720 et 827 ms ;
-- alignement temporel KL50/RPM : `PENDING` ;
+- corrélation diagnostique KL50/RPM sur horloge commune : `OBSERVED_BOUNDED` ;
+- ordre physique exact KL50/RPM : `UNKNOWN` en raison des lectures séquentielles ;
 - source de demande de démarrage OEM : `UNKNOWN` ;
 - bouton START / demande de démarrage CAS : `UNKNOWN` ;
 - mécanisme d'actionnement remote-start : `UNKNOWN` ;

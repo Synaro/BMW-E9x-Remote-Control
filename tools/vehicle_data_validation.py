@@ -924,6 +924,294 @@ def validate_cas_kl50_timing_observation(
     _require_nonempty_string(document["notes"], "cas_kl50_timing_observation.notes")
 
 
+def validate_cas_dde_diagnostic_correlation(
+    document: Mapping[str, Any], evidence_ids: set[str]
+) -> None:
+    location = "cas_dde_diagnostic_correlation"
+    _required(
+        document,
+        {
+            "schema_version",
+            "artifact_type",
+            "observation_id",
+            "profile_ref",
+            "evidence_index",
+            "evidence_ref",
+            "source",
+            "source_payload_sha256",
+            "recovery",
+            "critical_samples",
+            "transition_bounds",
+            "observed_kl50_duration_bounds_ms",
+            "diagnostic_correlation",
+            "stabilized_rpm_summary",
+            "qualification",
+            "physical_transition_order",
+            "rpm_alignment_status",
+            "forbidden_inferences",
+            "notes",
+        },
+        location,
+    )
+    _require_schema_v1(document, location)
+    if document["artifact_type"] != "CAS_DDE_DIAGNOSTIC_CORRELATION_OBSERVATION":
+        raise ValidationError(f"{location}.artifact_type: unsupported type")
+    for field in ("observation_id", "profile_ref", "evidence_index"):
+        _require_nonempty_string(document[field], f"{location}.{field}")
+    _validate_evidence_ref(document["evidence_ref"], evidence_ids, f"{location}.evidence_ref")
+
+    source = _require_object(document["source"], f"{location}.source")
+    _required(
+        source,
+        {
+            "tool",
+            "process_count",
+            "session_count",
+            "clock",
+            "acquisition_order",
+            "cas",
+            "dde",
+            "captured_at",
+            "read_only",
+        },
+        f"{location}.source",
+    )
+    expected_source = {
+        "tool": "TestO 2.0",
+        "process_count": 1,
+        "session_count": 1,
+        "clock": "Date.now() milliseconds",
+        "acquisition_order": ["CAS", "DDE"],
+        "read_only": True,
+    }
+    for field, expected in expected_source.items():
+        if source[field] != expected:
+            raise ValidationError(f"{location}.source.{field}: expected {expected!r}")
+    expected_signals = {
+        "cas": {
+            "sgbd_prg": "CAS.PRG",
+            "job": "STATUS_FZG_ZUSTAND",
+            "field": "KLEMMENSTATUS",
+        },
+        "dde": {
+            "sgbd_prg": "D71N47C0.PRG",
+            "job": "STATUS_MOTORDREHZAHL",
+            "field": "STAT_MOTORDREHZAHL_WERT",
+        },
+    }
+    for ecu, expected in expected_signals.items():
+        signal_source = _require_object(source[ecu], f"{location}.source.{ecu}")
+        _required(signal_source, expected, f"{location}.source.{ecu}")
+        if signal_source != expected:
+            raise ValidationError(f"{location}.source.{ecu}: unexpected diagnostic source")
+    _require_timestamp(source["captured_at"], f"{location}.source.captured_at")
+
+    payload_digest = _require_nonempty_string(
+        document["source_payload_sha256"], f"{location}.source_payload_sha256"
+    )
+    if re.fullmatch(r"[0-9a-f]{64}", payload_digest) is None:
+        raise ValidationError(f"{location}.source_payload_sha256: expected lowercase SHA-256")
+
+    recovery = _require_object(document["recovery"], f"{location}.recovery")
+    _required(
+        recovery,
+        {
+            "declared_samples",
+            "recovered_samples",
+            "missing_samples",
+            "duplicate_samples",
+            "all_recovered_reads_ok",
+            "full_raw_file_in_repository",
+            "raw_excerpt_in_repository",
+        },
+        f"{location}.recovery",
+    )
+    declared = recovery["declared_samples"]
+    recovered = recovery["recovered_samples"]
+    missing = _require_array(recovery["missing_samples"], f"{location}.recovery.missing_samples")
+    duplicates = _require_array(recovery["duplicate_samples"], f"{location}.recovery.duplicate_samples")
+    if any(not isinstance(value, int) or isinstance(value, bool) or value < 0 for value in (declared, recovered)):
+        raise ValidationError(f"{location}.recovery: sample counts must be non-negative integers")
+    if missing != sorted(set(missing)) or any(
+        not isinstance(value, int) or isinstance(value, bool) or value < 0 for value in missing
+    ):
+        raise ValidationError(f"{location}.recovery.missing_samples: sorted unique integers required")
+    if duplicates:
+        raise ValidationError(f"{location}.recovery.duplicate_samples: duplicates are not accepted")
+    if declared != recovered + len(missing):
+        raise ValidationError(f"{location}.recovery: recovered plus missing must equal declared")
+    if recovery["all_recovered_reads_ok"] is not True:
+        raise ValidationError(f"{location}.recovery: every recovered CAS/DDE read must be OK")
+    if recovery["full_raw_file_in_repository"] is not False or recovery["raw_excerpt_in_repository"] is not True:
+        raise ValidationError(f"{location}.recovery: must distinguish excerpt from unavailable full raw file")
+
+    samples = _require_array(document["critical_samples"], f"{location}.critical_samples")
+    if [sample.get("sample") if isinstance(sample, dict) else None for sample in samples] != list(range(9, 21)):
+        raise ValidationError(f"{location}.critical_samples: exact samples 9 through 20 required")
+    by_sample: dict[int, Mapping[str, Any]] = {}
+    previous_cas = -1
+    previous_dde = -1
+    for index, raw_sample in enumerate(samples):
+        sample_location = f"{location}.critical_samples[{index}]"
+        sample = _require_object(raw_sample, sample_location)
+        _required(
+            sample,
+            {
+                "sample",
+                "cas_timestamp_ms",
+                "klemmenstatus_decimal",
+                "klemmenstatus_hex",
+                "kl50_interpretation",
+                "dde_timestamp_ms",
+                "rpm",
+                "end_timestamp_ms",
+                "cas_ok",
+                "dde_ok",
+            },
+            sample_location,
+        )
+        sample_number = sample["sample"]
+        cas_timestamp = sample["cas_timestamp_ms"]
+        dde_timestamp = sample["dde_timestamp_ms"]
+        end_timestamp = sample["end_timestamp_ms"]
+        if any(
+            not isinstance(value, int) or isinstance(value, bool) or value < 0
+            for value in (sample_number, cas_timestamp, dde_timestamp, end_timestamp)
+        ):
+            raise ValidationError(f"{sample_location}: sample and timestamps must be non-negative integers")
+        if not previous_cas < cas_timestamp < dde_timestamp <= end_timestamp or dde_timestamp <= previous_dde:
+            raise ValidationError(f"{sample_location}: sequential timestamps must remain strictly ordered")
+        previous_cas = cas_timestamp
+        previous_dde = dde_timestamp
+        if sample["cas_ok"] is not True or sample["dde_ok"] is not True:
+            raise ValidationError(f"{sample_location}: diagnostic reads must remain successful")
+        klemmenstatus = sample["klemmenstatus_decimal"]
+        if klemmenstatus not in {69, 85} or sample["klemmenstatus_hex"] != f"0x{klemmenstatus:02X}":
+            raise ValidationError(f"{sample_location}: inconsistent KLEMMENSTATUS representations")
+        expected_kl50 = "KL50_ON" if ((klemmenstatus >> 4) & 0b11) == 0b01 else "KL50_OFF"
+        if sample["kl50_interpretation"] != expected_kl50:
+            raise ValidationError(f"{sample_location}: KL50 interpretation disagrees with bits 4-5")
+        rpm = sample["rpm"]
+        if not isinstance(rpm, (int, float)) or isinstance(rpm, bool) or rpm < 0:
+            raise ValidationError(f"{sample_location}.rpm: expected non-negative number")
+        by_sample[sample_number] = sample
+
+    expected_critical = {
+        9: (1786303279519, 69, 1786303279572, 0.0),
+        10: (1786303279776, 85, 1786303279829, 131.0),
+        11: (1786303280089, 85, 1786303280142, 224.5),
+        12: (1786303280347, 85, 1786303280399, 863.0),
+        13: (1786303280653, 69, 1786303280706, 981.5),
+    }
+    for sample_number, expected in expected_critical.items():
+        sample = by_sample[sample_number]
+        actual = (
+            sample["cas_timestamp_ms"],
+            sample["klemmenstatus_decimal"],
+            sample["dde_timestamp_ms"],
+            float(sample["rpm"]),
+        )
+        if actual != expected:
+            raise ValidationError(f"{location}.critical_samples: sample {sample_number} changed")
+
+    transitions = _require_object(document["transition_bounds"], f"{location}.transition_bounds")
+    _required(transitions, {"kl50_on", "rpm_nonzero", "kl50_off"}, f"{location}.transition_bounds")
+    expected_bounds = {
+        "kl50_on": (by_sample[9]["cas_timestamp_ms"], by_sample[10]["cas_timestamp_ms"]),
+        "rpm_nonzero": (by_sample[9]["dde_timestamp_ms"], by_sample[10]["dde_timestamp_ms"]),
+        "kl50_off": (by_sample[12]["cas_timestamp_ms"], by_sample[13]["cas_timestamp_ms"]),
+    }
+    for name, (lower, upper) in expected_bounds.items():
+        bound = _require_object(transitions[name], f"{location}.transition_bounds.{name}")
+        _required(
+            bound,
+            {"after_timestamp_ms_exclusive", "by_timestamp_ms_inclusive", "window_ms", "physical_instant_known"},
+            f"{location}.transition_bounds.{name}",
+        )
+        if (
+            bound["after_timestamp_ms_exclusive"],
+            bound["by_timestamp_ms_inclusive"],
+            bound["window_ms"],
+            bound["physical_instant_known"],
+        ) != (lower, upper, upper - lower, False):
+            raise ValidationError(f"{location}.transition_bounds.{name}: inconsistent sampling bound")
+
+    duration = _require_object(
+        document["observed_kl50_duration_bounds_ms"],
+        f"{location}.observed_kl50_duration_bounds_ms",
+    )
+    _required(duration, {"minimum", "maximum", "exact_physical_duration", "status"}, f"{location}.observed_kl50_duration_bounds_ms")
+    expected_minimum = by_sample[12]["cas_timestamp_ms"] - by_sample[10]["cas_timestamp_ms"]
+    expected_maximum = by_sample[13]["cas_timestamp_ms"] - by_sample[9]["cas_timestamp_ms"]
+    if (duration["minimum"], duration["maximum"]) != (expected_minimum, expected_maximum):
+        raise ValidationError(f"{location}.observed_kl50_duration_bounds_ms: inconsistent bounds")
+    if duration["exact_physical_duration"] is not None or duration["status"] != "OBSERVED_BOUNDED_DIAGNOSTIC_SAMPLING":
+        raise ValidationError(f"{location}.observed_kl50_duration_bounds_ms: exact duration must remain unknown")
+
+    correlation = _require_object(document["diagnostic_correlation"], f"{location}.diagnostic_correlation")
+    _required(
+        correlation,
+        {
+            "same_clock",
+            "same_process",
+            "same_ediabas_session",
+            "cas_then_dde_sequential",
+            "first_on_to_first_nonzero_read_gap_ms",
+            "last_on_to_863_rpm_read_gap_ms",
+            "first_off_to_981_5_rpm_read_gap_ms",
+        },
+        f"{location}.diagnostic_correlation",
+    )
+    if any(correlation[field] is not True for field in ("same_clock", "same_process", "same_ediabas_session", "cas_then_dde_sequential")):
+        raise ValidationError(f"{location}.diagnostic_correlation: acquisition context must remain explicit")
+    expected_gaps = (
+        by_sample[10]["dde_timestamp_ms"] - by_sample[10]["cas_timestamp_ms"],
+        by_sample[12]["dde_timestamp_ms"] - by_sample[12]["cas_timestamp_ms"],
+        by_sample[13]["dde_timestamp_ms"] - by_sample[13]["cas_timestamp_ms"],
+    )
+    actual_gaps = (
+        correlation["first_on_to_first_nonzero_read_gap_ms"],
+        correlation["last_on_to_863_rpm_read_gap_ms"],
+        correlation["first_off_to_981_5_rpm_read_gap_ms"],
+    )
+    if actual_gaps != expected_gaps:
+        raise ValidationError(f"{location}.diagnostic_correlation: read gaps must derive from timestamps")
+
+    stable = _require_object(document["stabilized_rpm_summary"], f"{location}.stabilized_rpm_summary")
+    _required(stable, {"sample_range", "recovered_sample_count", "minimum", "median", "mean", "maximum", "unit"}, f"{location}.stabilized_rpm_summary")
+    if stable["sample_range"] != [19, 299] or stable["recovered_sample_count"] != 272 or stable["unit"] != "rpm":
+        raise ValidationError(f"{location}.stabilized_rpm_summary: unexpected recovery scope")
+    if (stable["minimum"], stable["median"], stable["mean"], stable["maximum"]) != (773, 781, 780.557, 786.5):
+        raise ValidationError(f"{location}.stabilized_rpm_summary: reported statistics changed")
+
+    if document["qualification"] != "CONFIRMED_DIAGNOSTIC_CORRELATION":
+        raise ValidationError(f"{location}.qualification: expected diagnostic correlation only")
+    if document["physical_transition_order"] != "UNKNOWN":
+        raise ValidationError(f"{location}.physical_transition_order: sequential reads cannot prove physical order")
+    if document["rpm_alignment_status"] != "OBSERVED_BOUNDED":
+        raise ValidationError(f"{location}.rpm_alignment_status: expected OBSERVED_BOUNDED")
+    required_forbidden = {
+        "EXACT_PHYSICAL_KL50_ON_TIME",
+        "EXACT_PHYSICAL_KL50_OFF_TIME",
+        "PHYSICAL_KL50_VS_RPM_ORDER",
+        "CAN_IDENTIFIER",
+        "CAN_PAYLOAD",
+        "CAS_COMMAND",
+        "DDE_COMMAND",
+        "KL50_COMMAND",
+        "TRANSMISSION_PATH",
+        "IMMOBILIZER_BYPASS",
+        "REMOTE_START_ACTUATION",
+        "OEM_START_REQUEST",
+        "OEM_START_AUTHORIZATION",
+        "FINAL_ENGINE_RUNNING_ALGORITHM",
+    }
+    forbidden = set(_require_array(document["forbidden_inferences"], f"{location}.forbidden_inferences"))
+    if not required_forbidden.issubset(forbidden):
+        raise ValidationError(f"{location}: physical timing, CAN, commands and actuation inferences must remain forbidden")
+    _require_nonempty_string(document["notes"], f"{location}.notes")
+
+
 def validate_synchronized_start_observation(document: Mapping[str, Any], evidence_ids: set[str]) -> None:
     _required(
         document,
@@ -1249,6 +1537,7 @@ def _parse_arguments() -> argparse.Namespace:
     parser.add_argument("--synchronized-start", action="append", default=[], type=Path)
     parser.add_argument("--kl50-observation", action="append", default=[], type=Path)
     parser.add_argument("--kl50-timing-observation", action="append", default=[], type=Path)
+    parser.add_argument("--cas-dde-correlation", action="append", default=[], type=Path)
     return parser.parse_args()
 
 
@@ -1277,6 +1566,8 @@ def main() -> int:
         validate_cas_kl50_observation(load_json_object(path), evidence_ids)
     for path in arguments.kl50_timing_observation:
         validate_cas_kl50_timing_observation(load_json_object(path), evidence_ids)
+    for path in arguments.cas_dde_correlation:
+        validate_cas_dde_diagnostic_correlation(load_json_object(path), evidence_ids)
     print("Phase 3C/3D vehicle data: VALID")
     return 0
 

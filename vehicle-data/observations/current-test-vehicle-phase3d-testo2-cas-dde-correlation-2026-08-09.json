@@ -1,0 +1,83 @@
+{
+  "schema_version": 1,
+  "artifact_type": "CAS_DDE_DIAGNOSTIC_CORRELATION_OBSERVATION",
+  "observation_id": "CURRENT_TEST_VEHICLE_PHASE3D_TESTO2_CAS_DDE_CORRELATION_2026_08_09",
+  "profile_ref": "../profiles/current-test-vehicle.vehicle-profile.json",
+  "evidence_index": "../evidence/current-test-vehicle.evidence-index.json",
+  "evidence_ref": "CURRENT_TEST_VEHICLE_PHASE3D_TESTO2_CAS_DDE_CORRELATION_2026_08_09",
+  "source": {
+    "tool": "TestO 2.0",
+    "process_count": 1,
+    "session_count": 1,
+    "clock": "Date.now() milliseconds",
+    "acquisition_order": ["CAS", "DDE"],
+    "cas": {"sgbd_prg": "CAS.PRG", "job": "STATUS_FZG_ZUSTAND", "field": "KLEMMENSTATUS"},
+    "dde": {"sgbd_prg": "D71N47C0.PRG", "job": "STATUS_MOTORDREHZAHL", "field": "STAT_MOTORDREHZAHL_WERT"},
+    "captured_at": "2026-08-09T21:21:16.895+02:00",
+    "read_only": true
+  },
+  "source_payload_sha256": "0eeed9deb95ab65d6f45142a7a0df4f3de9f9502f1cf51cb85eeef3033da4399",
+  "recovery": {
+    "declared_samples": 300,
+    "recovered_samples": 291,
+    "missing_samples": [168, 172, 180, 183, 191, 196, 199, 202, 204],
+    "duplicate_samples": [],
+    "all_recovered_reads_ok": true,
+    "full_raw_file_in_repository": false,
+    "raw_excerpt_in_repository": true
+  },
+  "critical_samples": [
+    {"sample":9,"cas_timestamp_ms":1786303279519,"klemmenstatus_decimal":69,"klemmenstatus_hex":"0x45","kl50_interpretation":"KL50_OFF","dde_timestamp_ms":1786303279572,"rpm":0,"end_timestamp_ms":1786303279776,"cas_ok":true,"dde_ok":true},
+    {"sample":10,"cas_timestamp_ms":1786303279776,"klemmenstatus_decimal":85,"klemmenstatus_hex":"0x55","kl50_interpretation":"KL50_ON","dde_timestamp_ms":1786303279829,"rpm":131,"end_timestamp_ms":1786303280089,"cas_ok":true,"dde_ok":true},
+    {"sample":11,"cas_timestamp_ms":1786303280089,"klemmenstatus_decimal":85,"klemmenstatus_hex":"0x55","kl50_interpretation":"KL50_ON","dde_timestamp_ms":1786303280142,"rpm":224.5,"end_timestamp_ms":1786303280347,"cas_ok":true,"dde_ok":true},
+    {"sample":12,"cas_timestamp_ms":1786303280347,"klemmenstatus_decimal":85,"klemmenstatus_hex":"0x55","kl50_interpretation":"KL50_ON","dde_timestamp_ms":1786303280399,"rpm":863,"end_timestamp_ms":1786303280653,"cas_ok":true,"dde_ok":true},
+    {"sample":13,"cas_timestamp_ms":1786303280653,"klemmenstatus_decimal":69,"klemmenstatus_hex":"0x45","kl50_interpretation":"KL50_OFF","dde_timestamp_ms":1786303280706,"rpm":981.5,"end_timestamp_ms":1786303280912,"cas_ok":true,"dde_ok":true},
+    {"sample":14,"cas_timestamp_ms":1786303280912,"klemmenstatus_decimal":69,"klemmenstatus_hex":"0x45","kl50_interpretation":"KL50_OFF","dde_timestamp_ms":1786303280964,"rpm":916,"end_timestamp_ms":1786303281167,"cas_ok":true,"dde_ok":true},
+    {"sample":15,"cas_timestamp_ms":1786303281167,"klemmenstatus_decimal":69,"klemmenstatus_hex":"0x45","kl50_interpretation":"KL50_OFF","dde_timestamp_ms":1786303281220,"rpm":887.5,"end_timestamp_ms":1786303281424,"cas_ok":true,"dde_ok":true},
+    {"sample":16,"cas_timestamp_ms":1786303281424,"klemmenstatus_decimal":69,"klemmenstatus_hex":"0x45","kl50_interpretation":"KL50_OFF","dde_timestamp_ms":1786303281476,"rpm":863.5,"end_timestamp_ms":1786303281681,"cas_ok":true,"dde_ok":true},
+    {"sample":17,"cas_timestamp_ms":1786303281681,"klemmenstatus_decimal":69,"klemmenstatus_hex":"0x45","kl50_interpretation":"KL50_OFF","dde_timestamp_ms":1786303281732,"rpm":839,"end_timestamp_ms":1786303281987,"cas_ok":true,"dde_ok":true},
+    {"sample":18,"cas_timestamp_ms":1786303281987,"klemmenstatus_decimal":69,"klemmenstatus_hex":"0x45","kl50_interpretation":"KL50_OFF","dde_timestamp_ms":1786303282040,"rpm":807.5,"end_timestamp_ms":1786303282297,"cas_ok":true,"dde_ok":true},
+    {"sample":19,"cas_timestamp_ms":1786303282297,"klemmenstatus_decimal":69,"klemmenstatus_hex":"0x45","kl50_interpretation":"KL50_OFF","dde_timestamp_ms":1786303282350,"rpm":779,"end_timestamp_ms":1786303282555,"cas_ok":true,"dde_ok":true},
+    {"sample":20,"cas_timestamp_ms":1786303282555,"klemmenstatus_decimal":69,"klemmenstatus_hex":"0x45","kl50_interpretation":"KL50_OFF","dde_timestamp_ms":1786303282607,"rpm":780,"end_timestamp_ms":1786303282810,"cas_ok":true,"dde_ok":true}
+  ],
+  "transition_bounds": {
+    "kl50_on": {"after_timestamp_ms_exclusive":1786303279519,"by_timestamp_ms_inclusive":1786303279776,"window_ms":257,"physical_instant_known":false},
+    "rpm_nonzero": {"after_timestamp_ms_exclusive":1786303279572,"by_timestamp_ms_inclusive":1786303279829,"window_ms":257,"physical_instant_known":false},
+    "kl50_off": {"after_timestamp_ms_exclusive":1786303280347,"by_timestamp_ms_inclusive":1786303280653,"window_ms":306,"physical_instant_known":false}
+  },
+  "observed_kl50_duration_bounds_ms": {
+    "minimum": 571,
+    "maximum": 1134,
+    "exact_physical_duration": null,
+    "status": "OBSERVED_BOUNDED_DIAGNOSTIC_SAMPLING"
+  },
+  "diagnostic_correlation": {
+    "same_clock": true,
+    "same_process": true,
+    "same_ediabas_session": true,
+    "cas_then_dde_sequential": true,
+    "first_on_to_first_nonzero_read_gap_ms": 53,
+    "last_on_to_863_rpm_read_gap_ms": 52,
+    "first_off_to_981_5_rpm_read_gap_ms": 53
+  },
+  "stabilized_rpm_summary": {
+    "sample_range": [19, 299],
+    "recovered_sample_count": 272,
+    "minimum": 773,
+    "median": 781,
+    "mean": 780.557,
+    "maximum": 786.5,
+    "unit": "rpm"
+  },
+  "qualification": "CONFIRMED_DIAGNOSTIC_CORRELATION",
+  "physical_transition_order": "UNKNOWN",
+  "rpm_alignment_status": "OBSERVED_BOUNDED",
+  "forbidden_inferences": [
+    "EXACT_PHYSICAL_KL50_ON_TIME", "EXACT_PHYSICAL_KL50_OFF_TIME",
+    "PHYSICAL_KL50_VS_RPM_ORDER", "CAN_IDENTIFIER", "CAN_PAYLOAD",
+    "CAS_COMMAND", "DDE_COMMAND", "KL50_COMMAND", "TRANSMISSION_PATH",
+    "IMMOBILIZER_BYPASS", "REMOTE_START_ACTUATION", "OEM_START_REQUEST",
+    "OEM_START_AUTHORIZATION", "FINAL_ENGINE_RUNNING_ALGORITHM"
+  ],
+  "notes": "This is a same-clock diagnostic correlation, not simultaneous sampling. CAS is read before DDE in every loop. The KL50 and first-nonzero-RPM transition windows overlap, so their exact physical order remains unknown."
+}

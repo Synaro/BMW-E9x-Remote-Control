@@ -52,6 +52,13 @@ bornée. `duration_estimate_ms` est uniquement le milieu arrondi des bornes : le
 validateur interdit de le présenter comme une durée exacte. Cette preuve reste
 en lecture seule et ne qualifie ni demande, ni autorisation, ni actionnement.
 
+Une acquisition TestO interrogeant CAS puis DDE sur la même horloge utilise
+`CAS_DDE_DIAGNOSTIC_CORRELATION_OBSERVATION`. Elle peut borner séparément les
+transitions observées et conserver les écarts entre lectures. Elle ne rend pas
+les mesures simultanées : l'ordre physique KL50/RPM doit rester `UNKNOWN` si
+les fenêtres d'échantillonnage se recouvrent. Un extrait brut doit être marqué
+comme tel et ne doit jamais être présenté comme l'export complet.
+
 ## Règles pour les données réelles
 
 1. Placer d'abord les exports bruts et captures dans un sous-dossier `private/`.
@@ -78,6 +85,8 @@ bitfields des timelines synchronisées. `--kl50-observation` valide la preuve
 KL50 read-only et interdit toute durée issue d'un trace Level 1.
 `--kl50-timing-observation` valide séparément les bornes calculées depuis les
 timestamps du trace Level 3.
+`--cas-dde-correlation` protège les observations TestO CAS/DDE séquentielles,
+leur qualité de récupération et l'absence de conclusion physique excessive.
 
 Les preuves acceptées sont : capture ISTA, export TestO, sortie INPA, sortie
 Tool32, future capture CAN et note manuelle. La catégorie « future capture CAN »

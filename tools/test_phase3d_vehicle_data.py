@@ -17,6 +17,7 @@ from vehicle_data_validation import (
     validate_engine_run_timeline,
     validate_cas_kl50_observation,
     validate_cas_kl50_timing_observation,
+    validate_cas_dde_diagnostic_correlation,
     validate_evidence_index,
     validate_prerequisites,
     validate_qualified_observations,
@@ -37,6 +38,7 @@ SIGNAL_SOURCES_PATH = DATA / "observations" / "current-test-vehicle-phase3d-sign
 SYNCHRONIZED_START_PATH = DATA / "observations" / "current-test-vehicle-phase3d-synchronized-rpm-msa-start-2026-08-09.json"
 KL50_IFH_PATH = DATA / "observations" / "current-test-vehicle-phase3d-cas-kl50-ifh-level1-2026-08-09.json"
 KL50_IFH_LEVEL3_PATH = DATA / "observations" / "current-test-vehicle-phase3d-cas-kl50-ifh-level3-2026-08-09.json"
+CAS_DDE_CORRELATION_PATH = DATA / "observations" / "current-test-vehicle-phase3d-testo2-cas-dde-correlation-2026-08-09.json"
 EXAMPLE_EVIDENCE_PATH = DATA / "evidence" / "EXAMPLE_ONLY.evidence-index.json"
 EXAMPLE_ENGINE_INPUT = DATA / "imports" / "EXAMPLE_ONLY.engine-speed.csv"
 EXAMPLE_ENGINE_MAPPING = DATA / "imports" / "EXAMPLE_ONLY.engine-speed.mapping.json"
@@ -57,6 +59,7 @@ class Phase3DVehicleDataTests(unittest.TestCase):
         self.synchronized_start = load_json_object(SYNCHRONIZED_START_PATH)
         self.kl50_ifh = load_json_object(KL50_IFH_PATH)
         self.kl50_ifh_level3 = load_json_object(KL50_IFH_LEVEL3_PATH)
+        self.cas_dde_correlation = load_json_object(CAS_DDE_CORRELATION_PATH)
         self.status_by_id = {
             observation["observation_id"]: observation
             for observation in self.status["observations"]
@@ -76,6 +79,7 @@ class Phase3DVehicleDataTests(unittest.TestCase):
         validate_synchronized_start_observation(self.synchronized_start, self.evidence_ids)
         validate_cas_kl50_observation(self.kl50_ifh, self.evidence_ids)
         validate_cas_kl50_timing_observation(self.kl50_ifh_level3, self.evidence_ids)
+        validate_cas_dde_diagnostic_correlation(self.cas_dde_correlation, self.evidence_ids)
 
     def test_identification_values_are_preserved_as_reported(self):
         expected = {
@@ -236,6 +240,89 @@ class Phase3DVehicleDataTests(unittest.TestCase):
         with self.assertRaisesRegex(ValidationError, "authorization must remain forbidden"):
             validate_cas_kl50_timing_observation(modified, self.evidence_ids)
 
+    def test_testo2_cas_dde_critical_sequence_matches_raw_capture(self):
+        observation = self.cas_dde_correlation
+        samples = {sample["sample"]: sample for sample in observation["critical_samples"]}
+        self.assertEqual(
+            [(69, 0), (85, 131), (85, 224.5), (85, 863), (69, 981.5)],
+            [
+                (samples[index]["klemmenstatus_decimal"], samples[index]["rpm"])
+                for index in range(9, 14)
+            ],
+        )
+        self.assertEqual(
+            "0eeed9deb95ab65d6f45142a7a0df4f3de9f9502f1cf51cb85eeef3033da4399",
+            observation["source_payload_sha256"],
+        )
+        self.assertEqual(["CAS", "DDE"], observation["source"]["acquisition_order"])
+        self.assertTrue(observation["source"]["read_only"])
+
+    def test_testo2_transition_and_duration_bounds_are_preserved(self):
+        bounds = self.cas_dde_correlation["transition_bounds"]
+        self.assertEqual(
+            (1786303279519, 1786303279776, 257),
+            tuple(bounds["kl50_on"][field] for field in (
+                "after_timestamp_ms_exclusive", "by_timestamp_ms_inclusive", "window_ms"
+            )),
+        )
+        self.assertEqual(
+            (1786303279572, 1786303279829, 257),
+            tuple(bounds["rpm_nonzero"][field] for field in (
+                "after_timestamp_ms_exclusive", "by_timestamp_ms_inclusive", "window_ms"
+            )),
+        )
+        self.assertEqual(
+            (1786303280347, 1786303280653, 306),
+            tuple(bounds["kl50_off"][field] for field in (
+                "after_timestamp_ms_exclusive", "by_timestamp_ms_inclusive", "window_ms"
+            )),
+        )
+        duration = self.cas_dde_correlation["observed_kl50_duration_bounds_ms"]
+        self.assertEqual((571, 1134), (duration["minimum"], duration["maximum"]))
+        self.assertIsNone(duration["exact_physical_duration"])
+
+    def test_testo2_sequential_reads_do_not_assign_physical_order(self):
+        observation = self.cas_dde_correlation
+        self.assertEqual("UNKNOWN", observation["physical_transition_order"])
+        self.assertEqual("OBSERVED_BOUNDED", observation["rpm_alignment_status"])
+        self.assertEqual(
+            (53, 52, 53),
+            tuple(observation["diagnostic_correlation"][field] for field in (
+                "first_on_to_first_nonzero_read_gap_ms",
+                "last_on_to_863_rpm_read_gap_ms",
+                "first_off_to_981_5_rpm_read_gap_ms",
+            )),
+        )
+        modified = copy.deepcopy(observation)
+        modified["physical_transition_order"] = "KL50_BEFORE_RPM"
+        with self.assertRaisesRegex(ValidationError, "cannot prove physical order"):
+            validate_cas_dde_diagnostic_correlation(modified, self.evidence_ids)
+
+    def test_testo2_recovery_quality_and_stable_rpm_are_explicit(self):
+        recovery = self.cas_dde_correlation["recovery"]
+        self.assertEqual(300, recovery["declared_samples"])
+        self.assertEqual(291, recovery["recovered_samples"])
+        self.assertEqual([168, 172, 180, 183, 191, 196, 199, 202, 204], recovery["missing_samples"])
+        self.assertFalse(recovery["full_raw_file_in_repository"])
+        self.assertTrue(recovery["raw_excerpt_in_repository"])
+        stable = self.cas_dde_correlation["stabilized_rpm_summary"]
+        self.assertEqual((272, 773, 781, 780.557, 786.5), (
+            stable["recovered_sample_count"], stable["minimum"], stable["median"],
+            stable["mean"], stable["maximum"],
+        ))
+
+    def test_testo2_correlation_cannot_drop_safety_inferences(self):
+        modified = copy.deepcopy(self.cas_dde_correlation)
+        modified["forbidden_inferences"].remove("CAN_IDENTIFIER")
+        with self.assertRaisesRegex(ValidationError, "inferences must remain forbidden"):
+            validate_cas_dde_diagnostic_correlation(modified, self.evidence_ids)
+
+    def test_testo2_bounds_are_recomputed_from_diagnostic_timestamps(self):
+        modified = copy.deepcopy(self.cas_dde_correlation)
+        modified["transition_bounds"]["kl50_on"]["window_ms"] = 256
+        with self.assertRaisesRegex(ValidationError, "inconsistent sampling bound"):
+            validate_cas_dde_diagnostic_correlation(modified, self.evidence_ids)
+
     def test_tool32_egs_prnd_mapping_is_confirmed(self):
         for position in ("p", "r", "n", "d"):
             observation = self.status_by_id[f"egs.tool32.position.{position}"]
@@ -325,7 +412,7 @@ class Phase3DVehicleDataTests(unittest.TestCase):
             "kl50": "CONFIRMED",
             "kl50_oem_start_transition": "CONFIRMED",
             "kl50_duration": "OBSERVED_BOUNDED",
-            "kl50_rpm_temporal_alignment": "PENDING",
+            "kl50_rpm_temporal_alignment": "OBSERVED_BOUNDED",
             "engine_speed": "CONFIRMED",
             "stopped_cranking_running_observations": "CONFIRMED",
             "engine_running_detection_algorithm": "NOT_YET_VALIDATED",
