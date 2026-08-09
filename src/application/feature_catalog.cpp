@@ -52,6 +52,10 @@ FeatureResolution resolveFeature(
     if ((context.implementedFeatures & featureBit(id)) == 0U) {
         return {FeatureResolutionStatus::NotImplemented, 0U};
     }
+    if (descriptor->releaseTier == FeatureReleaseTier::BenchOnly &&
+        context.target == FeatureExecutionTarget::Vehicle) {
+        return {FeatureResolutionStatus::CriticalControlBlocked, 0U};
+    }
 
     std::uint32_t missing =
         descriptor->requiredCapabilities & ~context.availableCapabilities;
@@ -65,6 +69,15 @@ FeatureResolution resolveFeature(
     if (descriptor->requiresQualifiedVehicleSignals &&
         !context.vehicleSignalsQualified) {
         return {FeatureResolutionStatus::SignalsUnqualified, 0U};
+    }
+    if (descriptor->controlClass == FeatureControlClass::ComfortVehicleWrite &&
+        !context.comfortWritesQualified) {
+        return {FeatureResolutionStatus::ComfortWritesUnqualified, 0U};
+    }
+    if (descriptor->controlClass ==
+            FeatureControlClass::SafetyCriticalVehicleControl &&
+        !context.criticalControlsQualified) {
+        return {FeatureResolutionStatus::CriticalControlBlocked, 0U};
     }
     return {
         context.target == FeatureExecutionTarget::Simulation
