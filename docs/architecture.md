@@ -41,8 +41,9 @@ flowchart LR
 - **Application** : politique de sécurité, machine d'état, événements et actions.
 - **Infrastructure** : exécution des actions au travers de ports abstraits.
 - **Simulation** : décodeur synthétique et génération de scénarios hors véhicule.
-- **Firmware** : assemblage spécifique à la carte. La version actuelle est
-  inerte.
+- **Firmware** : assemblage ESP-IDF spécifique à l'ESP32-S3. La version actuelle
+  dessert uniquement le protocole de configuration USB et NVS ; elle reste
+  inerte vis-à-vis du véhicule.
 
 Le domaine et l'application ne dépendent d'aucun framework embarqué.
 
@@ -70,8 +71,8 @@ installation peut explicitement désactiver ce contrôle avec
 `UserSettings` contient uniquement les préférences exposées à l'utilisateur.
 `makeUserConfiguration()` les valide puis produit les configurations effectives
 du contrôleur et du détecteur de verrouillages. Un échec de validation laisse le
-démarrage distant désactivé. Le format de fichier PC et la future mémoire du
-boîtier restent des adaptateurs d'infrastructure.
+démarrage distant désactivé. Le format de fichier PC et la mémoire NVS du
+prototype restent des adaptateurs d'infrastructure.
 
 La persistance concrète est séparée en deux niveaux. `SettingsByteStorage`
 abstrait une mémoire adressable et son commit ; `JournaledUserSettingsStore`
@@ -79,12 +80,20 @@ encode deux générations versionnées avec CRC, sélectionne la plus récente v
 et fournit un retour fail-safe si aucune ne peut être chargée. Voir
 [settings-persistence.md](settings-persistence.md).
 
+Sur l'ESP32-S3, `EspIdfNvsSettingsStorage` adapte ce contrat à une partition NVS
+explicite. `GpioHal` et `MonotonicTimeHal` forment la HAL minimale du socle. Le
+contrat `FutureTwaiSafetyHal` ne permet que de maintenir les deux barrières
+matérielles de silence ; il n'expose aucune opération CAN. La composition
+embarquée n'instancie ni runtime véhicule, ni GPIO d'actionneur, ni pilote TWAI.
+Voir [esp32s3-safe-foundation.md](esp32s3-safe-foundation.md).
+
 Le protocole de configuration transporte le même payload pré-V1 fixe de 40 octets que
 le journal, sans exposer son format de stockage. Le codec vérifie la version, la
 taille et le CRC avant que `SettingsProtocolService` n'accède au port. Le service
 exige une session déclarée authentifiée et refuse toute écriture lorsque le
-contrôleur n'est pas en `Idle`. L'établissement de cette session appartient au
-futur adaptateur USB, Bluetooth ou réseau. Voir
+contrôleur n'est pas en `Idle`. Le prototype considère l'accès physique au port
+USB comme session locale ; une future liaison distante devra ajouter sa propre
+authentification. Voir
 [settings-protocol.md](settings-protocol.md).
 
 Le catalogue de fonctionnalités appartient aussi à la couche application. Ses

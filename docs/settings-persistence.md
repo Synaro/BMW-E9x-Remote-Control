@@ -66,9 +66,12 @@ atomiquement la dernière donnée durable.
 ## Port matériel
 
 `SettingsByteStorage` expose seulement `capacity()`, `read()`, `write()` et
-`commit()`. Le prototype ESP32-S3 utilise une EEPROM émulée en flash. La carte
-définitive devra employer un stockage qualifié tout en préservant les deux
-emplacements, les erreurs de retour et les sémantiques de commit.
+`commit()`. Le prototype ESP32-S3 utilise l'adaptateur ESP-IDF
+`EspIdfNvsSettingsStorage` sur une partition NVS dédiée. Un blob de 128 octets
+porte l'image adressable du journal ; l'adaptateur n'efface jamais
+automatiquement la partition lorsqu'une erreur est détectée. La carte définitive
+devra employer un stockage qualifié tout en préservant les deux emplacements,
+les erreurs de retour et les sémantiques de commit.
 
 Le scénario `settings-recovery` du simulateur enregistre deux configurations,
 corrompt volontairement la plus récente et démontre le retour automatique à la

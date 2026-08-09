@@ -1,5 +1,8 @@
 .pio/
 .vscode/
+sdkconfig
+sdkconfig.*
+!sdkconfig.defaults
 build/
 build-cmake*/
 cmake-build-*/

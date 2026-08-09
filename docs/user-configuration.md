@@ -143,8 +143,8 @@ ne seront pas librement modifiables par l'utilisateur final.
 Le journal portable fourni utilise deux générations, une version de schéma, un
 CRC-32 et un retour aux valeurs sûres si la mémoire est corrompue. Il reste à
 raccorder son port `SettingsByteStorage` à une mémoire automobile qualifiée pour
-la carte définitive ; le prototype utilise déjà une EEPROM émulée dans la flash
-de l'ESP32-S3.
+la carte définitive ; le prototype utilise NVS dans une partition flash
+explicitement décrite par `partitions.csv`.
 Le contrôleur ne doit être construit qu'après validation réussie des valeurs
 chargées.
 

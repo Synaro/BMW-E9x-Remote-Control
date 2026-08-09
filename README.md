@@ -35,7 +35,7 @@ Le premier jalon logiciel est opérationnel :
 - décisions et listes d'actions de taille fixe, sans allocation dynamique ;
 - arrêt fail-safe en cas de défaut d'un adaptateur ;
 - ports abstraits pour véhicule, actionneurs, minuterie et notifications ;
-- firmware ESP32 de référence inerte ;
+- socle ESP32-S3 sous ESP-IDF 5.5.0, limité à la configuration USB et NVS ;
 - rejeu temporel de traces CAN et assemblage des signaux avec gestion de fraîcheur ;
 - protocole CAN synthétique réservé aux simulations hors véhicule ;
 - simulateur interactif avec parcours nominal et injection d'un défaut de sécurité ;
@@ -114,6 +114,8 @@ Le premier moteur de télémétrie et ses alertes sont décrits dans
 [docs/telemetry-alerts.md](docs/telemetry-alerts.md).
 Le journal binaire redondant est spécifié dans
 [docs/settings-persistence.md](docs/settings-persistence.md).
+Le socle ESP-IDF, ses garde-fous et sa procédure de banc sont documentés dans
+[docs/esp32s3-safe-foundation.md](docs/esp32s3-safe-foundation.md).
 Le configurateur PC est décrit dans
 [docs/configurator.md](docs/configurator.md).
 Le protocole entre configurateur et boîtier est spécifié dans

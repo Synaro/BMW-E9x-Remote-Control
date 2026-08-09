@@ -1,5 +1,21 @@
 cmake_minimum_required(VERSION 3.16)
 
+if(DEFINED ENV{IDF_PATH})
+    set(EXTRA_COMPONENT_DIRS "${CMAKE_CURRENT_SOURCE_DIR}/src")
+    # Build only the firmware component, the component that owns the required
+    # erratum Kconfig option, and their declared dependencies. Host tools and
+    # simulators stay out of the embedded image.
+    # PlatformIO's generated __pio_env component carries the generic compiler
+    # environment and must remain in the selected component set.
+    # Keep the legacy driver component in the configuration graph solely so
+    # ESP-IDF exposes CONFIG_TWAI_ERRATA_FIX_LISTEN_ONLY_DOM. No TWAI driver is
+    # referenced or initialized by the Phase 2 firmware.
+    set(COMPONENTS __pio_env src driver)
+    include($ENV{IDF_PATH}/tools/cmake/project.cmake)
+    project(bmw_e9x_remote_control_firmware)
+    return()
+endif()
+
 project(bmw_e9x_remote_control LANGUAGES CXX)
 
 file(STRINGS

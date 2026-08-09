@@ -15,6 +15,8 @@ core|src/infrastructure/can_lock_command_adapter.cpp
 core|src/infrastructure/can_trace_replay.cpp
 core|src/infrastructure/crc32.cpp
 core|src/infrastructure/diagnostic_journal.cpp
+core|src/infrastructure/esp_idf_hal.cpp
+core|src/infrastructure/esp_idf_settings.cpp
 core|src/infrastructure/replay_vehicle_gateway.cpp
 core|src/infrastructure/runtime.cpp
 core|src/infrastructure/settings_identity.cpp

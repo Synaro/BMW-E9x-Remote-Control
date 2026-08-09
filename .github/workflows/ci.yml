@@ -38,13 +38,32 @@ jobs:
           python-version: '3.x'
 
       - name: Install PlatformIO
-        run: python -m pip install platformio==6.1.19
+        run: python -m pip install platformio==6.1.19 intelhex==2.3.0
 
       - name: Build native target
         run: pio run -e native
 
       - name: Build ESP32-S3 target
         run: pio run -e esp32s3dev
+
+      - name: Verify ESP32-S3 safety gates
+        shell: bash
+        run: |
+          grep -q '#define CONFIG_TWAI_ERRATA_FIX_LISTEN_ONLY_DOM 1' \
+            .pio/build/esp32s3dev/config/sdkconfig.h
+          if grep -ERn \
+            'twai_(transmit|receive|driver_install|start|node_[a-z_]+)|twai_new_node' \
+            src include; then
+            echo 'Forbidden TWAI initialization, reception or transmission API in firmware sources.'
+            exit 1
+          fi
+          if pio pkg exec --package toolchain-xtensa-esp-elf -- \
+            xtensa-esp32s3-elf-nm -C \
+            .pio/build/esp32s3dev/firmware.elf | \
+            grep -E 'twai_(transmit|receive|driver_install|start|node_[a-z_]+)|twai_new_node'; then
+            echo 'Forbidden TWAI driver symbol linked in firmware.'
+            exit 1
+          fi
 
   windows-simulator-gui:
     runs-on: windows-latest

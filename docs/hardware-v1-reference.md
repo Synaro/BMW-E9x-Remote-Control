@@ -48,10 +48,12 @@ La documentation BMW distingue :
 
 La cible officielle utilise exclusivement le contrôleur **TWAI interne de
 l'ESP32-S3** avec un transceiver CAN externe adapté à la couche physique du bus
-observé. La Phase 1 n'implémente encore aucun pilote TWAI.
+observé. Le socle de Phase 2 n'initialise encore aucun pilote TWAI.
 
 ```text
 ESP32-S3 -- contrôleur TWAI interne -- transceiver externe -- un bus de test
+    |                                  |
+    +-- inhibition TX indépendante    +-- mode silent matériel
 ```
 
 Un seul bus sera étudié à la fois en écoute seule. Si l'observation simultanée de
@@ -65,8 +67,12 @@ Les composants candidats pour la future carte sont :
 - `LM5164-Q1` comme base d'étude de l'alimentation abaisseuse à large plage.
 
 Ces références sont des **candidats de conception**, pas encore une liste
-d'achat. Elles seront accompagnées des protections, filtres, modes silencieux,
-circuits de réveil et mesures de courant nécessaires sur le schéma final.
+d'achat. Le composant retenu devra posséder un mode silencieux matériel. Une
+inhibition TX indépendante et des résistances externes maintiendront le montage
+silencieux lorsque l'ESP32-S3 démarre, est reset, subit un brownout, plante ou
+laisse ses GPIO en haute impédance. Le watchdog ne remplace pas cette sûreté
+électrique. Les protections, filtres, circuits de réveil et mesures de courant
+seront revus sur le schéma final.
 
 ## Déroulement matériel sûr
 
@@ -103,10 +109,14 @@ utilisation manuelle, relancer `-ListDevices` et reprendre avec ce numéro.
 
 ### Phase B — un CAN simulé sur table
 
-1. Ajouter un transceiver externe sur une carte d'interface protégée.
-2. Utiliser une alimentation de laboratoire limitée en courant.
-3. Vérifier d'abord les modes écoute seule sur un bus CAN de test.
-4. Tester séparément les débits 100 et 500 kbit/s sans véhicule.
+1. Ajouter un transceiver externe avec mode silent sur une interface protégée.
+2. Ajouter et mesurer une inhibition TX indépendante, bloquée par défaut.
+3. Utiliser une alimentation de laboratoire limitée en courant.
+4. Observer silent, TXD, CANH et CANL au boot, reset, brownout et blocage du
+   firmware.
+5. Vérifier l'absence de bit dominant aux bons et mauvais débits sur un bus CAN
+   de test.
+6. Tester séparément les débits envisagés sans véhicule et archiver les mesures.
 
 ### Phase C — observation passive du véhicule
 
@@ -117,6 +127,10 @@ utilisation manuelle, relancer `-ListDevices` et reprendre avec ce numéro.
 
 Les actionneurs et le démarrage restent hors périmètre tant que cette phase n'a
 pas produit de résultats reproductibles.
+
+Les critères détaillés et la décision ESP-IDF sont dans
+[esp32s3-safe-foundation.md](esp32s3-safe-foundation.md). Un échec de validation
+sur banc interdit toute connexion au véhicule.
 
 ## Pourquoi la carte de développement ne restera pas dans le véhicule
 

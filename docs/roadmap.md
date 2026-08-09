@@ -20,7 +20,17 @@ sans ajouter de comportement.
 - [x] Retirer MCP2515 de la cible matérielle officielle
 - [x] Valider tous les tests et builds locaux, puis la CI GitHub
 
-## Phase 2 — Couche CAN en écoute seule
+## Phase 2 — Socle ESP32-S3 sûr
+
+- [x] Adopter ESP-IDF 5.5.0 comme environnement embarqué de référence
+- [x] Versionner `sdkconfig.defaults` et la table de partitions
+- [x] Remplacer l'adaptateur Arduino/EEPROM par NVS
+- [x] Définir la HAL minimale GPIO, temps, stockage et sûreté du futur TWAI
+- [x] Activer watchdogs et buffers USB bornés sans tâche applicative superflue
+- [x] Documenter silence matériel, inhibition TX et validation sur banc
+- [x] Prouver au build l'absence d'installation et d'émission TWAI
+
+## Phase 3 — TWAI en écoute seule
 
 - [ ] Définir le port de réception CAN indépendant d'Espressif
 - [ ] Implémenter l'adaptateur ESP32-S3/TWAI en mode écoute seule
@@ -28,49 +38,49 @@ sans ajouter de comportement.
 - [ ] Ajouter compteurs, erreurs et horodatage bornés
 - [ ] Valider sur bus de banc avant toute connexion véhicule
 
-## Phase 3 — Capture et analyse hors ligne
+## Phase 4 — Capture et analyse hors ligne
 
 - [ ] Stabiliser le format de capture canonique
 - [ ] Relier les captures TWAI au format canonique
 - [ ] Renforcer l'analyse différentielle et les rapports reproductibles
 - [ ] Ajouter les jeux de validation sans données personnelles
 
-## Phase 4 — Base de données des trames
+## Phase 5 — Base de données des trames
 
 - [ ] Définir un schéma versionné pour identifiants, signaux et preuves
 - [ ] Enregistrer véhicule, variante, provenance et date de validation
 - [ ] Gérer niveaux de confiance et contradictions
 - [ ] Valider le schéma avec des captures de plusieurs véhicules
 
-## Phase 5 — Bibliothèque BMW E8x/E9x
+## Phase 6 — Bibliothèque BMW E8x/E9x
 
 - [ ] Créer une bibliothèque indépendante du contrôleur distant
 - [ ] Décoder uniquement les trames suffisamment validées
 - [ ] Documenter unités, cadence, compteurs et contrôles d'intégrité
 - [ ] Tester la compatibilité inter-véhicules et les cas inconnus
 
-## Phase 6 — API véhicule en lecture seule
+## Phase 7 — API véhicule en lecture seule
 
 - [ ] Exposer des signaux sémantiques qualifiés au domaine
 - [ ] Relier fraîcheur, plausibilité et profils véhicule
 - [ ] Remplacer progressivement les sources synthétiques dans les essais de banc
 - [ ] Conserver toutes les commandes véhicule désactivées
 
-## Phase 7 — Commande sur banc et sûreté matérielle
+## Phase 8 — Commande sur banc et sûreté matérielle
 
 - [ ] Réaliser l'analyse de risques avant toute sortie physique
 - [ ] Concevoir alimentation, protections, watchdog et interverrouillages
 - [ ] Implémenter les actionneurs uniquement sur charges factices
 - [ ] Mener les campagnes HIL et d'injection de défauts
 
-## Phase 8 — Interfaces utilisateur
+## Phase 9 — Interfaces utilisateur
 
 - [ ] Stabiliser une API authentifiée et anti-rejeu
 - [ ] Concevoir l'application iOS
 - [ ] Ajouter un client Android sur la même API
 - [ ] Maintenir chaque option désactivable dans les limites de sûreté
 
-## Phase 9 — Qualification véhicule contrôlée
+## Phase 10 — Qualification véhicule contrôlée
 
 - [ ] Revue indépendante du logiciel, du schéma et des risques
 - [ ] Qualification par variante E8x/E9x
