@@ -56,8 +56,9 @@ libère les barrières matérielles. Le correctif
 
 ## Configuration BENCH_ONLY
 
-Aucune broche n'est choisie dans le dépôt. Par défaut l'acquisition est
-désactivée et toutes les broches valent `-1`. Pour préparer un banc revu :
+La Phase 3B propose GPIO4/5/6/7 uniquement pour la DevKitC-1-N8 et son schéma
+TCAN1057AV-Q1 + SN74LVC1G125-Q1. L'acquisition reste désactivée par défaut. Pour
+préparer ce banc après revue électrique :
 
 ```powershell
 Copy-Item `
@@ -65,13 +66,13 @@ Copy-Item `
   .\config\bench-twai.local.hpp
 ```
 
-Le fichier local est ignoré par Git. Il faut y reporter les quatre broches du
-schéma de banc : RX, TX vers la barrière indépendante, silent et inhibition TX,
-ainsi que leurs niveaux actifs. Le build refuse une configuration activée avec
-broches manquantes, dupliquées ou débit autre que 100/500 kbit/s au moment où
-l'acquisition tente de démarrer.
+Le fichier local est ignoré par Git. L'exemple contient les broches de Phase 3B
+mais conserve `BMW_REMOTE_BENCH_ONLY_TWAI_ENABLED=0`. Ne le passer à `1` que
+pendant la procédure de qualification. L'acquisition refuse les broches
+manquantes/dupliquées et les débits autres que 100/500 kbit/s au démarrage.
 
 Ces broches sont **BENCH_ONLY**. Elles ne décrivent aucun faisceau BMW validé.
+Voir [phase3b-can-bench-hardware.md](phase3b-can-bench-hardware.md).
 
 ## Bornes et statistiques
 

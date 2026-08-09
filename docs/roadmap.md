@@ -37,7 +37,16 @@ sans ajouter de comportement.
 - [x] Garantir par construction et en CI l'absence d'émission
 - [x] Ajouter file fixe, compteurs, erreurs et horodatage bornés
 - [x] Définir le format Capture V2 et son manifeste de session
-- [ ] Valider sur bus de banc avant toute connexion véhicule
+
+## Phase 3B — Matériel CAN de banc
+
+- [x] Comparer les transceivers automobiles à partir des datasheets constructeur
+- [x] Retenir le TCAN1057AV-Q1 et une inhibition TX physique indépendante
+- [x] Définir le schéma de principe, les pulls sûrs et les GPIO BENCH_ONLY
+- [x] Définir la procédure électrique et la checklist PASS/FAIL
+- [ ] Assembler et inspecter le banc physique
+- [ ] Exécuter et archiver tous les essais électriques
+- [ ] Obtenir un PASS complet avant toute demande de connexion véhicule
 
 ## Phase 4 — Capture et analyse hors ligne
 

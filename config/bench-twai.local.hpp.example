@@ -1,13 +1,14 @@
 #pragma once
 
-// BENCH_ONLY: copy this file to config/bench-twai.local.hpp, then replace every
-// -1 with pins from a reviewed bench schematic. These values are never a BMW
-// wiring recommendation. The local file is ignored by Git.
-#define BMW_REMOTE_BENCH_ONLY_TWAI_ENABLED 1
-#define BMW_REMOTE_BENCH_ONLY_TWAI_RX_GPIO -1
-#define BMW_REMOTE_BENCH_ONLY_TWAI_TX_GPIO -1
-#define BMW_REMOTE_BENCH_ONLY_SILENT_GPIO -1
-#define BMW_REMOTE_BENCH_ONLY_TX_INHIBIT_GPIO -1
+// BENCH_ONLY: proposed only for the ESP32-S3-DevKitC-1-N8 and the reviewed
+// Phase 3B TCAN1057AV + SN74LVC1G125-Q1 bench circuit. This is never a BMW
+// wiring recommendation. Keep disabled until the electrical checklist starts.
+// The copied local file is ignored by Git.
+#define BMW_REMOTE_BENCH_ONLY_TWAI_ENABLED 0
+#define BMW_REMOTE_BENCH_ONLY_TWAI_RX_GPIO 4
+#define BMW_REMOTE_BENCH_ONLY_TWAI_TX_GPIO 5
+#define BMW_REMOTE_BENCH_ONLY_SILENT_GPIO 6
+#define BMW_REMOTE_BENCH_ONLY_TX_INHIBIT_GPIO 7
 
 // 1 means that a high level holds the corresponding barrier active. Change
 // only after checking the selected transceiver and independent TX gate.

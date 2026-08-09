@@ -1,4 +1,4 @@
-# Socle ESP32-S3 sûr — Phase 2, étendu en Phase 3
+# Socle ESP32-S3 sûr — Phase 2, étendu en Phases 3 et 3B
 
 ## Périmètre livré
 
@@ -82,7 +82,7 @@ implémentation ESP-IDF n'expose aucune opération d'émission.
 ## Chaîne matérielle future et état sûr
 
 ```text
-ESP32-S3 -> contrôleur TWAI -> transceiver CAN externe -> bus véhicule
+ESP32-S3 -> contrôleur TWAI -> transceiver CAN externe -> bus de banc
     |                              ^
     +--> inhibition TX indépendante+-- mode silencieux matériel
 ```
@@ -100,9 +100,10 @@ La future carte doit satisfaire simultanément les règles suivantes :
 6. le watchdog accélère le retour au reset, mais ne remplace jamais ces états
    matériels par défaut.
 
-Les niveaux actifs et les broches ne sont pas figés avant le choix du
-transceiver et la revue du schéma. Aucun câblage improvisé de DevKit vers un bus
-véhicule n'est autorisé.
+La Phase 3B fige `S=HIGH`, `/OE=HIGH` et GPIO4/5/6/7 uniquement pour le banc
+TCAN1057AV-Q1 + SN74LVC1G125-Q1 sur DevKitC-1-N8. Ce choix ne s'applique ni au
+PCB final, ni à un bus BMW. Aucun câblage improvisé de DevKit vers un véhicule
+n'est autorisé.
 
 ## Porte de validation sur banc
 
@@ -121,6 +122,8 @@ Avant toute connexion au véhicule :
    ce banc avant toute demande d'étape suivante.
 
 Un échec à une seule étape interdit la connexion au véhicule.
+Le schéma mesurable, les seuils et la checklist exhaustive sont définis dans
+[phase3b-can-bench-hardware.md](phase3b-can-bench-hardware.md).
 
 ## Références primaires
 

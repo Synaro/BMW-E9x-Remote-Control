@@ -123,6 +123,9 @@ Le socle ESP-IDF, ses garde-fous et sa procédure de banc sont documentés dans
 L'acquisition passive de Phase 3 et le format Capture V2 sont décrits dans
 [docs/twai-listen-only-acquisition.md](docs/twai-listen-only-acquisition.md) et
 [docs/capture-format-v2.md](docs/capture-format-v2.md).
+Le choix du transceiver, le schéma de banc et la qualification électrique de
+Phase 3B sont figés dans
+[docs/phase3b-can-bench-hardware.md](docs/phase3b-can-bench-hardware.md).
 Le configurateur PC est décrit dans
 [docs/configurator.md](docs/configurator.md).
 Le protocole entre configurateur et boîtier est spécifié dans

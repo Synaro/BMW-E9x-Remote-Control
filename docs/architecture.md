@@ -6,8 +6,8 @@ Le premier jalon fournit un noyau de décision complet, compilable sur ordinateu
 et microcontrôleur. Il ne suppose aucun protocole BMW et ne commande aucun
 matériel réel. Il sait reconnaître une séquence abstraite de trois impulsions de
 verrouillage, mais leur acquisition BMW appartient au futur adaptateur. Cette
-limite permet de vérifier les décisions avant de sélectionner un transceiver ou
-une topologie électrique.
+limite a permis de vérifier les décisions avant de sélectionner le transceiver
+de banc en Phase 3B. La topologie automobile finale reste indéfinie.
 
 ## Règle de dépendance
 
@@ -90,6 +90,9 @@ générique de `libs/can-core`, uniquement en `TWAI_MODE_LISTEN_ONLY`, sans API
 d'émission publique. L'acquisition est désactivée sans configuration locale de
 banc validée. Voir [esp32s3-safe-foundation.md](esp32s3-safe-foundation.md) et
 [twai-listen-only-acquisition.md](twai-listen-only-acquisition.md).
+Le transceiver, l'inhibition TX indépendante et la porte de validation
+électrique sont définis séparément dans
+[phase3b-can-bench-hardware.md](phase3b-can-bench-hardware.md).
 
 ```mermaid
 flowchart LR

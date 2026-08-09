@@ -36,8 +36,10 @@ La première étape n'utilise aucun signal du véhicule. La liste minimale est :
 | 1 jeu | Fils Dupont | Pour les futures charges logiques de banc uniquement |
 
 Un ordinateur suffit à alimenter et programmer cette première maquette par
-USB. **Aucun câble du véhicule, aucune alimentation 12 V et aucun transceiver
-CAN ne doit encore être raccordé.**
+USB. La Phase 3B autorise désormais l'achat des composants du **banc 5 V**
+décrits dans [phase3b-can-bench-hardware.md](phase3b-can-bench-hardware.md).
+**Aucun câble du véhicule et aucune alimentation automobile 12 V ne doivent
+être raccordés.**
 
 ## Architecture de communication prévue
 
@@ -62,19 +64,21 @@ Un seul bus sera étudié à la fois en écoute seule. Si l'observation simultan
 plusieurs bus devient un besoin validé, elle fera l'objet d'une nouvelle décision
 d'architecture ; aucun second contrôleur CAN n'est retenu aujourd'hui.
 
-Les composants candidats pour la future carte sont :
+Le banc haute vitesse de Phase 3B retient précisément :
 
-- `TJA1055T/3` pour la couche physique K-CAN basse vitesse tolérante aux défauts ;
-- `TCAN1044AV-Q1` pour la couche physique PT-CAN haute vitesse avec E/S 3,3 V ;
-- `LM5164-Q1` comme base d'étude de l'alimentation abaisseuse à large plage.
+- `TCAN1057AVDRQ1`, alimenté en 5 V avec `VIO=3,3 V`, en Silent permanent ;
+- `CLVC1G125QDBVRQ1` (`SN74LVC1G125-Q1`) comme inhibition physique TXD ;
+- GPIO4/5/6/7 uniquement sur la DevKitC-1-N8 et uniquement en `BENCH_ONLY` ;
+- pulls externes 10 kΩ sur `S`, `/OE` et `TXD`.
 
-Ces références sont des **candidats de conception**, pas encore une liste
-d'achat. Le composant retenu devra posséder un mode silencieux matériel. Une
-inhibition TX indépendante et des résistances externes maintiendront le montage
-silencieux lorsque l'ESP32-S3 démarre, est reset, subit un brownout, plante ou
-laisse ses GPIO en haute impédance. Le watchdog ne remplace pas cette sûreté
-électrique. Les protections, filtres, circuits de réveil et mesures de courant
-seront revus sur le schéma final.
+Ce choix qualifie uniquement une couche physique ISO 11898-2 haute vitesse.
+Il ne convient pas à la couche physique K-CAN basse vitesse tolérante aux
+défauts. `TJA1055T/3` reste donc une hypothèse séparée pour une future étude
+K-CAN, sans sélection ni autorisation actuelle. `LM5164-Q1` reste une base
+d'étude de l'alimentation automobile finale, absente du banc 5 V.
+
+Le watchdog ne remplace pas la sûreté électrique. Les protections, filtres,
+circuits de réveil et mesures de courant seront revus sur le schéma final.
 
 ## Déroulement matériel sûr
 
@@ -111,28 +115,28 @@ utilisation manuelle, relancer `-ListDevices` et reprendre avec ce numéro.
 
 ### Phase B — un CAN simulé sur table
 
-1. Ajouter un transceiver externe avec mode silent sur une interface protégée.
-2. Ajouter et mesurer une inhibition TX indépendante, bloquée par défaut.
+1. Assembler le schéma TCAN1057AV-Q1 + SN74LVC1G125-Q1 de Phase 3B.
+2. Inspecter et mesurer les deux barrières avant d'alimenter.
 3. Utiliser une alimentation de laboratoire limitée en courant.
-4. Observer silent, TXD, CANH et CANL au boot, reset, brownout et blocage du
-   firmware.
-5. Vérifier l'absence de bit dominant aux bons et mauvais débits sur un bus CAN
-   de test.
-6. Tester séparément les débits envisagés sans véhicule et archiver les mesures.
+4. Exécuter entièrement la checklist alimentation, reset, brownout, firmware
+   absent, watchdog, débits, saturation et erreurs.
+5. Archiver les formes d'onde et obtenir deux revues indépendantes.
+6. Conserver le statut global `FAIL` tant qu'une seule ligne manque.
 
-### Phase C — observation passive du véhicule
+### Phase C — observation passive du véhicule, non autorisée
 
-1. Utiliser un faisceau intermédiaire protégé et réversible.
-2. Commencer par un seul bus en mode silencieux matériel et logiciel.
-3. Enregistrer uniquement des traces privées sans VIN.
-4. Qualifier les signaux avant toute émission.
+Cette phase n'est pas ouverte. Même après un PASS de banc complet, une nouvelle
+autorisation et une décision de couche physique adaptée au bus visé seront
+requises. La Phase 3B ne valide notamment aucun câblage K-CAN ou PT-CAN BMW.
 
 Les actionneurs et le démarrage restent hors périmètre tant que cette phase n'a
 pas produit de résultats reproductibles.
 
 Les critères détaillés et la décision ESP-IDF sont dans
 [esp32s3-safe-foundation.md](esp32s3-safe-foundation.md). Un échec de validation
-sur banc interdit toute connexion au véhicule.
+sur banc interdit toute connexion au véhicule. Le schéma, les résistances et la
+checklist de Phase 3B se trouvent dans
+[phase3b-can-bench-hardware.md](phase3b-can-bench-hardware.md).
 
 ## Pourquoi la carte de développement ne restera pas dans le véhicule
 
@@ -153,6 +157,7 @@ avec alimentation, interfaces, protections et interverrouillages qualifiés.
 - [Guide ESP32-S3-DevKitC-1](https://docs.espressif.com/projects/esp-dev-kits/en/latest/esp32s3/esp32-s3-devkitc-1/index.html)
 - [Fiche technique ESP32-S3](https://documentation.espressif.com/esp32-s3_datasheet_en.pdf)
 - [BMW Body Electronics II — Bus Systems](https://bmwtechinfo.bmwgroup.com/tech_training_manual/ST401%20Body%20Electronics%20II.pdf)
-- [NXP TJA1055](https://www.nxp.com/products/TJA1055T)
-- [TI TCAN1044A-Q1](https://www.ti.com/product/TCAN1044A-Q1)
+- [TI TCAN1057AV-Q1](https://www.ti.com/product/TCAN1057A-Q1)
+- [TI SN74LVC1G125-Q1](https://www.ti.com/product/SN74LVC1G125-Q1)
+- [NXP TJA1055, hypothèse K-CAN non retenue](https://www.nxp.com/products/TJA1055T)
 - [TI LM5164-Q1](https://www.ti.com/product/LM5164-Q1)
