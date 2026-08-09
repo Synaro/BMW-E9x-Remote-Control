@@ -69,6 +69,7 @@ est détaillé dans
 - [x] Archiver une timeline synchronisée RPM/MSA sans inférer la fonction des bits
 - [x] Conserver les bitfields en décimal, hexadécimal, binaire et bits modifiés
 - [x] Interdire la promotion automatique d'une corrélation vers une sémantique fonctionnelle
+- [x] Confirmer l'état KL50 en lecture sans inférer son mécanisme d'activation
 - [ ] Valider l'algorithme de détection moteur tournant sur plusieurs captures structurées
 - [ ] Identifier Terminal 50, la demande START et l'autorisation OEM par preuves séparées
 

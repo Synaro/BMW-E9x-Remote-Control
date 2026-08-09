@@ -21,6 +21,8 @@
     "engine_running_detection_algorithm": {"status": "UNKNOWN", "evidence_refs": [], "updated_at": "2000-01-01T00:00:00Z", "notes": null, "blocker_reason": null},
     "terminal_50_start_request": {"status": "UNKNOWN", "evidence_refs": [], "updated_at": "2000-01-01T00:00:00Z", "notes": null, "blocker_reason": null},
     "cas_start_button_request": {"status": "UNKNOWN", "evidence_refs": [], "updated_at": "2000-01-01T00:00:00Z", "notes": null, "blocker_reason": null},
+    "oem_start_request_source": {"status": "UNKNOWN", "evidence_refs": [], "updated_at": "2000-01-01T00:00:00Z", "notes": null, "blocker_reason": null},
+    "remote_start_actuation_mechanism": {"status": "UNKNOWN", "evidence_refs": [], "updated_at": "2000-01-01T00:00:00Z", "notes": null, "blocker_reason": null},
     "msa_start_correlated_bits": {"status": "UNKNOWN", "evidence_refs": [], "updated_at": "2000-01-01T00:00:00Z", "notes": null, "blocker_reason": null},
     "msa_bit_functional_meaning": {"status": "UNKNOWN", "evidence_refs": [], "updated_at": "2000-01-01T00:00:00Z", "notes": null, "blocker_reason": null},
     "oem_start_authorization": {"status": "UNKNOWN", "evidence_refs": [], "updated_at": "2000-01-01T00:00:00Z", "notes": null, "blocker_reason": null},

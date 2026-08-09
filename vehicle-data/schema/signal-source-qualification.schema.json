@@ -39,7 +39,7 @@
           "qualification": {"enum": ["OBSERVED", "CONFIRMED", "UNTRUSTED", "BLOCKED"]},
           "suitability": {
             "enum": [
-              "CANDIDATE", "UNTRUSTED", "NOT_SUITABLE", "NOT_SUITABLE_FOR_PN",
+              "CANDIDATE", "READ_ONLY_SIGNAL", "UNTRUSTED", "NOT_SUITABLE", "NOT_SUITABLE_FOR_PN",
               "NOT_FUNCTIONALLY_IDENTIFIED", "OBSERVED_NO_TRANSITION"
             ]
           },

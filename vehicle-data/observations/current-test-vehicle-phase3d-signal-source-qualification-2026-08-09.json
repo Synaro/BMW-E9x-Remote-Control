@@ -3,7 +3,7 @@
   "qualification_set_id": "CURRENT_TEST_VEHICLE_PHASE3D_SIGNAL_SOURCES_2026_08_09",
   "profile_ref": "../profiles/current-test-vehicle.vehicle-profile.json",
   "evidence_index": "../evidence/current-test-vehicle.evidence-index.json",
-  "updated_at": "2026-08-09T19:03:01+02:00",
+  "updated_at": "2026-08-09T19:17:46+02:00",
   "entries": [
     {
       "qualification_id": "egs.tool32.selector_position",
@@ -64,6 +64,18 @@
       "forbidden_inferences": ["ENGINE_RUNNING"],
       "evidence_refs": ["CURRENT_TEST_VEHICLE_TOOL32_CAS_KLEMMENSTATUS_2026_08_09", "CURRENT_TEST_VEHICLE_PHASE3D_SYNCHRONIZED_MSA_FOLLOWUP_2026_08_09"],
       "notes": "Confirmed for observed terminal states only."
+    },
+    {
+      "qualification_id": "cas.tool32.klemmenstatus_kl50",
+      "signal": "KLEMMENSTATUS.KL50",
+      "source": {"tool":"Tool32","sgbd_prg":"CAS.PRG","job":"status_fzg_zustand","field":"KLEMMENSTATUS bits 4-5"},
+      "qualification": "CONFIRMED",
+      "suitability": "READ_ONLY_SIGNAL",
+      "precondition_eligibility": "PROHIBITED",
+      "allowed_interpretations": ["KL50_OFF", "KL50_ON"],
+      "forbidden_inferences": ["REMOTE_START_COMMAND_MECHANISM", "OEM_START_REQUEST_SOURCE", "START_AUTHORIZATION", "CAN_IDENTIFIER", "DIAGNOSTIC_COMMAND", "IMMOBILIZER_BYPASS"],
+      "evidence_refs": ["CURRENT_TEST_VEHICLE_PHASE3D_CAS_KL50_2026_08_09"],
+      "notes": "Job-Info documents bits 4-5 and one real OEM start produced 69/0x45 -> 85/0x55 -> 69/0x45, decoded as KL50 OFF -> ON -> OFF. Confirmed as read-only terminal state only."
     },
     {
       "qualification_id": "cas.tool32.klemmenstatus_engine_running",

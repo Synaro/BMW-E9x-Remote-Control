@@ -26,7 +26,7 @@
           "observation_id": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$"},
           "category": {
             "enum": [
-              "IDENTIFICATION", "KL15", "TRANSMISSION_POSITION", "ACTUAL_GEAR",
+              "IDENTIFICATION", "KL15", "KL50", "TRANSMISSION_POSITION", "ACTUAL_GEAR",
               "BRAKE", "ENGINE_SPEED", "ENGINE_STATE", "SOURCE_QUALITY"
             ]
           },

@@ -57,6 +57,22 @@ véhicule réveillé contact coupé, 65 pour la clé insérée avant KL15, 69 po
 actif. La valeur 69 existe moteur arrêté et moteur tournant : elle est donc
 explicitement exclue comme preuve autonome de moteur tournant.
 
+### KL50
+
+Le Job-Info de `CAS.PRG/status_fzg_zustand` documente `KLEMMENSTATUS` comme
+quatre champs de deux bits : Klemme R en bits 0-1, Klemme 15 en bits 2-3,
+Klemme 50 en bits 4-5 et validité clé en bits 6-7. Pour chaque terminal,
+`00 = OFF`, `01 = ON` et `11 = invalide`.
+
+Un démarrage OEM réel a produit la séquence ordonnée `69 / 0x45`,
+`85 / 0x55`, puis `69 / 0x45`. Les bits KL15 restent à `01`, tandis que les
+bits KL50 suivent `00 -> 01 -> 00`. L'état KL50 exposé en lecture est donc
+`CONFIRMED` pour cette observation.
+
+Cette qualification est `READ_ONLY_SIGNAL` et reste `PROHIBITED` comme
+précondition. Elle ne prouve ni la source de demande OEM, ni une commande de
+démarrage, ni une autorisation, ni un ID CAN ou une commande diagnostique.
+
 ### Transmission et frein
 
 `GS19D.PRG/status_getriebeposition` suit correctement les positions physiques
@@ -126,8 +142,10 @@ timestamps synchronisés explicitement fournis.
 - exports TestO bruts : `BLOCKED` par absence des fichiers source dans le dépôt ;
 - algorithme de détection moteur tournant : `NOT_YET_VALIDATED` ;
 - signification fonctionnelle des bits MSA observés : `UNKNOWN` ;
-- Terminal 50 : `UNKNOWN` ;
+- état Terminal 50 : `CONFIRMED` en lecture via KLEMMENSTATUS ;
+- source de demande de démarrage OEM : `UNKNOWN` ;
 - bouton START / demande de démarrage CAS : `UNKNOWN` ;
+- mécanisme d'actionnement remote-start : `UNKNOWN` ;
 - autorisation OEM de démarrage : `UNKNOWN` ;
 - stratégie d'arrêt : `UNKNOWN` ;
 - stratégie de timeout définitive : `UNKNOWN` ;

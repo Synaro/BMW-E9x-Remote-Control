@@ -34,6 +34,11 @@ bitfields synchronisés conservent les formes décimale, hexadécimale et binair
 ainsi que les bits modifiés. Une corrélation temporelle reste une corrélation :
 elle ne peut pas devenir automatiquement une signification fonctionnelle.
 
+La qualification `READ_ONLY_SIGNAL` couvre notamment l'état KL50 confirmé via
+`CAS.PRG/status_fzg_zustand`. Elle autorise uniquement l'interprétation de
+l'état observé et interdit toute déduction de commande, d'autorisation ou de
+transport CAN.
+
 ## Règles pour les données réelles
 
 1. Placer d'abord les exports bruts et captures dans un sous-dossier `private/`.

@@ -19,7 +19,8 @@
         "exact_cas_identification", "exact_dde_identification", "exact_egs_identification", "oem_start_architecture",
         "kl15", "kl50", "engine_speed", "engine_running_state", "stopped_cranking_running_observations", "transmission_pn",
         "transmission_prnd_tool32", "brake", "engine_running_detection_algorithm",
-        "terminal_50_start_request", "cas_start_button_request", "msa_start_correlated_bits", "msa_bit_functional_meaning",
+        "terminal_50_start_request", "cas_start_button_request", "oem_start_request_source",
+        "remote_start_actuation_mechanism", "msa_start_correlated_bits", "msa_bit_functional_meaning",
         "oem_start_authorization", "battery_voltage", "timeout_strategy",
         "stop_strategy", "communication_loss", "post_reset_behavior", "start_inhibit_conditions", "can_identifiers"
       ],
@@ -39,6 +40,8 @@
         "engine_running_detection_algorithm": {"$ref": "#/$defs/item"},
         "terminal_50_start_request": {"$ref": "#/$defs/item"},
         "cas_start_button_request": {"$ref": "#/$defs/item"},
+        "oem_start_request_source": {"$ref": "#/$defs/item"},
+        "remote_start_actuation_mechanism": {"$ref": "#/$defs/item"},
         "msa_start_correlated_bits": {"$ref": "#/$defs/item"},
         "msa_bit_functional_meaning": {"$ref": "#/$defs/item"},
         "oem_start_authorization": {"$ref": "#/$defs/item"},

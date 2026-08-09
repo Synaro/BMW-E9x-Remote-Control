@@ -114,6 +114,48 @@ class Phase3DVehicleDataTests(unittest.TestCase):
             self.status_by_id["cas.klemmenstatus.kl15_engine_running"]["notes"],
         )
 
+    def test_klemmenstatus_kl50_sequence_is_confirmed_read_only_state(self):
+        sequence = [
+            self.status_by_id[f"cas.klemmenstatus.kl50.sequence.{index}.{phase}"]
+            for index, phase in enumerate(("before", "active", "after"))
+        ]
+        self.assertEqual([69, 85, 69], [observation["raw_value"] for observation in sequence])
+        self.assertEqual(
+            ["KL50_OFF", "KL50_ON", "KL50_OFF"],
+            [observation["interpreted_value"] for observation in sequence],
+        )
+        self.assertEqual([0, 1, 0], [(observation["raw_value"] >> 4) & 0b11 for observation in sequence])
+        self.assertEqual([1, 1, 1], [(observation["raw_value"] >> 2) & 0b11 for observation in sequence])
+        self.assertTrue(all(observation["qualification"] == "CONFIRMED" for observation in sequence))
+        self.assertTrue(all(observation["precondition_eligibility"] == "PROHIBITED" for observation in sequence))
+
+    def test_confirmed_kl50_state_cannot_be_promoted_to_actuation_meaning(self):
+        entry = next(
+            item for item in self.signal_sources["entries"]
+            if item["qualification_id"] == "cas.tool32.klemmenstatus_kl50"
+        )
+        self.assertEqual("READ_ONLY_SIGNAL", entry["suitability"])
+        self.assertEqual("PROHIBITED", entry["precondition_eligibility"])
+        self.assertEqual({"KL50_OFF", "KL50_ON"}, set(entry["allowed_interpretations"]))
+        self.assertTrue(
+            {
+                "REMOTE_START_COMMAND_MECHANISM",
+                "OEM_START_REQUEST_SOURCE",
+                "START_AUTHORIZATION",
+                "CAN_IDENTIFIER",
+                "DIAGNOSTIC_COMMAND",
+                "IMMOBILIZER_BYPASS",
+            }.issubset(set(entry["forbidden_inferences"]))
+        )
+        modified = copy.deepcopy(self.signal_sources)
+        modified_entry = next(
+            item for item in modified["entries"]
+            if item["qualification_id"] == "cas.tool32.klemmenstatus_kl50"
+        )
+        modified_entry["allowed_interpretations"].append("REMOTE_START_COMMAND_MECHANISM")
+        with self.assertRaisesRegex(ValidationError, "both allowed and forbidden"):
+            validate_signal_source_qualifications(modified, self.evidence_ids)
+
     def test_tool32_egs_prnd_mapping_is_confirmed(self):
         for position in ("p", "r", "n", "d"):
             observation = self.status_by_id[f"egs.tool32.position.{position}"]
@@ -200,6 +242,7 @@ class Phase3DVehicleDataTests(unittest.TestCase):
             "transmission_prnd_tool32": "CONFIRMED",
             "brake": "OBSERVED",
             "kl15": "CONFIRMED",
+            "kl50": "CONFIRMED",
             "engine_speed": "CONFIRMED",
             "stopped_cranking_running_observations": "CONFIRMED",
             "engine_running_detection_algorithm": "NOT_YET_VALIDATED",
@@ -207,6 +250,8 @@ class Phase3DVehicleDataTests(unittest.TestCase):
             "msa_bit_functional_meaning": "UNKNOWN",
             "terminal_50_start_request": "UNKNOWN",
             "cas_start_button_request": "UNKNOWN",
+            "oem_start_request_source": "UNKNOWN",
+            "remote_start_actuation_mechanism": "UNKNOWN",
             "oem_start_authorization": "UNKNOWN",
             "stop_strategy": "UNKNOWN",
             "can_identifiers": "UNKNOWN",

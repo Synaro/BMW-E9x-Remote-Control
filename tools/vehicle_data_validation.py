@@ -75,6 +75,8 @@ REQUIRED_CHECKLIST_ITEMS = {
     "engine_running_detection_algorithm",
     "terminal_50_start_request",
     "cas_start_button_request",
+    "oem_start_request_source",
+    "remote_start_actuation_mechanism",
     "msa_start_correlated_bits",
     "msa_bit_functional_meaning",
     "oem_start_authorization",
@@ -358,6 +360,7 @@ def validate_qualified_observations(document: Mapping[str, Any], evidence_ids: s
     valid_categories = {
         "IDENTIFICATION",
         "KL15",
+        "KL50",
         "TRANSMISSION_POSITION",
         "ACTUAL_GEAR",
         "BRAKE",
@@ -536,6 +539,7 @@ def validate_signal_source_qualifications(document: Mapping[str, Any], evidence_
     identifiers: set[str] = set()
     suitability_values = {
         "CANDIDATE",
+        "READ_ONLY_SIGNAL",
         "UNTRUSTED",
         "NOT_SUITABLE",
         "NOT_SUITABLE_FOR_PN",
@@ -543,6 +547,14 @@ def validate_signal_source_qualifications(document: Mapping[str, Any], evidence_
         "OBSERVED_NO_TRANSITION",
     }
     dangerous_msa_inferences = {"KL50", "STARTER_REQUEST", "START_AUTHORIZATION", "CAS_START_REQUEST"}
+    kl50_forbidden_inferences = {
+        "REMOTE_START_COMMAND_MECHANISM",
+        "OEM_START_REQUEST_SOURCE",
+        "START_AUTHORIZATION",
+        "CAN_IDENTIFIER",
+        "DIAGNOSTIC_COMMAND",
+        "IMMOBILIZER_BYPASS",
+    }
     for index, raw_entry in enumerate(_require_array(document["entries"], "signal_sources.entries")):
         location = f"signal_sources.entries[{index}]"
         entry = _require_object(raw_entry, location)
@@ -593,6 +605,8 @@ def validate_signal_source_qualifications(document: Mapping[str, Any], evidence_
                 raise ValidationError(f"{location}.{list_name}: duplicate value")
             for value_index, value in enumerate(values):
                 _require_nonempty_string(value, f"{location}.{list_name}[{value_index}]")
+        if set(entry["allowed_interpretations"]) & set(entry["forbidden_inferences"]):
+            raise ValidationError(f"{location}: an interpretation cannot be both allowed and forbidden")
         for reference_index, reference in enumerate(entry["evidence_refs"]):
             _validate_evidence_ref(reference, evidence_ids, f"{location}.evidence_refs[{reference_index}]")
         if not entry["evidence_refs"]:
@@ -603,6 +617,11 @@ def validate_signal_source_qualifications(document: Mapping[str, Any], evidence_
                 raise ValidationError(f"{location}: unidentified signals cannot have allowed functional interpretations")
             if not dangerous_msa_inferences.issubset(set(entry["forbidden_inferences"])):
                 raise ValidationError(f"{location}: MSA correlation must forbid functional start inferences")
+        if entry["signal"] == "KLEMMENSTATUS.KL50":
+            if entry["qualification"] != "CONFIRMED" or entry["suitability"] != "READ_ONLY_SIGNAL":
+                raise ValidationError(f"{location}: KL50 observation must remain a confirmed read-only signal")
+            if not kl50_forbidden_inferences.issubset(set(entry["forbidden_inferences"])):
+                raise ValidationError(f"{location}: KL50 state must not imply an actuation or authorization mechanism")
 
 
 def _validate_bitfield_value(value: Any, location: str) -> int:
