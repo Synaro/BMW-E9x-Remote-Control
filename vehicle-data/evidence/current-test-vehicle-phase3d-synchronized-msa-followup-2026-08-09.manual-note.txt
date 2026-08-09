@@ -1,0 +1,54 @@
+Observation réelle anonymisée — suivi Phase 3D EGS/CAS/DDE/MSA
+Date de consignation : 2026-08-09
+
+EGS Tool32, GS19D.PRG, status_getriebeposition :
+- JOB_STATUS = OKAY ;
+- P physique : STAT_GETRIEBEPOSITION_WERT = 8, STAT_GETRIEBEPOSITION_TEXT = P ;
+- mapping physique P/R/N/D vers texte P/R/N/D confirmé.
+
+ISTA Transmission position reste incorrect : P/R/N/D physique vers R/N/D/D.
+ISTA Actual gear reste impropre à distinguer P/N : P/N/D indiquent 1st gear.
+
+Frein EGS/ISTA observé plusieurs fois : relâché -> not operated ; appuyé -> operated.
+La cohérence est observée mais aucune deuxième source structurée n'est archivée.
+
+CAS.PRG, status_fzg_zustand, KLEMMENSTATUS confirmé :
+64 réveillé/contact OFF ; 65 clé insérée ; 69 KL15 actif. La valeur 69 est
+identique moteur arrêté et tournant et ne convient pas à engine-running.
+
+CAS.PRG, status_kl15_abschaltung : BREMSE_AKTIV et
+WAHLHEBEL_NICHT_IN_P_AKTIV sont restés à 0 malgré différents états physiques.
+Ces champs ne conviennent pas comme signaux temps réel de frein ou de sélecteur.
+
+D71N47C0.PRG, status_motordrehzahl : 0 rpm arrêté et environ 780 rpm au ralenti.
+TestO 47C0 / DDE 7.1 N47 confirme environ 786,5 rpm au ralenti.
+
+STATUS_MSA Job-Info :
+- STAT_STAT_MSA : statut MSA et commutateur fonctionnel ;
+- STAT_STAT_B_MSAFZG : 1 signifie véhicule MSA ;
+- STAT_STAT_MSAAV : MSA actif/prêt et empêcheurs d'arrêt ;
+- STAT_STAT_MSAEV : empêcheurs de mise en marche ;
+- STAT_STAT_MSAAA : demandes d'arrêt ;
+- STAT_STAT_MSAEA : demandes de mise en marche.
+
+Timeline synchronisée RPM/MSA d'un démarrage OEM :
+- 9,365 s : MSAAV 1537->1569 ; MSAAA 146->150 ;
+- 9,427 s : RPM 0->114, début de rotation/cranking ;
+- 9,507 s : MSAEV 3->7 ; MSAAA 150->146 ;
+- 9,567 s : 153 rpm ; 9,706 s : 183 rpm ;
+- 9,789 s : MSAAV 1569->1537 ;
+- 9,847 s : 380 rpm ; 9,987 s : 833 rpm ;
+- ensuite pic proche de 983 rpm et stabilisation proche de 780 rpm, sans
+  timestamps fournis pour ces deux résumés.
+
+Les premières transitions MSA précèdent le premier RPM non nul de 62 ms.
+MSAAV change au bit 5 ; MSAAA et MSAEV changent au bit 2 dans ces observations.
+Ces bits sont uniquement corrélés temporellement au démarrage OEM. Ils ne sont
+pas identifiés fonctionnellement comme KL50, demande démarreur, autorisation de
+démarrage ou requête CAS.
+
+STAT_STAT_MSAEA est resté constant à 11 pendant la séquence : aucune transition
+observée et aucune confirmation d'une signification de demande de démarrage.
+
+Cette preuve est une transcription manuelle des relevés fournis. Aucun export
+brut, VIN ou identifiant CAN n'est ajouté.

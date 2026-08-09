@@ -1,0 +1,43 @@
+{
+  "schema_version": 1,
+  "artifact_type": "CAS_KL50_OBSERVATION",
+  "observation_id": "CURRENT_TEST_VEHICLE_PHASE3D_CAS_KL50_IFH_LEVEL1_2026_08_09",
+  "profile_ref": "../profiles/current-test-vehicle.vehicle-profile.json",
+  "evidence_index": "../evidence/current-test-vehicle.evidence-index.json",
+  "evidence_refs": [
+    "CURRENT_TEST_VEHICLE_PHASE3D_CAS_KL50_2026_08_09",
+    "CURRENT_TEST_VEHICLE_PHASE3D_CAS_KL50_IFH_LEVEL1_2026_08_09"
+  ],
+  "source": {
+    "tools": ["Tool32", "EDIABAS IFH trace"],
+    "artifact": "ifh.trc",
+    "sgbd_prg": "CAS.PRG",
+    "job": "status_fzg_zustand",
+    "field": "KLEMMENSTATUS bits 4-5",
+    "trace_level": 1,
+    "recorded_at": "2026-08-09T19:27:26+02:00",
+    "session": "PHASE3D_CAS_KL50_IFH_LEVEL1_2026_08_09"
+  },
+  "signal": "CAS.KLEMMENSTATUS.KL50",
+  "observed_off_value": {"decimal": 69, "hexadecimal": "0x45"},
+  "observed_on_value": {"decimal": 85, "hexadecimal": "0x55"},
+  "trace_values": [
+    {"decimal": 64, "hexadecimal": "0x40"},
+    {"decimal": 65, "hexadecimal": "0x41"},
+    {"decimal": 85, "hexadecimal": "0x55"},
+    {"decimal": 69, "hexadecimal": "0x45"}
+  ],
+  "on_value_repeated_consecutively": true,
+  "observed_transition": ["OFF", "ON", "OFF"],
+  "status": "CONFIRMED",
+  "timestamp_basis": "UNAVAILABLE",
+  "duration_us": null,
+  "duration_status": "PENDING_LEVEL3_TRACE",
+  "rpm_alignment_status": "PENDING",
+  "raw_trace_available_in_repository": false,
+  "forbidden_inferences": [
+    "CAN_IDENTIFIER", "CAS_COMMAND", "KL50_COMMAND", "TRANSMISSION_PATH",
+    "IMMOBILIZER_BYPASS", "REMOTE_START_ACTUATION"
+  ],
+  "notes": "IFH Trace Level 1 corroborates the Tool32 visual transition. No individual timestamps or KL50 duration are claimed; Level 3 evidence is pending."
+}

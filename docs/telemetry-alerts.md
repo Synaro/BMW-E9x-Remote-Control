@@ -62,8 +62,8 @@ transmission_overheat_temperature_c=110
 temperature_alert_hysteresis_c=5
 ```
 
-Les seuils sont bornés par le validateur commun et persistés dans le format V3.
-Les anciennes configurations V1 et V2 sont migrées avec les valeurs par défaut.
+Les seuils sont bornés par le validateur commun et persistés dans l'unique
+format pré-V1 courant. Les anciens formats de développement ne sont pas migrés.
 
 ## Essai graphique
 

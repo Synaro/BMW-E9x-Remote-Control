@@ -1,0 +1,20 @@
+#pragma once
+
+// BENCH_ONLY: proposed only for the ESP32-S3-DevKitC-1-N8 and the reviewed
+// Phase 3B TCAN1057AV + SN74LVC1G125-Q1 bench circuit. This is never a BMW
+// wiring recommendation. Keep disabled until the electrical checklist starts.
+// The copied local file is ignored by Git.
+#define BMW_REMOTE_BENCH_ONLY_TWAI_ENABLED 0
+#define BMW_REMOTE_BENCH_ONLY_TWAI_RX_GPIO 4
+#define BMW_REMOTE_BENCH_ONLY_TWAI_TX_GPIO 5
+#define BMW_REMOTE_BENCH_ONLY_SILENT_GPIO 6
+#define BMW_REMOTE_BENCH_ONLY_TX_INHIBIT_GPIO 7
+
+// 1 means that a high level holds the corresponding barrier active. Change
+// only after checking the selected transceiver and independent TX gate.
+#define BMW_REMOTE_BENCH_ONLY_SILENT_LEVEL 1
+#define BMW_REMOTE_BENCH_ONLY_TX_INHIBIT_LEVEL 1
+
+// Only 100000 and 500000 are supported in Phase 3.
+#define BMW_REMOTE_BENCH_ONLY_BITRATE 100000
+#define BMW_REMOTE_BENCH_ONLY_CHANNEL 0

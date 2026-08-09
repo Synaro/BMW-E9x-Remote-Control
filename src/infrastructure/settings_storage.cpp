@@ -5,6 +5,7 @@
 #include <cstdint>
 
 #include "bmw_remote/application/user_settings.hpp"
+#include "bmw_remote/infrastructure/crc32.hpp"
 #include "bmw_remote/infrastructure/settings_payload.hpp"
 
 namespace bmw::remote::infrastructure {
@@ -17,8 +18,6 @@ constexpr std::size_t GenerationOffset = 8U;
 constexpr std::size_t PayloadOffset = 12U;
 constexpr std::size_t PayloadSize = UserSettingsPayloadSize;
 constexpr std::size_t CrcOffset = PayloadOffset + PayloadSize;
-constexpr std::uint16_t LegacySchemaVersion = 1U;
-constexpr std::uint16_t FeatureSchemaVersion = 2U;
 
 struct DecodedRecord final {
     application::UserSettings settings{};
@@ -58,21 +57,6 @@ void writeU32(
            (static_cast<std::uint32_t>(source[3]) << 24U);
 }
 
-[[nodiscard]] std::uint32_t crc32(
-    const std::uint8_t* const data,
-    const std::size_t size) noexcept {
-    std::uint32_t crc = 0xFFFFFFFFU;
-    for (std::size_t index = 0U; index < size; ++index) {
-        crc ^= data[index];
-        for (std::uint8_t bit = 0U; bit < 8U; ++bit) {
-            const std::uint32_t mask =
-                static_cast<std::uint32_t>(0U - (crc & 1U));
-            crc = (crc >> 1U) ^ (0xEDB88320U & mask);
-        }
-    }
-    return crc ^ 0xFFFFFFFFU;
-}
-
 [[nodiscard]] bool encodeRecord(
     const application::UserSettings& settings,
     const std::uint32_t generation,
@@ -109,12 +93,8 @@ void writeU32(
     const std::size_t storedPayloadSize =
         readU16(record.data() + PayloadSizeOffset);
     const bool supportedVersion =
-        (version == LegacySchemaVersion &&
-         storedPayloadSize == LegacyUserSettingsPayloadSize) ||
-        (version == FeatureSchemaVersion &&
-         storedPayloadSize == FeatureUserSettingsPayloadSize) ||
-        (version == JournaledUserSettingsStore::SchemaVersion &&
-         storedPayloadSize == UserSettingsPayloadSize);
+        version == JournaledUserSettingsStore::SchemaVersion &&
+        storedPayloadSize == UserSettingsPayloadSize;
     const std::size_t storedCrcOffset = PayloadOffset + storedPayloadSize;
     if (!supportedVersion ||
         storedCrcOffset + sizeof(std::uint32_t) > record.size() ||

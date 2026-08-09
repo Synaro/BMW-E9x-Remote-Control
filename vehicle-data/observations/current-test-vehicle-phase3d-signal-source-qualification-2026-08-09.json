@@ -1,0 +1,153 @@
+{
+  "schema_version": 1,
+  "qualification_set_id": "CURRENT_TEST_VEHICLE_PHASE3D_SIGNAL_SOURCES_2026_08_09",
+  "profile_ref": "../profiles/current-test-vehicle.vehicle-profile.json",
+  "evidence_index": "../evidence/current-test-vehicle.evidence-index.json",
+  "updated_at": "2026-08-09T19:27:26+02:00",
+  "entries": [
+    {
+      "qualification_id": "egs.tool32.selector_position",
+      "signal": "TRANSMISSION_POSITION",
+      "source": {"tool":"Tool32","sgbd_prg":"GS19D.PRG","job":"status_getriebeposition","field":"STAT_GETRIEBEPOSITION_TEXT"},
+      "qualification": "CONFIRMED",
+      "suitability": "CANDIDATE",
+      "precondition_eligibility": "CANDIDATE",
+      "allowed_interpretations": ["P", "R", "N", "D"],
+      "forbidden_inferences": [],
+      "evidence_refs": ["CURRENT_TEST_VEHICLE_PHASE3D_IDENTIFICATION_STATUS_2026_08_09", "CURRENT_TEST_VEHICLE_PHASE3D_SYNCHRONIZED_MSA_FOLLOWUP_2026_08_09"],
+      "notes": "JOB_STATUS OKAY and physical P/R/N/D followed the corresponding Tool32 text. P also produced numeric value 8."
+    },
+    {
+      "qualification_id": "egs.ista.transmission_position",
+      "signal": "TRANSMISSION_POSITION",
+      "source": {"tool":"ISTA","sgbd_prg":"GS19D.PRG","job":"Transmission position","field":"Transmission position"},
+      "qualification": "UNTRUSTED",
+      "suitability": "UNTRUSTED",
+      "precondition_eligibility": "PROHIBITED",
+      "allowed_interpretations": [],
+      "forbidden_inferences": ["PHYSICAL_SELECTOR_POSITION", "P_OR_N_SAFE_STATE"],
+      "evidence_refs": ["CURRENT_TEST_VEHICLE_PHASE3D_IDENTIFICATION_STATUS_2026_08_09", "CURRENT_TEST_VEHICLE_PHASE3D_SYNCHRONIZED_MSA_FOLLOWUP_2026_08_09"],
+      "notes": "Physical P/R/N/D produced R/N/D/D on this configuration."
+    },
+    {
+      "qualification_id": "egs.ista.actual_gear_for_pn",
+      "signal": "TRANSMISSION_POSITION_PN",
+      "source": {"tool":"ISTA","sgbd_prg":"GS19D.PRG","job":"Actual gear","field":"Actual gear"},
+      "qualification": "OBSERVED",
+      "suitability": "NOT_SUITABLE_FOR_PN",
+      "precondition_eligibility": "PROHIBITED",
+      "allowed_interpretations": [],
+      "forbidden_inferences": ["P_OR_N_SAFE_STATE"],
+      "evidence_refs": ["CURRENT_TEST_VEHICLE_PHASE3D_IDENTIFICATION_STATUS_2026_08_09", "CURRENT_TEST_VEHICLE_PHASE3D_SYNCHRONIZED_MSA_FOLLOWUP_2026_08_09"],
+      "notes": "P, N and D all reported 1st gear; the source cannot distinguish P/N."
+    },
+    {
+      "qualification_id": "egs.ista.brake_actuated",
+      "signal": "BRAKE",
+      "source": {"tool":"ISTA","sgbd_prg":"GS19D.PRG","job":"Brake actuated","field":"Brake actuated"},
+      "qualification": "OBSERVED",
+      "suitability": "CANDIDATE",
+      "precondition_eligibility": "PROHIBITED",
+      "allowed_interpretations": ["OPERATED", "NOT_OPERATED"],
+      "forbidden_inferences": ["VALIDATED_BRAKE_PRECONDITION"],
+      "evidence_refs": ["CURRENT_TEST_VEHICLE_PHASE3D_IDENTIFICATION_STATUS_2026_08_09", "CURRENT_TEST_VEHICLE_PHASE3D_SYNCHRONIZED_MSA_FOLLOWUP_2026_08_09"],
+      "notes": "Repeated physically and coherent, but no second source or structured repeated capture is archived."
+    },
+    {
+      "qualification_id": "cas.tool32.klemmenstatus_kl15",
+      "signal": "KL15",
+      "source": {"tool":"Tool32","sgbd_prg":"CAS.PRG","job":"status_fzg_zustand","field":"KLEMMENSTATUS"},
+      "qualification": "CONFIRMED",
+      "suitability": "CANDIDATE",
+      "precondition_eligibility": "CANDIDATE",
+      "allowed_interpretations": ["64_AWAKE_IGNITION_OFF", "65_KEY_INSERTED", "69_KL15_ACTIVE"],
+      "forbidden_inferences": ["ENGINE_RUNNING"],
+      "evidence_refs": ["CURRENT_TEST_VEHICLE_TOOL32_CAS_KLEMMENSTATUS_2026_08_09", "CURRENT_TEST_VEHICLE_PHASE3D_SYNCHRONIZED_MSA_FOLLOWUP_2026_08_09"],
+      "notes": "Confirmed for observed terminal states only."
+    },
+    {
+      "qualification_id": "cas.tool32.klemmenstatus_kl50",
+      "signal": "KLEMMENSTATUS.KL50",
+      "source": {"tool":"Tool32","sgbd_prg":"CAS.PRG","job":"status_fzg_zustand","field":"KLEMMENSTATUS bits 4-5"},
+      "qualification": "CONFIRMED",
+      "suitability": "READ_ONLY_SIGNAL",
+      "precondition_eligibility": "PROHIBITED",
+      "allowed_interpretations": ["KL50_OFF", "KL50_ON"],
+      "forbidden_inferences": ["REMOTE_START_COMMAND_MECHANISM", "OEM_START_REQUEST_SOURCE", "START_AUTHORIZATION", "CAN_IDENTIFIER", "DIAGNOSTIC_COMMAND", "IMMOBILIZER_BYPASS"],
+      "evidence_refs": ["CURRENT_TEST_VEHICLE_PHASE3D_CAS_KL50_2026_08_09", "CURRENT_TEST_VEHICLE_PHASE3D_CAS_KL50_IFH_LEVEL1_2026_08_09"],
+      "notes": "Job-Info documents bits 4-5 and one real OEM start produced 69/0x45 -> 85/0x55 -> 69/0x45, decoded as KL50 OFF -> ON -> OFF. The transition is corroborated by repeated 85 readings and return to 69 in a real IFH Level 1 trace. Confirmed as read-only terminal state only; no duration inferred."
+    },
+    {
+      "qualification_id": "cas.tool32.klemmenstatus_engine_running",
+      "signal": "ENGINE_RUNNING",
+      "source": {"tool":"Tool32","sgbd_prg":"CAS.PRG","job":"status_fzg_zustand","field":"KLEMMENSTATUS"},
+      "qualification": "CONFIRMED",
+      "suitability": "NOT_SUITABLE",
+      "precondition_eligibility": "PROHIBITED",
+      "allowed_interpretations": [],
+      "forbidden_inferences": ["ENGINE_RUNNING"],
+      "evidence_refs": ["CURRENT_TEST_VEHICLE_TOOL32_CAS_KLEMMENSTATUS_2026_08_09", "CURRENT_TEST_VEHICLE_PHASE3D_SYNCHRONIZED_MSA_FOLLOWUP_2026_08_09"],
+      "notes": "Raw value 69 is present with the engine stopped and running."
+    },
+    {
+      "qualification_id": "cas.kl15_abschaltung.brake_live",
+      "signal": "BRAKE",
+      "source": {"tool":"Tool32","sgbd_prg":"CAS.PRG","job":"status_kl15_abschaltung","field":"BREMSE_AKTIV"},
+      "qualification": "OBSERVED",
+      "suitability": "NOT_SUITABLE",
+      "precondition_eligibility": "PROHIBITED",
+      "allowed_interpretations": [],
+      "forbidden_inferences": ["LIVE_BRAKE_STATE"],
+      "evidence_refs": ["CURRENT_TEST_VEHICLE_PHASE3D_SYNCHRONIZED_MSA_FOLLOWUP_2026_08_09"],
+      "notes": "Remained 0 across different physical brake states and appears related to KL15 shutdown logic."
+    },
+    {
+      "qualification_id": "cas.kl15_abschaltung.selector_live",
+      "signal": "TRANSMISSION_POSITION",
+      "source": {"tool":"Tool32","sgbd_prg":"CAS.PRG","job":"status_kl15_abschaltung","field":"WAHLHEBEL_NICHT_IN_P_AKTIV"},
+      "qualification": "OBSERVED",
+      "suitability": "NOT_SUITABLE",
+      "precondition_eligibility": "PROHIBITED",
+      "allowed_interpretations": [],
+      "forbidden_inferences": ["LIVE_SELECTOR_NOT_IN_P"],
+      "evidence_refs": ["CURRENT_TEST_VEHICLE_PHASE3D_SYNCHRONIZED_MSA_FOLLOWUP_2026_08_09"],
+      "notes": "Remained 0 across different selector states and appears related to KL15 shutdown logic."
+    },
+    {
+      "qualification_id": "dde.tool32.engine_speed",
+      "signal": "ENGINE_SPEED",
+      "source": {"tool":"Tool32","sgbd_prg":"D71N47C0.PRG","job":"status_motordrehzahl","field":"Motordrehzahl"},
+      "qualification": "CONFIRMED",
+      "suitability": "CANDIDATE",
+      "precondition_eligibility": "CANDIDATE",
+      "allowed_interpretations": ["ENGINE_SPEED_RPM"],
+      "forbidden_inferences": ["FINAL_ENGINE_RUNNING_ALGORITHM"],
+      "evidence_refs": ["CURRENT_TEST_VEHICLE_PHASE3D_IDENTIFICATION_STATUS_2026_08_09", "CURRENT_TEST_VEHICLE_PHASE3D_TESTO_OEM_START_2026_08_09", "CURRENT_TEST_VEHICLE_PHASE3D_SYNCHRONIZED_MSA_FOLLOWUP_2026_08_09"],
+      "notes": "0 rpm stopped and idle near 780/786.5 rpm are confirmed; final state thresholds remain unvalidated."
+    },
+    {
+      "qualification_id": "dde.status_msa.correlated_bitfields",
+      "signal": "MSA_BITFIELDS",
+      "source": {"tool":"Tool32","sgbd_prg":"D71N47C0.PRG","job":"STATUS_MSA","field":"STAT_STAT_MSAAV / STAT_STAT_MSAEV / STAT_STAT_MSAAA"},
+      "qualification": "OBSERVED",
+      "suitability": "NOT_FUNCTIONALLY_IDENTIFIED",
+      "precondition_eligibility": "PROHIBITED",
+      "allowed_interpretations": [],
+      "forbidden_inferences": ["KL50", "STARTER_REQUEST", "START_AUTHORIZATION", "CAS_START_REQUEST"],
+      "evidence_refs": ["CURRENT_TEST_VEHICLE_PHASE3D_SYNCHRONIZED_MSA_FOLLOWUP_2026_08_09"],
+      "notes": "Bit changes are only temporally correlated with one observed OEM start."
+    },
+    {
+      "qualification_id": "dde.status_msa.msaea",
+      "signal": "MSAEA",
+      "source": {"tool":"Tool32","sgbd_prg":"D71N47C0.PRG","job":"STATUS_MSA","field":"STAT_STAT_MSAEA"},
+      "qualification": "OBSERVED",
+      "suitability": "OBSERVED_NO_TRANSITION",
+      "precondition_eligibility": "PROHIBITED",
+      "allowed_interpretations": [],
+      "forbidden_inferences": ["START_REQUEST"],
+      "evidence_refs": ["CURRENT_TEST_VEHICLE_PHASE3D_SYNCHRONIZED_MSA_FOLLOWUP_2026_08_09"],
+      "notes": "Remained constant at decimal 11 during the observed start; direct start-request hypothesis is not confirmed."
+    }
+  ]
+}

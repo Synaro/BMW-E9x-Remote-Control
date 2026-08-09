@@ -8,54 +8,9 @@
 namespace bmw::remote::application {
 
 enum class FeatureId : std::uint8_t {
-    PassiveBleAccess,
-    SequentialKillSwitch,
-    AlarmPushNotification,
-    ValetMode,
-    AntiCarjacking,
-    SlamAndGoLock,
-    HandsFreeTrunk,
-    PhoneLeftBehindAlert,
-
-    NeedleSweep,
-    ExternalShiftLight,
-    AndroidRacingDashboard,
-    SteeringWheelMMode,
     ColdEngineGuard,
-    OilTemperatureGauge,
-    OneTouchDtc,
-    ForcedDpfRegeneration,
     DpfRegenerationIndicator,
-    ActiveTransmissionCooling,
     TransmissionOverheatAlert,
-    FlightRecorder,
-    VirtualObdBle,
-    SmartTurboTimer,
-
-    CustomWelcomeLighting,
-    RapidHeadlightFlash,
-    FourCornerStrobe,
-    DynamicCorneringLights,
-    DirectionalFollowMeHome,
-    DynamicAmbientLighting,
-
-    CustomStartupSequence,
-    AutomaticDefrost,
-    DynamicReverseTilt,
-    RainWindowClosure,
-    HighSpeedWindowClosure,
-    ReverseAudioDucking,
-    DriveThroughAssistant,
-    SteeringWheelRemap,
-    AutomaticHotspot,
-    SmartphoneVoiceAssistant,
-    MultiDriverProfiles,
-
-    SmokerWindowOverride,
-    RainSmokerPriority,
-    PassengerReverseTiltOverride,
-    ManualOverridePriority,
-
     Count,
 };
 
@@ -110,12 +65,12 @@ enum class FeatureCapability : std::uint32_t {
 }
 
 struct FeatureDescriptor final {
-    FeatureId id{FeatureId::PassiveBleAccess};
-    const char* code{"passive_ble_access"};
-    const char* displayName{"Passive BLE access"};
-    FeatureCategory category{FeatureCategory::SecurityAccess};
+    FeatureId id{FeatureId::ColdEngineGuard};
+    const char* code{"cold_engine_guard"};
+    const char* displayName{"Protection moteur froid"};
+    FeatureCategory category{FeatureCategory::TelemetryCockpit};
     FeatureControlClass controlClass{FeatureControlClass::Informational};
-    FeatureReleaseTier releaseTier{FeatureReleaseTier::FutureComfort};
+    FeatureReleaseTier releaseTier{FeatureReleaseTier::V1ReadOnly};
     std::uint32_t requiredCapabilities{0U};
     std::uint32_t anyCapability{0U};
     bool requiresQualifiedVehicleSignals{false};

@@ -1,0 +1,35 @@
+{
+  "schema_version": 1,
+  "profile_id": "EXAMPLE_ONLY_VEHICLE",
+  "example_only": true,
+  "recorded_at": "2000-01-01T00:00:00Z",
+  "evidence_index": "../evidence/EXAMPLE_ONLY.evidence-index.json",
+  "vehicle": {
+    "vin": {
+      "value": null,
+      "anonymized": true,
+      "observed_at": null,
+      "confidence": "UNKNOWN",
+      "evidence_refs": [],
+      "notes": "No fictional VIN is provided."
+    },
+    "model": {"value": null, "observed_at": null, "confidence": "UNKNOWN", "evidence_refs": [], "notes": null},
+    "chassis": {"value": null, "observed_at": null, "confidence": "UNKNOWN", "evidence_refs": [], "notes": null},
+    "production_date": {"value": null, "observed_at": null, "confidence": "UNKNOWN", "evidence_refs": [], "notes": null},
+    "engine": {"value": null, "observed_at": null, "confidence": "UNKNOWN", "evidence_refs": [], "notes": null},
+    "transmission": {"value": null, "observed_at": null, "confidence": "UNKNOWN", "evidence_refs": [], "notes": null}
+  },
+  "cas": {
+    "type_version": {"value": null, "observed_at": null, "confidence": "UNKNOWN", "evidence_refs": [], "notes": null},
+    "hardware_reference": {"value": null, "observed_at": null, "confidence": "UNKNOWN", "evidence_refs": [], "notes": null},
+    "software_reference": {"value": null, "observed_at": null, "confidence": "UNKNOWN", "evidence_refs": [], "notes": null},
+    "zb_number": {"value": null, "observed_at": null, "confidence": "UNKNOWN", "evidence_refs": [], "notes": null}
+  },
+  "dde": {
+    "type_version": {"value": null, "observed_at": null, "confidence": "UNKNOWN", "evidence_refs": [], "notes": null},
+    "hardware_reference": {"value": null, "observed_at": null, "confidence": "UNKNOWN", "evidence_refs": [], "notes": null},
+    "software_reference": {"value": null, "observed_at": null, "confidence": "UNKNOWN", "evidence_refs": [], "notes": null},
+    "zb_number": {"value": null, "observed_at": null, "confidence": "UNKNOWN", "evidence_refs": [], "notes": null}
+  },
+  "other_control_units": []
+}

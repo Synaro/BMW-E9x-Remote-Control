@@ -40,7 +40,7 @@ bool VehicleStateAssembler::consume(const CanFrame& frame) noexcept {
         return false;
     }
 
-    applyBatch(batch, frame.timestampMs);
+    applyBatch(batch, frame.timestampMilliseconds());
     ++statistics_.decodedFrames;
     statistics_.decodedSignals += static_cast<std::uint32_t>(batch.count);
     return true;

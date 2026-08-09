@@ -1,0 +1,29 @@
+{
+  "schema_version": 1,
+  "mapping_id": "EXAMPLE_ONLY_ENGINE_SPEED_MAPPING",
+  "example_only": true,
+  "input": {"delimiter": ",", "encoding": "utf-8-sig", "timestamp_unit": "ms"},
+  "columns": {"timestamp": "elapsed_ms", "rpm": "rpm"},
+  "timeline": {
+    "timeline_id": "EXAMPLE_ONLY_ENGINE_TIMELINE",
+    "profile_ref": "../profiles/EXAMPLE_ONLY.vehicle-profile.json",
+    "evidence_index": "../evidence/EXAMPLE_ONLY.evidence-index.json",
+    "evidence_ref": "EXAMPLE_ONLY_MANUAL_NOTE",
+    "source": {
+      "tool": "EXAMPLE_ONLY_GENERIC_CSV",
+      "sgbd_prg": "EXAMPLE_ONLY",
+      "job": "EXAMPLE_ONLY_ENGINE_SPEED",
+      "session": "EXAMPLE_ONLY_SESSION",
+      "observed_at": "2000-01-01T00:00:00Z",
+      "notes": "Synthetic timeline used only to test the generic importer."
+    }
+  },
+  "candidate_thresholds": {
+    "candidate_only": true,
+    "stopped_max_rpm": 0,
+    "running_band_min_rpm": 700,
+    "running_band_max_rpm": 1100,
+    "running_exit_rpm": 500,
+    "consecutive_samples": 3
+  }
+}

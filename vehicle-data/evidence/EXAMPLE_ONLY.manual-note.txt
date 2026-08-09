@@ -1,0 +1,4 @@
+EXAMPLE_ONLY
+
+This is a fictional formatting note. It contains no real vehicle observation,
+identifier, CAN identifier, CAS/DDE reference, or inferred BMW value.

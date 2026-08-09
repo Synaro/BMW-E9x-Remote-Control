@@ -175,7 +175,7 @@ infrastructure::CanFrame makeSyntheticPowertrainFrame(
     const std::uint32_t timestampMs,
     const SyntheticPowertrainState state) noexcept {
     infrastructure::CanFrame frame{};
-    frame.timestampMs = timestampMs;
+    frame.timestampUs = static_cast<std::uint64_t>(timestampMs) * 1'000U;
     frame.identifier = SyntheticCanProtocol::PowertrainFrameIdentifier;
     frame.extended = true;
     frame.dataLength = infrastructure::CanFrame::MaximumDataLength;
@@ -193,7 +193,7 @@ infrastructure::CanFrame makeSyntheticBodyFrame(
     const std::uint32_t timestampMs,
     const SyntheticBodyState state) noexcept {
     infrastructure::CanFrame frame{};
-    frame.timestampMs = timestampMs;
+    frame.timestampUs = static_cast<std::uint64_t>(timestampMs) * 1'000U;
     frame.identifier = SyntheticCanProtocol::BodyFrameIdentifier;
     frame.extended = true;
     frame.dataLength = infrastructure::CanFrame::MaximumDataLength;
@@ -211,7 +211,7 @@ infrastructure::CanFrame makeSyntheticTelemetryFrame(
     const std::uint32_t timestampMs,
     const SyntheticTelemetryState state) noexcept {
     infrastructure::CanFrame frame{};
-    frame.timestampMs = timestampMs;
+    frame.timestampUs = static_cast<std::uint64_t>(timestampMs) * 1'000U;
     frame.identifier = SyntheticCanProtocol::TelemetryFrameIdentifier;
     frame.extended = true;
     frame.dataLength = infrastructure::CanFrame::MaximumDataLength;

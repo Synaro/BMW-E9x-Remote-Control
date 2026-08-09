@@ -40,26 +40,20 @@ réellement retiré de la décision.
 
 ## Fonctionnalités modulaires
 
-Le fichier accepte les 43 identifiants stables du catalogue sous la forme :
+Le fichier accepte les trois identifiants du catalogue courant sous la forme :
 
 ```ini
 feature.cold_engine_guard=true
-feature.alarm_push_notification=false
-feature.smartphone_voice_assistant=false
+feature.dpf_regeneration_indicator=false
+feature.transmission_overheat_alert=false
 ```
 
 Chaque option absente ou à `false` reste désactivée. Une clé inconnue, dupliquée
 ou une valeur autre que `true`/`false` fait rejeter le fichier complet.
 
-Une préférence à `true` exprime une demande ; elle ne contourne ni l'absence
-d'implémentation, ni une capacité matérielle manquante, ni la qualification BMW,
-ni les barrières imposées aux commandes critiques. Les détails et la liste des
-niveaux de livraison sont dans
+Une préférence à `true` exprime une demande ; elle ne contourne ni une capacité
+matérielle manquante, ni la qualification BMW. Les détails sont dans
 [feature-framework.md](feature-framework.md).
-
-Les fonctions génériques liées au téléphone acceptent une future application
-iOS ou Android. Le format de configuration est identique sur les deux
-plateformes ; l'application compagnon n'est pas encore livrée.
 
 ## Créer sa configuration avec l'assistant
 
@@ -74,8 +68,8 @@ défaut. Entrée conserve la valeur affichée. Le fichier final est relu et vali
 avant de remplacer l'ancienne version ; une saisie interrompue ou invalide ne
 détruit pas la configuration précédente.
 
-À la fin, l'assistant propose facultativement de parcourir le catalogue des 43
-fonctionnalités. Répondre `non` conserve le masque existant ; répondre `oui`
+À la fin, l'assistant propose facultativement de parcourir les trois fonctions
+implémentées. Répondre `non` conserve le masque existant ; répondre `oui`
 permet d'activer ou désactiver chaque entrée séparément.
 
 Afficher ou contrôler le fichier sans le modifier :
@@ -149,8 +143,8 @@ ne seront pas librement modifiables par l'utilisateur final.
 Le journal portable fourni utilise deux générations, une version de schéma, un
 CRC-32 et un retour aux valeurs sûres si la mémoire est corrompue. Il reste à
 raccorder son port `SettingsByteStorage` à une mémoire automobile qualifiée pour
-la carte définitive ; le prototype utilise déjà une EEPROM émulée dans la flash
-de l'ESP32-S3.
+la carte définitive ; le prototype utilise NVS dans une partition flash
+explicitement décrite par `partitions.csv`.
 Le contrôleur ne doit être construit qu'après validation réussie des valeurs
 chargées.
 

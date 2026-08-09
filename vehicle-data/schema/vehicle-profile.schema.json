@@ -1,0 +1,102 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://bmw-e9x-remote-control.invalid/vehicle-data/schema/vehicle-profile.schema.json",
+  "title": "Phase 3C observed vehicle profile",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version", "profile_id", "example_only", "recorded_at",
+    "evidence_index", "vehicle", "cas", "dde", "other_control_units"
+  ],
+  "properties": {
+    "schema_version": {"const": 1},
+    "profile_id": {"type": "string", "minLength": 1, "maxLength": 96},
+    "example_only": {"type": "boolean"},
+    "recorded_at": {"type": "string", "format": "date-time"},
+    "evidence_index": {"type": "string", "minLength": 1},
+    "vehicle": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["vin", "model", "chassis", "production_date", "engine", "transmission"],
+      "properties": {
+        "vin": {"$ref": "#/$defs/vinAssertion"},
+        "model": {"$ref": "#/$defs/assertion"},
+        "chassis": {"$ref": "#/$defs/assertion"},
+        "production_date": {"$ref": "#/$defs/assertion"},
+        "engine": {"$ref": "#/$defs/assertion"},
+        "transmission": {"$ref": "#/$defs/assertion"}
+      }
+    },
+    "cas": {"$ref": "#/$defs/controlUnit"},
+    "dde": {"$ref": "#/$defs/controlUnit"},
+    "other_control_units": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["role", "type_version", "hardware_reference", "software_reference", "zb_number"],
+        "properties": {
+          "role": {"type": "string", "minLength": 1, "maxLength": 80},
+          "type_version": {"$ref": "#/$defs/assertion"},
+          "hardware_reference": {"$ref": "#/$defs/assertion"},
+          "software_reference": {"$ref": "#/$defs/assertion"},
+          "zb_number": {"$ref": "#/$defs/assertion"}
+        }
+      }
+    }
+  },
+  "$defs": {
+    "confidence": {
+      "type": "string",
+      "enum": ["UNKNOWN", "LOW", "MEDIUM", "HIGH", "VALIDATED"]
+    },
+    "assertion": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["value", "observed_at", "confidence", "evidence_refs"],
+      "properties": {
+        "value": {"type": ["string", "number", "boolean", "null"]},
+        "observed_at": {"type": ["string", "null"], "format": "date-time"},
+        "confidence": {"$ref": "#/$defs/confidence"},
+        "qualification": {"$ref": "#/$defs/qualification"},
+        "evidence_refs": {
+          "type": "array", "uniqueItems": true,
+          "items": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,95}$"}
+        },
+        "notes": {"type": ["string", "null"], "maxLength": 1000}
+      }
+    },
+    "vinAssertion": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["value", "anonymized", "observed_at", "confidence", "evidence_refs"],
+      "properties": {
+        "value": {"type": ["string", "null"]},
+        "anonymized": {"type": "boolean"},
+        "observed_at": {"type": ["string", "null"], "format": "date-time"},
+        "confidence": {"$ref": "#/$defs/confidence"},
+        "qualification": {"$ref": "#/$defs/qualification"},
+        "evidence_refs": {
+          "type": "array", "uniqueItems": true,
+          "items": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,95}$"}
+        },
+        "notes": {"type": ["string", "null"], "maxLength": 1000}
+      }
+    },
+    "controlUnit": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type_version", "hardware_reference", "software_reference", "zb_number"],
+      "properties": {
+        "type_version": {"$ref": "#/$defs/assertion"},
+        "hardware_reference": {"$ref": "#/$defs/assertion"},
+        "software_reference": {"$ref": "#/$defs/assertion"},
+        "zb_number": {"$ref": "#/$defs/assertion"}
+      }
+    },
+    "qualification": {
+      "type": "string",
+      "enum": ["UNKNOWN", "OBSERVED", "CONFIRMED", "UNTRUSTED", "BLOCKED"]
+    }
+  }
+}

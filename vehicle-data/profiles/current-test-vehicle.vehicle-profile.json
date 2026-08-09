@@ -1,0 +1,57 @@
+{
+  "schema_version": 1,
+  "profile_id": "CURRENT_TEST_VEHICLE",
+  "example_only": false,
+  "recorded_at": "2026-08-09T18:39:03+02:00",
+  "evidence_index": "../evidence/current-test-vehicle.evidence-index.json",
+  "vehicle": {
+    "vin": {
+      "value": null,
+      "anonymized": true,
+      "observed_at": null,
+      "confidence": "UNKNOWN",
+      "evidence_refs": [],
+      "notes": "VIN intentionally omitted."
+    },
+    "model": {
+      "value": "BMW E90",
+      "observed_at": "2026-08-09T18:11:02+02:00",
+      "confidence": "HIGH",
+      "qualification": "CONFIRMED",
+      "evidence_refs": ["CURRENT_TEST_VEHICLE_TOOL32_CAS_KLEMMENSTATUS_2026_08_09"],
+      "notes": "Identified by the owner as the current E90 test vehicle."
+    },
+    "chassis": {
+      "value": "E90",
+      "observed_at": "2026-08-09T18:11:02+02:00",
+      "confidence": "HIGH",
+      "qualification": "CONFIRMED",
+      "evidence_refs": ["CURRENT_TEST_VEHICLE_TOOL32_CAS_KLEMMENSTATUS_2026_08_09"],
+      "notes": null
+    },
+    "production_date": {"value": "2008/09", "observed_at": "2026-08-09T18:39:03+02:00", "confidence": "HIGH", "qualification": "CONFIRMED", "evidence_refs": ["CURRENT_TEST_VEHICLE_PHASE3D_IDENTIFICATION_STATUS_2026_08_09"], "notes": "Vehicle date reported by ISTA."},
+    "engine": {"value": "N47", "observed_at": "2026-08-09T18:39:03+02:00", "confidence": "HIGH", "qualification": "CONFIRMED", "evidence_refs": ["CURRENT_TEST_VEHICLE_PHASE3D_IDENTIFICATION_STATUS_2026_08_09"], "notes": null},
+    "transmission": {"value": "automatic", "observed_at": "2026-08-09T18:39:03+02:00", "confidence": "HIGH", "qualification": "CONFIRMED", "evidence_refs": ["CURRENT_TEST_VEHICLE_PHASE3D_IDENTIFICATION_STATUS_2026_08_09"], "notes": null}
+  },
+  "cas": {
+    "type_version": {"value": "CAS.PRG / variant index 21313", "observed_at": "2026-08-09T18:39:03+02:00", "confidence": "HIGH", "qualification": "CONFIRMED", "evidence_refs": ["CURRENT_TEST_VEHICLE_PHASE3D_IDENTIFICATION_STATUS_2026_08_09"], "notes": "Diagnostic family and variant index; not an inferred CAS generation."},
+    "hardware_reference": {"value": "C4", "observed_at": "2026-08-09T18:39:03+02:00", "confidence": "HIGH", "qualification": "CONFIRMED", "evidence_refs": ["CURRENT_TEST_VEHICLE_PHASE3D_IDENTIFICATION_STATUS_2026_08_09"], "notes": "ISTA hardware number."},
+    "software_reference": {"value": "function 2.4.8 / operating 3.3.0", "observed_at": "2026-08-09T18:39:03+02:00", "confidence": "HIGH", "qualification": "CONFIRMED", "evidence_refs": ["CURRENT_TEST_VEHICLE_PHASE3D_IDENTIFICATION_STATUS_2026_08_09"], "notes": null},
+    "zb_number": {"value": null, "observed_at": null, "confidence": "UNKNOWN", "evidence_refs": [], "notes": null}
+  },
+  "dde": {
+    "type_version": {"value": "D71N47C0.PRG", "observed_at": "2026-08-09T18:39:03+02:00", "confidence": "HIGH", "qualification": "CONFIRMED", "evidence_refs": ["CURRENT_TEST_VEHICLE_PHASE3D_IDENTIFICATION_STATUS_2026_08_09"], "notes": "D_MOTOR.GRP resolved variant D71N47C0."},
+    "hardware_reference": {"value": null, "observed_at": null, "confidence": "UNKNOWN", "evidence_refs": [], "notes": null},
+    "software_reference": {"value": "1037396565", "observed_at": "2026-08-09T18:39:03+02:00", "confidence": "HIGH", "qualification": "CONFIRMED", "evidence_refs": ["CURRENT_TEST_VEHICLE_PHASE3D_IDENTIFICATION_STATUS_2026_08_09"], "notes": "Reported DDE software version."},
+    "zb_number": {"value": null, "observed_at": null, "confidence": "UNKNOWN", "evidence_refs": [], "notes": null}
+  },
+  "other_control_units": [
+    {
+      "role": "EGS",
+      "type_version": {"value": "GS19D.PRG / variant index 21325", "observed_at": "2026-08-09T18:39:03+02:00", "confidence": "HIGH", "qualification": "CONFIRMED", "evidence_refs": ["CURRENT_TEST_VEHICLE_PHASE3D_IDENTIFICATION_STATUS_2026_08_09"], "notes": null},
+      "hardware_reference": {"value": "1267017192", "observed_at": "2026-08-09T18:39:03+02:00", "confidence": "HIGH", "qualification": "CONFIRMED", "evidence_refs": ["CURRENT_TEST_VEHICLE_PHASE3D_IDENTIFICATION_STATUS_2026_08_09"], "notes": "EGS HW number."},
+      "software_reference": {"value": "0479SA0T641Z", "observed_at": "2026-08-09T18:39:03+02:00", "confidence": "HIGH", "qualification": "CONFIRMED", "evidence_refs": ["CURRENT_TEST_VEHICLE_PHASE3D_IDENTIFICATION_STATUS_2026_08_09"], "notes": "Program version."},
+      "zb_number": {"value": null, "observed_at": null, "confidence": "UNKNOWN", "evidence_refs": [], "notes": "No ZB number was supplied; programmed part number is retained separately in qualified observations."}
+    }
+  ]
+}

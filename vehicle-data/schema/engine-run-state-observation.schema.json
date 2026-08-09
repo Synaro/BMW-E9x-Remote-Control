@@ -1,0 +1,70 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://bmw-e9x-remote-control.invalid/vehicle-data/schema/engine-run-state-observation.schema.json",
+  "title": "Phase 3D observational engine run-state timeline",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version", "timeline_id", "example_only", "profile_ref", "evidence_index",
+    "evidence_ref", "source", "timestamp_basis", "candidate_thresholds", "samples", "qualification"
+  ],
+  "properties": {
+    "schema_version": {"const": 1},
+    "timeline_id": {"type": "string", "minLength": 1, "maxLength": 96},
+    "example_only": {"type": "boolean"},
+    "profile_ref": {"type": "string", "minLength": 1},
+    "evidence_index": {"type": "string", "minLength": 1},
+    "evidence_ref": {"type": "string", "minLength": 1, "maxLength": 96},
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["tool", "sgbd_prg", "job", "session", "observed_at", "notes"],
+      "properties": {
+        "tool": {"type": "string", "minLength": 1},
+        "sgbd_prg": {"type": "string", "minLength": 1},
+        "job": {"type": "string", "minLength": 1},
+        "session": {"type": "string", "minLength": 1},
+        "observed_at": {"type": "string", "format": "date-time"},
+        "notes": {"type": ["string", "null"], "maxLength": 1000}
+      }
+    },
+    "timestamp_basis": {"enum": ["SESSION_RELATIVE", "UNAVAILABLE"]},
+    "candidate_thresholds": {
+      "oneOf": [
+        {"type": "null"},
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["candidate_only", "stopped_max_rpm", "running_band_min_rpm", "running_band_max_rpm", "running_exit_rpm", "consecutive_samples"],
+          "properties": {
+            "candidate_only": {"const": true},
+            "stopped_max_rpm": {"type": "number", "minimum": 0},
+            "running_band_min_rpm": {"type": "number", "minimum": 0},
+            "running_band_max_rpm": {"type": "number", "minimum": 0},
+            "running_exit_rpm": {"type": "number", "minimum": 0},
+            "consecutive_samples": {"type": "integer", "minimum": 2}
+          }
+        }
+      ]
+    },
+    "qualification": {"enum": ["OBSERVED", "CONFIRMED", "UNTRUSTED", "BLOCKED"]},
+    "samples": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["sequence", "timestamp_us", "rpm", "observed_state", "transition", "source_row", "notes"],
+        "properties": {
+          "sequence": {"type": "integer", "minimum": 0},
+          "timestamp_us": {"type": ["integer", "null"], "minimum": 0},
+          "rpm": {"type": "number", "minimum": 0},
+          "observed_state": {"enum": ["UNKNOWN", "STOPPED", "CRANKING", "RUNNING"]},
+          "transition": {"type": ["string", "null"], "enum": [null, "STOPPED_TO_CRANKING", "CRANKING_TO_RUNNING", "RUNNING_TO_STOPPED", "TO_UNKNOWN"]},
+          "source_row": {"type": ["integer", "null"], "minimum": 1},
+          "notes": {"type": ["string", "null"], "maxLength": 500}
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,62 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://bmw-e9x-remote-control.invalid/vehicle-data/schema/oem-start-observation-session.schema.json",
+  "title": "Phase 3C OEM start observation session",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version", "session_id", "example_only", "profile_ref",
+    "evidence_index", "started_at", "timestamp_basis", "records"
+  ],
+  "properties": {
+    "schema_version": {"const": 1},
+    "session_id": {"type": "string", "minLength": 1, "maxLength": 96},
+    "example_only": {"type": "boolean"},
+    "profile_ref": {"type": "string", "minLength": 1},
+    "evidence_index": {"type": "string", "minLength": 1},
+    "started_at": {"type": "string", "format": "date-time"},
+    "timestamp_basis": {"enum": ["SESSION_RELATIVE", "SOURCE_ABSOLUTE", "UNAVAILABLE"]},
+    "notes": {"type": ["string", "null"], "maxLength": 2000},
+    "records": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "sequence", "timestamp_us", "phase", "signal", "raw_value",
+          "interpreted_value", "unit", "source", "confidence"
+        ],
+        "properties": {
+          "sequence": {"type": "integer", "minimum": 0},
+          "timestamp_us": {"type": ["integer", "null"], "minimum": 0},
+          "phase": {
+            "enum": [
+              "UNKNOWN", "PRECHECK", "AUTHORIZATION", "KL15_ACTIVE",
+              "CRANK_REQUESTED", "CRANKING", "ENGINE_RUNNING", "ABORTED", "SHUTDOWN"
+            ]
+          },
+          "signal": {
+            "enum": [
+              "KL15", "KL50", "ENGINE_SPEED", "ENGINE_STATE",
+              "TRANSMISSION_POSITION", "BRAKE", "KEY_STATE",
+              "START_AUTHORIZATION", "BATTERY_VOLTAGE"
+            ]
+          },
+          "raw_value": {"type": ["string", "number", "boolean", "null"]},
+          "interpreted_value": {"type": ["string", "number", "boolean", "null"]},
+          "unit": {"type": ["string", "null"], "maxLength": 32},
+          "source": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["evidence_ref", "locator"],
+            "properties": {
+              "evidence_ref": {"type": "string", "minLength": 1, "maxLength": 96},
+              "locator": {"type": "string", "minLength": 1, "maxLength": 300}
+            }
+          },
+          "confidence": {"enum": ["UNKNOWN", "LOW", "MEDIUM", "HIGH", "VALIDATED"]}
+        }
+      }
+    }
+  }
+}

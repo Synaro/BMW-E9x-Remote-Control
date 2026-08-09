@@ -23,7 +23,7 @@ Le script compile l'outil puis ouvre l'assistant. La cible par défaut est
 actuelles entre crochets ; appuyer sur Entrée les conserve.
 
 Le dernier écran propose d'éditer le catalogue modulaire. Ce passage est
-facultatif ; s'il est choisi, chacune des 43 fonctionnalités possède sa propre
+facultatif ; s'il est choisi, chacune des 3 fonctions de télémétrie implémentées possède sa propre
 question oui/non et reste soumise aux barrières d'implémentation et de sûreté.
 
 Une configuration typique pour le véhicule de référence sans capteur de capot

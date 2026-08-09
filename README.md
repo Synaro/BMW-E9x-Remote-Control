@@ -6,8 +6,9 @@ matériel.
 
 > [!WARNING]
 > Ce dépôt n'est pas un produit prêt à installer dans un véhicule. Le firmware
-> fourni est volontairement inerte : aucun bus véhicule, GPIO ou actionneur réel
-> n'est configuré. Toute intégration physique exige une analyse de risques, des
+> fourni reste interdit de connexion au véhicule : l'acquisition TWAI passive
+> est désactivée par défaut et réservée à un bus de banc qualifié. Aucun GPIO
+> d'actionneur réel n'est configuré. Toute intégration physique exige une analyse de risques, des
 > interverrouillages matériels, des essais sur banc et l'intervention d'une
 > personne qualifiée. Le projet ne doit pas servir à contourner un antidémarrage,
 > un système antivol ou une réglementation applicable.
@@ -21,10 +22,11 @@ Le premier jalon logiciel est opérationnel :
 - machine d'état événementielle complète ;
 - détection applicative configurable de trois impulsions de verrouillage ;
 - garde fermée par défaut sur leur provenance, fraîcheur et ordre ;
-- adaptateur CAN lecture seule désactivé par défaut, avec fronts et compteur roulant ;
+- adaptateur générique de trames CAN testé sur données synthétiques, sans
+  identifiant BMW réel ;
 - profil utilisateur validé avant application, sans recompilation du noyau ;
-- catalogue stable de 43 fonctionnalités, toutes activables séparément et
-  désactivées par défaut ;
+- catalogue exécutable limité aux 3 fonctions de télémétrie réellement
+  implémentées, toutes désactivées par défaut ;
 - résolution fermée par défaut entre préférence, implémentation, capacités et
   qualification véhicule ;
 - configurateur Windows interactif avec enregistrement vérifié et remplacement sûr ;
@@ -34,7 +36,17 @@ Le premier jalon logiciel est opérationnel :
 - décisions et listes d'actions de taille fixe, sans allocation dynamique ;
 - arrêt fail-safe en cas de défaut d'un adaptateur ;
 - ports abstraits pour véhicule, actionneurs, minuterie et notifications ;
-- firmware ESP32 de référence inerte ;
+- socle ESP32-S3 sous ESP-IDF 5.5.0 avec acquisition TWAI listen-only générique,
+  désactivée par défaut et protégée par deux barrières matérielles ;
+- modèle CAN indépendant de BMW, file RX fixe, statistiques et contrat de
+  capture V2 avec timestamps microsecondes et séquences monotones ;
+- contrats Phase 3C pour profils observés, preuves, sessions OEM et checklist
+  de prérequis, sans donnée BMW inventée ;
+- import tabulaire générique et validateur de provenance sans dépendance
+  propriétaire ;
+- qualification Phase 3D des observations réelles ISTA, Tool32 et TestO avec
+  exclusion structurelle des sources non fiables ;
+- timeline RPM observationnelle à seuils candidats, sans usage de commande ;
 - rejeu temporel de traces CAN et assemblage des signaux avec gestion de fraîcheur ;
 - protocole CAN synthétique réservé aux simulations hors véhicule ;
 - simulateur interactif avec parcours nominal et injection d'un défaut de sécurité ;
@@ -58,8 +70,8 @@ Le premier jalon logiciel est opérationnel :
 - campagnes déterministes de perte, retard et corruption des données véhicule ;
 - superviseur logiciel des actionneurs avec heartbeat, séquencement, retours
   d'état et défauts mémorisés ;
-- 132 tests C++, 15 scénarios du simulateur, 3 contrôles du configurateur et
-  21 tests Python automatisés en intégration continue.
+- 135 tests C++, 15 scénarios du simulateur, 3 contrôles du configurateur et
+  70 tests Python automatisés en intégration continue.
 
 L'adaptateur BMW qui observera réellement le verrouillage, qualifiera la reprise
 conducteur et pilotera les sorties physiques reste à implémenter lorsque le
@@ -106,12 +118,27 @@ Le contrat du futur décodeur CAN de verrouillage est défini dans
 [docs/can-lock-command-adapter.md](docs/can-lock-command-adapter.md).
 Les préférences, leurs limites et leur future persistance sont décrites dans
 [docs/user-configuration.md](docs/user-configuration.md).
-Le catalogue modulaire, les niveaux de livraison et la compatibilité iOS/Android
-sont décrits dans [docs/feature-framework.md](docs/feature-framework.md).
+Le catalogue des fonctions actuellement implémentées est décrit dans
+[docs/feature-framework.md](docs/feature-framework.md). Les idées non livrées
+sont isolées dans [docs/backlog/features.md](docs/backlog/features.md).
 Le premier moteur de télémétrie et ses alertes sont décrits dans
 [docs/telemetry-alerts.md](docs/telemetry-alerts.md).
 Le journal binaire redondant est spécifié dans
 [docs/settings-persistence.md](docs/settings-persistence.md).
+Le socle ESP-IDF, ses garde-fous et sa procédure de banc sont documentés dans
+[docs/esp32s3-safe-foundation.md](docs/esp32s3-safe-foundation.md).
+L'acquisition passive de Phase 3 et le format Capture V2 sont décrits dans
+[docs/twai-listen-only-acquisition.md](docs/twai-listen-only-acquisition.md) et
+[docs/capture-format-v2.md](docs/capture-format-v2.md).
+Le choix du transceiver, le schéma de banc et la qualification électrique de
+Phase 3B sont figés dans
+[docs/phase3b-can-bench-hardware.md](docs/phase3b-can-bench-hardware.md).
+Les contrats d'intégration des futurs relevés ISTA/TestO, la provenance et la
+checklist de Phase 3C sont décrits dans
+[docs/phase3c-vehicle-data-intake.md](docs/phase3c-vehicle-data-intake.md).
+La qualification des premières preuves réelles et les inconnues restantes sont
+décrites dans
+[docs/phase3d-real-evidence-qualification.md](docs/phase3d-real-evidence-qualification.md).
 Le configurateur PC est décrit dans
 [docs/configurator.md](docs/configurator.md).
 Le protocole entre configurateur et boîtier est spécifié dans
@@ -140,7 +167,7 @@ Les tests de l'importeur Python n'installent aucune dépendance externe :
 python -m unittest discover -s tools -p 'test_*.py' -v
 ```
 
-Compilation du firmware natif inerte avec PlatformIO :
+Compilation du firmware natif avec PlatformIO :
 
 ```powershell
 pio run -e native
@@ -153,8 +180,10 @@ pio run -e esp32s3dev
 ```
 
 Cette carte est la cible du prototype de banc, pas celle de l'installation
-automobile définitive. Le firmware dessert uniquement le protocole local de
-configuration sur USB ; il n'active aucun bus véhicule ni aucune sortie.
+automobile définitive. Le firmware dessert le protocole local de configuration
+sur USB. L'acquisition TWAI n'est activable que par une configuration locale
+`BENCH_ONLY` et ne possède aucun chemin d'émission ; aucune sortie véhicule
+n'est activée.
 
 Avec CMake :
 
@@ -171,9 +200,11 @@ include/bmw_remote/domain/          Modèle métier du véhicule
 include/bmw_remote/application/     Sécurité, événements, décisions, contrôleur
 include/bmw_remote/infrastructure/  Contrats des adaptateurs et runtime
 include/bmw_remote/simulation/      Protocole synthétique hors véhicule
-src/                                Implémentations et firmware inerte
+libs/can-core/                       Modèle et réception CAN génériques, sans BMW
+src/                                Implémentations et firmware ESP32-S3
 tests/                              Scénarios hôte
 tools/                              Simulateur et importeur de traces PC
+vehicle-data/                       Profils, observations, preuves et imports versionnés
 scenarios/                          Traces synthétiques partageables
 docs/                               Architecture, sécurité et intégration
 ```
@@ -246,7 +277,7 @@ Sous Windows, l'exécutable interactif peut être construit avec :
 .\build\bmw_remote_simulator.exe
 ```
 
-Le catalogue complet des options et leur niveau de livraison est affichable
+Le catalogue des fonctions actuellement implémentées est affichable
 sans lancer de scénario :
 
 ```powershell

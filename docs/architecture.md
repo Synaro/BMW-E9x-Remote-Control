@@ -6,8 +6,8 @@ Le premier jalon fournit un noyau de décision complet, compilable sur ordinateu
 et microcontrôleur. Il ne suppose aucun protocole BMW et ne commande aucun
 matériel réel. Il sait reconnaître une séquence abstraite de trois impulsions de
 verrouillage, mais leur acquisition BMW appartient au futur adaptateur. Cette
-limite permet de vérifier les décisions avant de sélectionner un transceiver ou
-une topologie électrique.
+limite a permis de vérifier les décisions avant de sélectionner le transceiver
+de banc en Phase 3B. La topologie automobile finale reste indéfinie.
 
 ## Règle de dépendance
 
@@ -41,8 +41,11 @@ flowchart LR
 - **Application** : politique de sécurité, machine d'état, événements et actions.
 - **Infrastructure** : exécution des actions au travers de ports abstraits.
 - **Simulation** : décodeur synthétique et génération de scénarios hors véhicule.
-- **Firmware** : assemblage spécifique à la carte. La version actuelle est
-  inerte.
+- **CAN Core** : modèle de trame, réception, file bornée, statistiques et contrat
+  de capture génériques ; cette bibliothèque ne dépend ni de BMW ni d'ESP-IDF.
+- **Firmware** : assemblage ESP-IDF spécifique à l'ESP32-S3. La version actuelle
+  dessert le protocole USB/NVS et peut acquérir un bus de banc en listen-only
+  lorsque sa configuration locale `BENCH_ONLY` est explicitement activée.
 
 Le domaine et l'application ne dépendent d'aucun framework embarqué.
 
@@ -70,8 +73,8 @@ installation peut explicitement désactiver ce contrôle avec
 `UserSettings` contient uniquement les préférences exposées à l'utilisateur.
 `makeUserConfiguration()` les valide puis produit les configurations effectives
 du contrôleur et du détecteur de verrouillages. Un échec de validation laisse le
-démarrage distant désactivé. Le format de fichier PC et la future mémoire du
-boîtier restent des adaptateurs d'infrastructure.
+démarrage distant désactivé. Le format de fichier PC et la mémoire NVS du
+prototype restent des adaptateurs d'infrastructure.
 
 La persistance concrète est séparée en deux niveaux. `SettingsByteStorage`
 abstrait une mémoire adressable et son commit ; `JournaledUserSettingsStore`
@@ -79,12 +82,34 @@ encode deux générations versionnées avec CRC, sélectionne la plus récente v
 et fournit un retour fail-safe si aucune ne peut être chargée. Voir
 [settings-persistence.md](settings-persistence.md).
 
-Le protocole de configuration transporte le même payload V3 fixe de 40 octets que
+Sur l'ESP32-S3, `EspIdfNvsSettingsStorage` adapte ce contrat à une partition NVS
+explicite. `GpioHal` et `MonotonicTimeHal` forment la HAL minimale du socle.
+`TwaiSafetyHal` ne permet que d'imposer et confirmer les deux barrières
+matérielles de silence. `EspIdfTwaiReceiver` implémente séparément le port RX
+générique de `libs/can-core`, uniquement en `TWAI_MODE_LISTEN_ONLY`, sans API
+d'émission publique. L'acquisition est désactivée sans configuration locale de
+banc validée. Voir [esp32s3-safe-foundation.md](esp32s3-safe-foundation.md) et
+[twai-listen-only-acquisition.md](twai-listen-only-acquisition.md).
+Le transceiver, l'inhibition TX indépendante et la porte de validation
+électrique sont définis séparément dans
+[phase3b-can-bench-hardware.md](phase3b-can-bench-hardware.md).
+
+```mermaid
+flowchart LR
+    Bench["Bus CAN de banc"] --> Transceiver["Transceiver externe silencieux"]
+    Transceiver --> Twai["TWAI listen-only"]
+    Twai --> Adapter["Adaptateur ESP-IDF RX"]
+    Adapter --> Core["libs/can-core"]
+    Core --> Consumer["Consommateur de capture futur"]
+```
+
+Le protocole de configuration transporte le même payload pré-V1 fixe de 40 octets que
 le journal, sans exposer son format de stockage. Le codec vérifie la version, la
 taille et le CRC avant que `SettingsProtocolService` n'accède au port. Le service
 exige une session déclarée authentifiée et refuse toute écriture lorsque le
-contrôleur n'est pas en `Idle`. L'établissement de cette session appartient au
-futur adaptateur USB, Bluetooth ou réseau. Voir
+contrôleur n'est pas en `Idle`. Le prototype considère l'accès physique au port
+USB comme session locale ; une future liaison distante devra ajouter sa propre
+authentification. Voir
 [settings-protocol.md](settings-protocol.md).
 
 Le catalogue de fonctionnalités appartient aussi à la couche application. Ses

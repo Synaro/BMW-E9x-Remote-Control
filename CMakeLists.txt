@@ -1,34 +1,45 @@
 cmake_minimum_required(VERSION 3.16)
 
+if(DEFINED ENV{IDF_PATH})
+    set(EXTRA_COMPONENT_DIRS "${CMAKE_CURRENT_SOURCE_DIR}/src")
+    # Build only the firmware component, the component that owns the required
+    # erratum Kconfig option, and their declared dependencies. Host tools and
+    # simulators stay out of the embedded image.
+    # PlatformIO's generated __pio_env component carries the generic compiler
+    # environment and must remain in the selected component set.
+    # Keep the legacy driver component in the configuration graph solely so
+    # ESP-IDF exposes CONFIG_TWAI_ERRATA_FIX_LISTEN_ONLY_DOM. No TWAI driver is
+    # referenced or initialized by the Phase 2 firmware.
+    set(COMPONENTS __pio_env src driver)
+    include($ENV{IDF_PATH}/tools/cmake/project.cmake)
+    project(bmw_e9x_remote_control_firmware)
+    return()
+endif()
+
 project(bmw_e9x_remote_control LANGUAGES CXX)
 
-add_library(bmw_remote_core
-    src/infrastructure/actuator_safety_supervisor.cpp
-    src/application/controller.cpp
-    src/application/feature_catalog.cpp
-    src/application/lock_command_gate.cpp
-    src/application/lock_sequence_detector.cpp
-    src/application/profile_readiness.cpp
-    src/application/safety_policy.cpp
-    src/application/telemetry_monitor.cpp
-    src/application/user_settings.cpp
-    src/domain/reference_profiles.cpp
-    src/domain/vehicle_profile.cpp
-    src/domain/vehicle_signal.cpp
-    src/infrastructure/can_lock_command_adapter.cpp
-    src/infrastructure/can_trace_replay.cpp
-    src/infrastructure/diagnostic_journal.cpp
-    src/infrastructure/replay_vehicle_gateway.cpp
-    src/infrastructure/runtime.cpp
-    src/infrastructure/settings_identity.cpp
-    src/infrastructure/settings_payload.cpp
-    src/infrastructure/settings_protocol.cpp
-    src/infrastructure/settings_storage.cpp
-    src/infrastructure/settings_stream.cpp
-    src/infrastructure/vehicle_state_assembler.cpp
-)
+file(STRINGS
+    "${CMAKE_CURRENT_SOURCE_DIR}/cmake/source-manifest.txt"
+    BMW_REMOTE_SOURCE_MANIFEST)
+foreach(entry IN LISTS BMW_REMOTE_SOURCE_MANIFEST)
+    if(entry MATCHES "^[ \\t]*#" OR entry STREQUAL "")
+        continue()
+    endif()
+    string(REPLACE "|" ";" fields "${entry}")
+    list(LENGTH fields field_count)
+    if(NOT field_count EQUAL 2)
+        message(FATAL_ERROR "Invalid source manifest entry: ${entry}")
+    endif()
+    list(GET fields 0 group)
+    list(GET fields 1 source)
+    string(TOUPPER "${group}" group)
+    list(APPEND BMW_REMOTE_${group}_SOURCES "${source}")
+endforeach()
 
-target_include_directories(bmw_remote_core PUBLIC include)
+add_library(bmw_remote_core ${BMW_REMOTE_CORE_SOURCES})
+
+target_include_directories(
+    bmw_remote_core PUBLIC include libs/can-core/include)
 target_compile_features(bmw_remote_core PUBLIC cxx_std_17)
 
 if(MSVC)
@@ -37,12 +48,7 @@ else()
     target_compile_options(bmw_remote_core PRIVATE -Wall -Wextra -Wpedantic -Wconversion)
 endif()
 
-add_library(bmw_remote_host_tools
-    tools/can_trace_csv.cpp
-    tools/serial_settings_channel.cpp
-    tools/settings_device_client.cpp
-    tools/user_settings_file.cpp
-)
+add_library(bmw_remote_host_tools ${BMW_REMOTE_HOST_SOURCES})
 target_link_libraries(bmw_remote_host_tools PUBLIC bmw_remote_core)
 target_include_directories(
     bmw_remote_host_tools PUBLIC include ${CMAKE_CURRENT_SOURCE_DIR})
@@ -55,9 +61,7 @@ else()
         bmw_remote_host_tools PRIVATE -Wall -Wextra -Wpedantic -Wconversion)
 endif()
 
-add_library(bmw_remote_simulation
-    src/simulation/synthetic_can.cpp
-)
+add_library(bmw_remote_simulation ${BMW_REMOTE_SIMULATION_SOURCES})
 target_link_libraries(bmw_remote_simulation PUBLIC bmw_remote_core)
 target_include_directories(bmw_remote_simulation PUBLIC include)
 target_compile_features(bmw_remote_simulation PUBLIC cxx_std_17)
@@ -75,15 +79,15 @@ option(BMW_REMOTE_BUILD_CONFIGURATOR "Build the user settings configurator" ON)
 if(BMW_REMOTE_BUILD_SIMULATOR)
     add_executable(
         bmw_remote_simulator
-        tools/sandbox_session.cpp
-        tools/vehicle_simulator.cpp)
+        ${BMW_REMOTE_SANDBOX_SOURCES}
+        ${BMW_REMOTE_SIMULATOR_SOURCES})
     target_link_libraries(
         bmw_remote_simulator PRIVATE bmw_remote_simulation bmw_remote_host_tools)
 endif()
 
 if(BMW_REMOTE_BUILD_CONFIGURATOR)
     add_executable(
-        bmw_remote_configurator tools/settings_configurator.cpp)
+        bmw_remote_configurator ${BMW_REMOTE_CONFIGURATOR_SOURCES})
     target_link_libraries(
         bmw_remote_configurator PRIVATE bmw_remote_host_tools)
 endif()
@@ -94,8 +98,8 @@ if(BMW_REMOTE_BUILD_TESTS)
     enable_testing()
     add_executable(
         bmw_remote_tests
-        tests/test_main.cpp
-        tools/sandbox_session.cpp)
+        ${BMW_REMOTE_TESTS_SOURCES}
+        ${BMW_REMOTE_SANDBOX_SOURCES})
     target_link_libraries(
         bmw_remote_tests PRIVATE bmw_remote_simulation bmw_remote_host_tools)
     add_test(NAME bmw_remote_tests COMMAND bmw_remote_tests)

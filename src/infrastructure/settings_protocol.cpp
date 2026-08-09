@@ -1,5 +1,7 @@
 #include "bmw_remote/infrastructure/settings_protocol.hpp"
 
+#include "bmw_remote/infrastructure/crc32.hpp"
+
 namespace bmw::remote::infrastructure {
 namespace {
 
@@ -41,21 +43,6 @@ void writeU32(
            (static_cast<std::uint32_t>(source[1]) << 8U) |
            (static_cast<std::uint32_t>(source[2]) << 16U) |
            (static_cast<std::uint32_t>(source[3]) << 24U);
-}
-
-[[nodiscard]] std::uint32_t crc32(
-    const std::uint8_t* const data,
-    const std::size_t size) noexcept {
-    std::uint32_t crc = 0xFFFFFFFFU;
-    for (std::size_t index = 0U; index < size; ++index) {
-        crc ^= data[index];
-        for (std::uint8_t bit = 0U; bit < 8U; ++bit) {
-            const std::uint32_t mask =
-                static_cast<std::uint32_t>(0U - (crc & 1U));
-            crc = (crc >> 1U) ^ (0xEDB88320U & mask);
-        }
-    }
-    return crc ^ 0xFFFFFFFFU;
 }
 
 [[nodiscard]] SettingsProtocolFrame responseFor(
@@ -180,9 +167,7 @@ SettingsProtocolFrame SettingsProtocolService::handle(
 
     const bool payloadSizeValid =
         request.type == SettingsMessageType::WriteRequest
-            ? (request.payloadSize == UserSettingsPayloadSize ||
-               request.payloadSize == FeatureUserSettingsPayloadSize ||
-               request.payloadSize == LegacyUserSettingsPayloadSize)
+            ? request.payloadSize == UserSettingsPayloadSize
             : request.payloadSize == 0U;
     if (request.status != SettingsProtocolStatus::Ok || !payloadSizeValid) {
         return responseFor(

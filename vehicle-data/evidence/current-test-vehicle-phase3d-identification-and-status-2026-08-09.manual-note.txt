@@ -1,0 +1,36 @@
+Observation réelle anonymisée — Phase 3D
+Date de consignation : 2026-08-09
+Véhicule : BMW E90 berline, moteur N47, boîte automatique, date véhicule ISTA 2008/09
+
+CAS — ISTA / Tool32
+- SGBD : CAS.PRG ; bus : K-CAN
+- BMW part number : 9147226
+- coding index : 9 ; diagnosis index : 1696 ; variant index : 21313
+- function software : 2.4.8 ; operating software : 3.3.0
+- hardware number : C4 ; production date : 04.02.2009 ; supplier : Siemens
+- status_fzg_zustand / KLEMMENSTATUS observé :
+  64 réveillé clé absente contact coupé ; 65 clé insérée sans KL15 ;
+  69 KL15 actif moteur arrêté ; 69 moteur tournant ; 64 après arrêt/contact coupé.
+- conclusion : 69 confirme KL15 mais ne distingue jamais moteur arrêté/tournant.
+
+EGS — ISTA / Tool32
+- SGBD : GS19D.PRG ; bus : PT-CAN
+- BMW part number : 7591971 ; EGS HW number : 1267017192
+- coding index : 5 ; diagnosis index : 516 ; variant index : 21325
+- function software : 215.64.1 ; hardware number : 10 ; operating software : 2.3.10
+- programmed module part number : 000007603531
+- production date : 21.01.2009 ; program version : 0479SA0T641Z ; supplier : Bosch
+- status_getriebeposition : P->P, R->R, N->N, D->D, répété manuellement.
+- ISTA Transmission position : P->R, R->N, N->D, D->D : UNTRUSTED ici.
+- ISTA Actual gear : P->1st, R->Reverse, N->1st, D->1st : impropre à distinguer P/N.
+- ISTA Brake actuated : relâchée->not operated, appuyée->operated : OBSERVED/cohérent.
+
+DDE — ISTA / Tool32
+- groupe : D_MOTOR.GRP ; variante : D71N47C0 ; PRG : D71N47C0.PRG ; bus : PT-CAN
+- BMW part number : 7823420 ; data record : O_71RKC112A
+- production date : 10.02.2009 ; programming date : 17.02.2009
+- software version : 1037396565 ; supplier : Bosch
+- status_motordrehzahl : moteur arrêté 0 rpm ; ralenti environ 780 rpm.
+
+Cette note retranscrit les mesures fournies par le propriétaire. Aucun export
+brut, VIN ou identifiant CAN n'est joint à cette preuve.

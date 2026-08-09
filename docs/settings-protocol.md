@@ -35,7 +35,7 @@ pas une protection cryptographique.
 | Valeur | Message | Payload |
 |---:|---|---:|
 | `0x01` | lecture des réglages | 0 |
-| `0x02` | écriture des réglages | 40, ou 24/32 pour migration V1/V2 |
+| `0x02` | écriture des réglages | 40 |
 | `0x03` | identification du boîtier | 0 |
 | `0x81` | réponse de lecture | 40 si succès |
 | `0x82` | réponse d'écriture | 0 |
@@ -88,9 +88,8 @@ Le payload fixe est partagé par le journal persistant et le protocole :
 Le décodage ne suffit pas à accepter ces valeurs :
 `validateUserSettings()` doit aussi accepter l'ensemble.
 
-Le décodeur accepte encore les payloads V1 de 24 octets et V2 de 32 octets. Les
-champs absents prennent leurs valeurs par défaut. Les lectures et nouvelles
-écritures utilisent toujours le payload de 40 octets.
+Le décodeur accepte uniquement le payload pré-V1 courant de 40 octets. Les
+anciens formats de développement de 24 et 32 octets sont rejetés.
 
 ## Statuts applicatifs
 

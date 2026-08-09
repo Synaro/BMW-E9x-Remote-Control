@@ -1,32 +1,55 @@
-#if defined(ARDUINO)
+#if defined(ESP_PLATFORM)
 
-#include <Arduino.h>
-
+#include <array>
 #include <cstddef>
 #include <cstdint>
 
 #include "bmw_remote/application/controller.hpp"
-#include "bmw_remote/infrastructure/arduino_settings.hpp"
+#if __has_include("config/bench-twai.local.hpp")
+#include "config/bench-twai.local.hpp"
+#endif
+#include "bmw_remote/infrastructure/bench_twai_config.hpp"
+#include "bmw_remote/infrastructure/esp_idf_hal.hpp"
+#include "bmw_remote/infrastructure/esp_idf_settings.hpp"
+#include "bmw_remote/infrastructure/esp_idf_twai_receiver.hpp"
 #include "bmw_remote/infrastructure/settings_storage.hpp"
 #include "bmw_remote/infrastructure/settings_stream.hpp"
+
+#include "esp_idf_version.h"
+
+static_assert(
+    ESP_IDF_VERSION == ESP_IDF_VERSION_VAL(5, 5, 0),
+    "The ESP32-S3 reference build requires the pinned ESP-IDF 5.5.0");
 
 namespace {
 
 using bmw::remote::application::ControllerState;
-using bmw::remote::infrastructure::ArduinoEepromSettingsStorage;
-using bmw::remote::infrastructure::ArduinoStreamSettingsTransport;
+using bmw::remote::infrastructure::EspIdfMonotonicTimeHal;
+using bmw::remote::infrastructure::EspIdfNvsSettingsStorage;
+using bmw::remote::infrastructure::EspIdfGpioHal;
+using bmw::remote::infrastructure::EspIdfTwaiReceiver;
+using bmw::remote::infrastructure::EspIdfUsbSerialJtagSettingsTransport;
+using bmw::remote::infrastructure::GpioTwaiSafetyHal;
 using bmw::remote::infrastructure::JournaledUserSettingsStore;
+using bmw::remote::infrastructure::SettingsHardwareTarget;
 using bmw::remote::infrastructure::SettingsProtocolAccess;
 using bmw::remote::infrastructure::SettingsProtocolEndpoint;
-using bmw::remote::infrastructure::SettingsHardwareTarget;
 using bmw::remote::infrastructure::SettingsStreamConfig;
 using bmw::remote::infrastructure::settingsPrototypeIdentity;
+using bmw::remote::infrastructure::compiledBenchOnlyTwaiConfiguration;
 
-constexpr std::size_t MaximumBytesPerLoop = 64U;
+constexpr std::size_t MaximumBytesPerCycle = 64U;
+constexpr std::uint32_t UsbReadTimeoutMs = 10U;
+constexpr std::uint32_t IdleDelayMs = 1U;
+constexpr auto BenchTwaiConfig = compiledBenchOnlyTwaiConfiguration();
 
-ArduinoEepromSettingsStorage settingsStorage;
+EspIdfNvsSettingsStorage settingsStorage;
 JournaledUserSettingsStore settingsStore{settingsStorage};
-ArduinoStreamSettingsTransport settingsTransport{Serial};
+EspIdfUsbSerialJtagSettingsTransport settingsTransport;
+EspIdfMonotonicTimeHal monotonicTime;
+EspIdfGpioHal gpio;
+GpioTwaiSafetyHal twaiSafety{gpio, BenchTwaiConfig.safety};
+EspIdfTwaiReceiver twaiReceiver{twaiSafety, BenchTwaiConfig.acquisition};
 SettingsProtocolEndpoint settingsEndpoint{
     settingsStore,
     settingsTransport,
@@ -34,43 +57,47 @@ SettingsProtocolEndpoint settingsEndpoint{
     settingsPrototypeIdentity(SettingsHardwareTarget::Esp32S3DevKitC1)};
 
 [[nodiscard]] SettingsProtocolAccess localUsbAccess() noexcept {
-    // This firmware contains no vehicle runtime or actuator adapter. Its state
-    // is therefore permanently Idle, and physical access to the dedicated USB
-    // connector is the local authorization boundary for this bench target.
+    // There is no vehicle runtime or actuator adapter in Phase 3.
+    // Physical access to the bench USB connector remains the local boundary.
     return SettingsProtocolAccess{true, ControllerState::Idle};
 }
 
 void serviceUsbSettings() noexcept {
+    std::array<std::uint8_t, MaximumBytesPerCycle> receivedBytes{};
+    const std::size_t received = settingsTransport.read(
+        receivedBytes.data(),
+        receivedBytes.size(),
+        UsbReadTimeoutMs);
     const SettingsProtocolAccess access = localUsbAccess();
-    std::size_t consumed = 0U;
-    while (Serial.available() > 0 && consumed < MaximumBytesPerLoop) {
-        const int value = Serial.read();
-        if (value < 0) {
-            break;
-        }
+    for (std::size_t index = 0U; index < received; ++index) {
         const auto result = settingsEndpoint.consume(
-            static_cast<std::uint8_t>(value),
-            static_cast<std::uint32_t>(millis()),
+            receivedBytes[index],
+            monotonicTime.nowMs(),
             access);
         (void)result;
-        ++consumed;
     }
 
-    const auto pollResult =
-        settingsEndpoint.poll(static_cast<std::uint32_t>(millis()));
+    const auto pollResult = settingsEndpoint.poll(monotonicTime.nowMs());
     (void)pollResult;
 }
 
 }  // namespace
 
-void setup() {
-    Serial.begin(115200);
+extern "C" void app_main() {
     (void)settingsStorage.begin();
-}
+    const bool transportReady = settingsTransport.begin();
+    if (BenchTwaiConfig.enabled) {
+        // A local BENCH_ONLY configuration is required. Invalid pins or unsafe
+        // hardware barriers cause start() to fail before installing TWAI.
+        static_cast<void>(twaiReceiver.start());
+    }
 
-void loop() {
-    serviceUsbSettings();
-    delay(1U);
+    while (true) {
+        if (transportReady) {
+            serviceUsbSettings();
+        }
+        monotonicTime.delayMs(IdleDelayMs);
+    }
 }
 
 #else

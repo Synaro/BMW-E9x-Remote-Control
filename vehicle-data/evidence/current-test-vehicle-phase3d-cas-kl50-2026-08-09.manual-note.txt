@@ -1,0 +1,29 @@
+Observation réelle anonymisée — CAS KLEMMENSTATUS / KL50
+Date de consignation : 2026-08-09
+
+Source : Tool32 Job-Info et observation véhicule
+SGBD/PRG : CAS.PRG
+Job : status_fzg_zustand
+Champ : KLEMMENSTATUS
+Contexte : démarrage OEM normal de la BMW E90 de test
+
+Le Job-Info documente l'octet KLEMMENSTATUS :
+- bits 0-1 : Klemme R ;
+- bits 2-3 : Klemme 15 ;
+- bits 4-5 : Klemme 50 ;
+- bits 6-7 : validité clé.
+
+Pour chaque terminal : 00 = OFF, 01 = ON et 11 = invalide.
+
+Séquence observée, sans timestamps fournis :
+1. avant activation du démarreur : 69 / 0x45 ; KL15 ON, KL50 OFF ;
+2. pendant activation du démarreur : 85 / 0x55 ; KL15 ON, KL50 ON ;
+3. après relâchement de KL50 : 69 / 0x45 ; KL15 ON, KL50 OFF.
+
+Conclusion limitée à la preuve : CAS.PRG/status_fzg_zustand expose un état
+KL50 cohérent avec OFF -> ON -> OFF pendant ce démarrage OEM. Le signal est
+confirmé en lecture pour cette observation réelle.
+
+Cette preuve ne détermine ni le mécanisme de commande remote-start, ni la
+source de demande de démarrage OEM, ni l'autorisation de démarrage, ni un ID
+CAN, ni une commande diagnostique, ni un contournement d'antidémarrage.
