@@ -101,6 +101,17 @@
       "sha256": null,
       "contains_personal_data": false,
       "description": "Curated raw excerpt, source digest, and provenance for one read-only sequential CAS/DDE full-cycle acquisition; the complete raw trace remains outside Git."
+    },
+    {
+      "evidence_id": "CURRENT_TEST_VEHICLE_PHASE3D_SGBD_START_CATALOG_2026_08_09",
+      "kind": "MANUAL_NOTE",
+      "relative_path": "current-test-vehicle-phase3d-sgbd-start-observation-catalog-2026-08-09.manual-note.txt",
+      "captured_at": "2026-08-09T23:00:08+02:00",
+      "tool_name": "TestO static SGBD export",
+      "tool_version": "2.0",
+      "sha256": null,
+      "contains_personal_data": false,
+      "description": "Provenance and SHA-256 digests for the local CAS/DDE static exports used to derive the read-only start-observation signal catalog; full exports remain outside Git."
     }
   ]
 }

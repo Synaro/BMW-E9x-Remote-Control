@@ -1,0 +1,48 @@
+{
+  "schema_version": 1,
+  "catalog_id": "CURRENT_TEST_VEHICLE_START_OBSERVATION_SIGNALS_2026_08_09",
+  "read_only": true,
+  "action_capability": false,
+  "runtime_ews_isn_dependency": false,
+  "evidence_index": "../evidence/current-test-vehicle.evidence-index.json",
+  "evidence_ref": "CURRENT_TEST_VEHICLE_PHASE3D_SGBD_START_CATALOG_2026_08_09",
+  "provenance": {
+    "model": "Each signal's ecu, job and result resolve to the matching source export below; evidence_ref records the extraction review.",
+    "ecu_source_map": {"CAS":"CAS_STATIC_EXPORT.txt","DDE":"D71N47C0_STATIC_EXPORT.txt"}
+  },
+  "source_exports": [
+    {"file":"CAS_STATIC_EXPORT.txt","ecu":"CAS","sgbd_prg":"CAS.PRG","sha256":"1087852786672E9A4C4D058B0371BF80EBE4A7034248F489BB468D516F4F387F"},
+    {"file":"D71N47C0_STATIC_EXPORT.txt","ecu":"DDE","sgbd_prg":"D71N47C0.PRG","sha256":"99CDEC8827867F862807CA46822A7BBDD74C6EADDFCAF98220C848169E9C5E24"},
+    {"file":"CAS_DDE_RELEVANT_TABLES.txt","ecu":"CAS_DDE_TABLES","sgbd_prg":null,"sha256":"CA7FD19A4AC54FA1969B861DA063D2FD5A6AAD2A6AF65618AE049FE9C08C3DD2"}
+  ],
+  "signals": [
+    {"signal":"SST_A","ecu":"CAS","job":"STATUS_CAS_DIAGNOSE","result":"IN_ZAS_SSTADISC","type":"unsigned char","documented_meaning":"Start/stop button Hall sensor A status","valid_values":{"0":"not pressed","1":"pressed"},"qualification":"DOCUMENTED_NOT_OBSERVED","runtime_use":"OBSERVATION_ONLY"},
+    {"signal":"SST_B","ecu":"CAS","job":"STATUS_CAS_DIAGNOSE","result":"IN_ZAS_SSTBDISC","type":"unsigned char","documented_meaning":"Start/stop button Hall sensor B status","valid_values":{"0":"not pressed","1":"pressed"},"qualification":"DOCUMENTED_NOT_OBSERVED","runtime_use":"OBSERVATION_ONLY"},
+    {"signal":"KEY_RAST","ecu":"CAS","job":"STATUS_CAS_DIAGNOSE","result":"IN_ZAS_RASTDISC","type":"unsigned char","documented_meaning":"Key latch Hall sensor status","valid_values":{"0":"key not inserted","1":"key inserted and latched"},"qualification":"DOCUMENTED_NOT_OBSERVED","runtime_use":"OBSERVATION_ONLY"},
+    {"signal":"BRAKE","ecu":"CAS","job":"STATUS_CAS_DIAGNOSE","result":"IN_BLS_DISC","type":"unsigned char","documented_meaning":"Brake-light switch input","valid_values":{"0":"not pressed","1":"pressed"},"qualification":"DOCUMENTED_NOT_OBSERVED","runtime_use":"OBSERVATION_ONLY"},
+    {"signal":"P_N_OR_CLUTCH","ecu":"CAS","job":"STATUS_CAS_DIAGNOSE","result":"IN_PK_DISC","type":"unsigned char","documented_meaning":"P/N or clutch input","valid_values":{"0":"not engaged or pressed","1":"engaged or pressed"},"qualification":"DOCUMENTED_NOT_OBSERVED","runtime_use":"OBSERVATION_ONLY"},
+    {"signal":"MFS","ecu":"CAS","job":"STATUS_CAS_DIAGNOSE","result":"IN_MFS_DISC","type":"unsigned char","documented_meaning":"Remote-engine-start or automatic-engine-start input","valid_values":{"0":"inactive","1":"active"},"qualification":"DOCUMENTED_NOT_OBSERVED","runtime_use":"OBSERVATION_ONLY"},
+    {"signal":"START_DME","ecu":"CAS","job":"STATUS_CAS_DIAGNOSE","result":"IN_KSTART_DISC","type":"unsigned char","documented_meaning":"Comfort-start START_DME line input","valid_values":{"0":"inactive","1":"active"},"qualification":"DOCUMENTED_NOT_OBSERVED","runtime_use":"OBSERVATION_ONLY"},
+    {"signal":"START_RELEASE","ecu":"CAS","job":"STATUS_CAS_DIAGNOSE","result":"KS_ANL_SPERRE","type":"unsigned char","documented_meaning":"Documented start-release status; export does not establish action semantics or polarity beyond 0/1","valid_values":{"0":"documented range value","1":"documented range value"},"qualification":"DOCUMENTED_NOT_OBSERVED","runtime_use":"OBSERVATION_ONLY_NOT_SOFTWARE_AUTHORIZATION"},
+    {"signal":"KLEMMENSTATUS","ecu":"CAS","job":"STATUS_FZG_ZUSTAND","result":"KLEMMENSTATUS","type":"unsigned char","documented_meaning":"Packed terminal R, KL15, KL50 and key-validity status","valid_values":{"terminal_pairs":"00 OFF; 01 ON; 11 invalid; 10 not documented for terminals","key_pair":"00 no key; 01 valid key; 10 invalid or missing key; 11 not documented"},"qualification":"CONFIRMED_TEST_VEHICLE_VALUES_0X40_0X41_0X45_0X55","runtime_use":"OBSERVATION_ONLY"},
+    {"signal":"KL15_ENABLE_INHIBITOR","ecu":"CAS","job":"STATUS_KLEMMENVERHINDERER","result":"STAT_KL15_EIN_VERHINDERER","type":"unsigned char","documented_meaning":"Current reason preventing an SST-requested KL15 switch-on","valid_values":{"0":"no blocker","1":"current key invalid","14":"ELV control or query error","15":"ELV error counter maximum","16":"key not latched; emergency function only"},"qualification":"DOCUMENTED_NOT_OBSERVED","runtime_use":"OBSERVATION_ONLY_NO_BYPASS"},
+    {"signal":"KL15_DISABLE_INHIBITOR","ecu":"CAS","job":"STATUS_KLEMMENVERHINDERER","result":"STAT_KL15_AUS_VERHINDERER","type":"unsigned char","documented_meaning":"Current reason preventing an SST-requested KL15 switch-off","valid_values":{"0":"no blocker","3":"vehicle speed detected; emergency function only","4":"vehicle speed implausible via hardware and CAN; emergency function only","10":"drive engagement detected; P or N not engaged; emergency function only"},"qualification":"DOCUMENTED_NOT_OBSERVED","runtime_use":"OBSERVATION_ONLY_NO_BYPASS"},
+    {"signal":"KL50_ENABLE_INHIBITOR","ecu":"CAS","job":"STATUS_KLEMMENVERHINDERER","result":"STAT_KL50_EIN_VERHINDERER","type":"unsigned char","documented_meaning":"Current reason preventing an SST-requested KL50 activation","valid_values":{"0":"no blocker","1":"no valid key","5":"brake not pressed","6":"brake implausible and brake pressure insufficient or invalid","7":"clutch not pressed","8":"clutch implausible","9":"DME/DDE abort; engine running or no engine start allowed via CAN","10":"drive engagement detected; P or N not engaged","12":"TRSP_SK not locked","13":"KL50 assembly mode","14":"ELV control or query error","15":"ELV error counter maximum","16":"key not latched; emergency function only"},"qualification":"DOCUMENTED_NOT_OBSERVED","runtime_use":"OBSERVATION_ONLY_NO_BYPASS"},
+    {"signal":"KL15_SHUTDOWN_BRAKE_FLAG","ecu":"CAS","job":"STATUS_KL15_ABSCHALTUNG","result":"STAT_ABSCHALTVERHINDERER_BREMSE_AKTIV","type":"unsigned int","documented_meaning":"KL15 automatic-shutdown inhibitor named brake pressed","valid_values":{"0":"inactive","1":"active"},"qualification":"NOT_SUITABLE_AS_LIVE_SIGNAL","runtime_use":"CATALOG_ONLY"},
+    {"signal":"KL15_SHUTDOWN_SELECTOR_FLAG","ecu":"CAS","job":"STATUS_KL15_ABSCHALTUNG","result":"STAT_ABSCHALTVERHINDERER_WAEHLHEBEL_NICHT_IN_P_AKTIV","type":"unsigned int","documented_meaning":"KL15 automatic-shutdown inhibitor named selector not in P","valid_values":{"0":"inactive","1":"active"},"qualification":"NOT_SUITABLE_AS_LIVE_SIGNAL","runtime_use":"CATALOG_ONLY"},
+    {"signal":"ENGINE_RPM","ecu":"DDE","job":"STATUS_MOTORDREHZAHL","result":"STAT_MOTORDREHZAHL_WERT","type":"real","documented_meaning":"Engine speed measurement value","valid_values":{"unit_result":"STAT_MOTORDREHZAHL_EINH"},"qualification":"CONFIRMED_TEST_VEHICLE","runtime_use":"OBSERVATION_ONLY"},
+    {"signal":"MSA_STATUS","ecu":"DDE","job":"STATUS_MSA","result":"STAT_STAT_MSA","type":"unsigned long","documented_meaning":"MSA status and function switch-off flags","valid_values":{"minimum":0,"maximum":4294967295},"qualification":"DOCUMENTED_NOT_FUNCTIONALLY_IDENTIFIED","runtime_use":"CATALOG_ONLY"},
+    {"signal":"MSA_ACTIVE_READY_INHIBITORS","ecu":"DDE","job":"STATUS_MSA","result":"STAT_STAT_MSAAV","type":"unsigned long","documented_meaning":"MSA active, ready and switch-off inhibitors bitfield","valid_values":{"minimum":0,"maximum":4294967295},"qualification":"OBSERVED_BITS_NOT_FUNCTIONALLY_IDENTIFIED","runtime_use":"CATALOG_ONLY"},
+    {"signal":"MSA_SWITCH_ON_INHIBITORS","ecu":"DDE","job":"STATUS_MSA","result":"STAT_STAT_MSAEV","type":"unsigned long","documented_meaning":"MSA switch-on inhibitors bitfield","valid_values":{"minimum":0,"maximum":4294967295},"qualification":"OBSERVED_BITS_NOT_FUNCTIONALLY_IDENTIFIED","runtime_use":"CATALOG_ONLY"},
+    {"signal":"MSA_SWITCH_OFF_REQUESTERS","ecu":"DDE","job":"STATUS_MSA","result":"STAT_STAT_MSAAA","type":"unsigned long","documented_meaning":"MSA switch-off requesters bitfield","valid_values":{"minimum":0,"maximum":4294967295},"qualification":"OBSERVED_BITS_NOT_FUNCTIONALLY_IDENTIFIED","runtime_use":"CATALOG_ONLY"},
+    {"signal":"MSA_SWITCH_ON_REQUESTERS","ecu":"DDE","job":"STATUS_MSA","result":"STAT_STAT_MSAEA","type":"unsigned long","documented_meaning":"MSA switch-on requesters bitfield","valid_values":{"minimum":0,"maximum":4294967295},"qualification":"OBSERVED_NO_TRANSITION_NOT_FUNCTIONALLY_IDENTIFIED","runtime_use":"CATALOG_ONLY"}
+  ],
+  "excluded_runtime_categories": [
+    "WRITE_OR_CONTROL_JOBS",
+    "AUTHENTICATION_OR_PROGRAMMING_JOBS",
+    "EWS_OR_ISN_RUNTIME_DATA",
+    "SECRET_KEY_OR_TRANSPONDER_CREDENTIALS",
+    "CAN_IDENTIFIERS_OR_PAYLOADS"
+  ],
+  "notes": "Catalog entries describe read-only diagnostic documentation and qualification only. Existence in an SGBD does not validate a signal on the test vehicle."
+}

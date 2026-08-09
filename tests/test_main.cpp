@@ -14,7 +14,9 @@
 #include "bmw_remote/application/profile_readiness.hpp"
 #include "bmw_remote/application/safety_policy.hpp"
 #include "bmw_remote/application/user_settings.hpp"
+#include "bmw_remote/application/vehicle_start_observer.hpp"
 #include "bmw_remote/domain/reference_profiles.hpp"
+#include "bmw_remote/domain/start_observation.hpp"
 #include "bmw_remote/domain/vehicle_profile.hpp"
 #include "bmw_remote/domain/vehicle_state.hpp"
 #include "bmw_remote/infrastructure/actuator_safety_supervisor.hpp"
@@ -542,6 +544,7 @@ void testCanLockAdapterRejectsInvalidBindingsAndCounterAnomalies() {
 
 #include "cases/feature_and_telemetry_tests.inc"
 #include "cases/can_core_tests.inc"
+#include "cases/vehicle_start_observer_tests.inc"
 
 void testDefaultUserSettingsAreValidAndPreserved() {
     const UserSettings settings{};
@@ -3414,6 +3417,12 @@ int main() {
         {"TWAI 100 kbit bench config", testTwaiListenOnlyConfigurationAccepts100KbitBenchRate},
         {"TWAI 500 kbit bench config", testTwaiListenOnlyConfigurationAccepts500KbitBenchRate},
         {"capture V2 manifest", testCaptureV2SchemaAndManifestRemainReceiveOnly},
+        {"KLEMMENSTATUS qualified decoder", testKlemmenstatusDecoderPreservesDocumentedAndUnvalidatedStates},
+        {"CAS start inhibitor decoder", testCasInhibitorsUseExactDocumentedValuesAndCannotBeBypassed},
+        {"OEM_START_SYNC_01 observer", testObserverReconstructsOemStartSync01WithoutInventingMissingSignals},
+        {"OEM_FULL_CYCLE_01 observer", testObserverReconstructsOemFullCycle01},
+        {"start observer unknown handling", testObserverFailsUnknownOnCommunicationAndInvalidKlemmenstatus},
+        {"CAS signals remain observational", testDocumentedCasSignalsRemainObservationsOnly},
         {"default user settings", testDefaultUserSettingsAreValidAndPreserved},
         {"feature catalog stability", testFeatureCatalogHasStableCompleteIdentifiers},
         {"feature request mask", testFeatureRequestsDefaultOffAndRejectUnknownBits},

@@ -54,7 +54,7 @@ class VehicleDataTests(unittest.TestCase):
 
     def test_all_versioned_schemas_are_valid_json_schema_documents(self):
         schema_paths = sorted((DATA / "schema").glob("*.schema.json"))
-        self.assertEqual(16, len(schema_paths))
+        self.assertEqual(17, len(schema_paths))
         for path in schema_paths:
             schema = json.loads(path.read_text(encoding="utf-8"))
             self.assertEqual("https://json-schema.org/draft/2020-12/schema", schema["$schema"])

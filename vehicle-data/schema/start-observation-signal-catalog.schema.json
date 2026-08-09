@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://synaro.example/schemas/start-observation-signal-catalog.schema.json",
+  "title": "Read-only OEM start observation signal catalog",
+  "type": "object",
+  "required": ["schema_version", "catalog_id", "read_only", "action_capability", "runtime_ews_isn_dependency", "evidence_ref", "source_exports", "signals", "excluded_runtime_categories"],
+  "properties": {
+    "schema_version": {"const": 1},
+    "catalog_id": {"type": "string", "minLength": 1},
+    "read_only": {"const": true},
+    "action_capability": {"const": false},
+    "runtime_ews_isn_dependency": {"const": false},
+    "signals": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["signal", "ecu", "job", "result", "type", "documented_meaning", "valid_values", "qualification", "runtime_use"]
+      }
+    }
+  }
+}

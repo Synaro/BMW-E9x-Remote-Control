@@ -18,6 +18,7 @@ from vehicle_data_validation import (
     validate_cas_kl50_observation,
     validate_cas_kl50_timing_observation,
     validate_cas_dde_diagnostic_correlation,
+    validate_start_observation_signal_catalog,
     validate_cas_dde_full_cycle,
     validate_cas_dde_start_comparison,
     validate_evidence_index,
@@ -41,6 +42,7 @@ SYNCHRONIZED_START_PATH = DATA / "observations" / "current-test-vehicle-phase3d-
 KL50_IFH_PATH = DATA / "observations" / "current-test-vehicle-phase3d-cas-kl50-ifh-level1-2026-08-09.json"
 KL50_IFH_LEVEL3_PATH = DATA / "observations" / "current-test-vehicle-phase3d-cas-kl50-ifh-level3-2026-08-09.json"
 CAS_DDE_CORRELATION_PATH = DATA / "observations" / "current-test-vehicle-phase3d-testo2-cas-dde-correlation-2026-08-09.json"
+START_SIGNAL_CATALOG_PATH = DATA / "catalog" / "current-test-vehicle-start-observation-signals.json"
 CAS_DDE_FULL_CYCLE_PATH = DATA / "observations" / "current-test-vehicle-phase3d-testo2-cas-dde-full-cycle-2026-08-09.json"
 CAS_DDE_START_COMPARISON_PATH = DATA / "observations" / "current-test-vehicle-phase3d-testo2-start-comparison-2026-08-09.json"
 EXAMPLE_EVIDENCE_PATH = DATA / "evidence" / "EXAMPLE_ONLY.evidence-index.json"
@@ -66,6 +68,7 @@ class Phase3DVehicleDataTests(unittest.TestCase):
         self.cas_dde_correlation = load_json_object(CAS_DDE_CORRELATION_PATH)
         self.cas_dde_full_cycle = load_json_object(CAS_DDE_FULL_CYCLE_PATH)
         self.cas_dde_start_comparison = load_json_object(CAS_DDE_START_COMPARISON_PATH)
+        self.start_signal_catalog = load_json_object(START_SIGNAL_CATALOG_PATH)
         self.status_by_id = {
             observation["observation_id"]: observation
             for observation in self.status["observations"]
@@ -86,6 +89,7 @@ class Phase3DVehicleDataTests(unittest.TestCase):
         validate_cas_kl50_observation(self.kl50_ifh, self.evidence_ids)
         validate_cas_kl50_timing_observation(self.kl50_ifh_level3, self.evidence_ids)
         validate_cas_dde_diagnostic_correlation(self.cas_dde_correlation, self.evidence_ids)
+        validate_start_observation_signal_catalog(self.start_signal_catalog, self.evidence_ids)
         validate_cas_dde_full_cycle(self.cas_dde_full_cycle, self.evidence_ids)
         validate_cas_dde_start_comparison(self.cas_dde_start_comparison)
 
@@ -547,6 +551,43 @@ class Phase3DVehicleDataTests(unittest.TestCase):
             self.assertEqual(0, observation["raw_value"])
             self.assertEqual("NOT_SUITABLE_AS_LIVE_SIGNAL", observation["interpreted_value"])
             self.assertEqual("PROHIBITED", observation["precondition_eligibility"])
+
+    def test_start_signal_catalog_preserves_read_only_runtime_boundary(self):
+        catalog = self.start_signal_catalog
+        self.assertTrue(catalog["read_only"])
+        self.assertFalse(catalog["action_capability"])
+        self.assertFalse(catalog["runtime_ews_isn_dependency"])
+        self.assertIn("EWS_OR_ISN_RUNTIME_DATA", catalog["excluded_runtime_categories"])
+        self.assertIn("CAN_IDENTIFIERS_OR_PAYLOADS", catalog["excluded_runtime_categories"])
+
+        start_release = next(
+            signal for signal in catalog["signals"] if signal["signal"] == "START_RELEASE"
+        )
+        self.assertEqual("DOCUMENTED_NOT_OBSERVED", start_release["qualification"])
+        self.assertEqual(
+            "OBSERVATION_ONLY_NOT_SOFTWARE_AUTHORIZATION", start_release["runtime_use"]
+        )
+
+    def test_start_signal_catalog_rejects_action_or_ews_runtime_dependency(self):
+        modified = copy.deepcopy(self.start_signal_catalog)
+        modified["action_capability"] = True
+        with self.assertRaisesRegex(ValidationError, "strictly read-only"):
+            validate_start_observation_signal_catalog(modified, self.evidence_ids)
+
+        modified = copy.deepcopy(self.start_signal_catalog)
+        modified["runtime_ews_isn_dependency"] = True
+        with self.assertRaisesRegex(ValidationError, "EWS/ISN"):
+            validate_start_observation_signal_catalog(modified, self.evidence_ids)
+
+    def test_start_signal_catalog_rejects_inhibitor_bypass_semantics(self):
+        modified = copy.deepcopy(self.start_signal_catalog)
+        inhibitor = next(
+            signal for signal in modified["signals"]
+            if signal["signal"] == "KL50_ENABLE_INHIBITOR"
+        )
+        inhibitor["runtime_use"] = "BYPASS_ALLOWED"
+        with self.assertRaisesRegex(ValidationError, "action-capable use is forbidden"):
+            validate_start_observation_signal_catalog(modified, self.evidence_ids)
 
     def test_synchronized_bitfields_preserve_decimal_hex_binary_and_changed_bits(self):
         bit_events = {

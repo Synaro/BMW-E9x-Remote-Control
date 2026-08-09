@@ -8,7 +8,9 @@ core|src/application/profile_readiness.cpp
 core|src/application/safety_policy.cpp
 core|src/application/telemetry_monitor.cpp
 core|src/application/user_settings.cpp
+core|src/application/vehicle_start_observer.cpp
 core|src/domain/reference_profiles.cpp
+core|src/domain/start_observation.cpp
 core|src/domain/vehicle_profile.cpp
 core|src/domain/vehicle_signal.cpp
 core|src/infrastructure/can_lock_command_adapter.cpp

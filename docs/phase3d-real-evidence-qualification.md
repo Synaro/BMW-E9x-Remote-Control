@@ -251,6 +251,26 @@ La première timeline versionnée conserve seulement l'ordre et les RPM fournis,
 avec `timestamp_basis: UNAVAILABLE`; la timeline RPM/MSA distincte conserve les
 timestamps synchronisés explicitement fournis.
 
+## Observateur OEM read-only
+
+Les exports statiques locaux `CAS.PRG` et `D71N47C0.PRG` alimentent désormais
+un catalogue machine-readable limité aux résultats de statut utiles. Les jobs
+d'écriture, de contrôle, d'authentification, de programmation et les données
+EWS/ISN sont exclus du runtime. L'existence d'un résultat dans le SGBD vaut
+`DOCUMENTED_NOT_OBSERVED`, jamais validation sur le véhicule.
+
+Le domaine définit `StartSignalSnapshot` avec un intervalle début/fin propre à
+chaque sous-acquisition. Les quatre jobs CAS/DDE restent donc séquentiels et ne
+sont jamais réduits à un timestamp unique. `VehicleStartObserver`, dans la
+couche application, produit seulement des états suffixés `Observed` et les
+preuves signal/source/intervalle associées. Il n'expose aucune action.
+
+Les sessions `OEM_START_SYNC_01` et `OEM_FULL_CYCLE_01` qualifient uniquement
+les reconnaissances déjà observées : `0x55` avec RPM non nul, retour
+`0x55 -> 0x45` avec rotation persistante, stabilisation observée sur plusieurs
+lectures, puis `0x45 -> 0x40` et décroissance jusqu'à 0. Aucun seuil RPM
+universel n'est introduit.
+
 ## Inconnues et blocages actuels
 
 - fichiers TestO bruts : analysés et hachés, mais volontairement conservés hors Git ;

@@ -1773,6 +1773,107 @@ def validate_import_mapping(document: Mapping[str, Any], evidence_ids: set[str])
     _validate_evidence_ref(document["evidence_ref"], evidence_ids, "mapping.evidence_ref")
 
 
+def validate_start_observation_signal_catalog(
+    document: Mapping[str, Any], evidence_ids: set[str]
+) -> None:
+    location = "start_observation_signal_catalog"
+    _required(
+        document,
+        {
+            "schema_version", "catalog_id", "read_only", "action_capability",
+            "runtime_ews_isn_dependency", "evidence_index", "evidence_ref",
+            "provenance", "source_exports", "signals", "excluded_runtime_categories", "notes",
+        },
+        location,
+    )
+    _require_schema_v1(document, location)
+    _require_nonempty_string(document["catalog_id"], f"{location}.catalog_id")
+    if document["read_only"] is not True or document["action_capability"] is not False:
+        raise ValidationError(f"{location}: catalog must remain strictly read-only")
+    if document["runtime_ews_isn_dependency"] is not False:
+        raise ValidationError(f"{location}: EWS/ISN cannot be a runtime dependency")
+    _validate_evidence_ref(document["evidence_ref"], evidence_ids, f"{location}.evidence_ref")
+    provenance = _require_object(document["provenance"], f"{location}.provenance")
+    _required(provenance, {"model", "ecu_source_map"}, f"{location}.provenance")
+    _require_nonempty_string(provenance["model"], f"{location}.provenance.model")
+    if provenance["ecu_source_map"] != {
+        "CAS": "CAS_STATIC_EXPORT.txt", "DDE": "D71N47C0_STATIC_EXPORT.txt"
+    }:
+        raise ValidationError(f"{location}.provenance.ecu_source_map: unexpected source mapping")
+
+    exports = _require_array(document["source_exports"], f"{location}.source_exports")
+    expected_hashes = {
+        "CAS_STATIC_EXPORT.txt": "1087852786672E9A4C4D058B0371BF80EBE4A7034248F489BB468D516F4F387F",
+        "D71N47C0_STATIC_EXPORT.txt": "99CDEC8827867F862807CA46822A7BBDD74C6EADDFCAF98220C848169E9C5E24",
+        "CAS_DDE_RELEVANT_TABLES.txt": "CA7FD19A4AC54FA1969B861DA063D2FD5A6AAD2A6AF65618AE049FE9C08C3DD2",
+    }
+    actual_hashes: dict[str, str] = {}
+    for index, raw_export in enumerate(exports):
+        export = _require_object(raw_export, f"{location}.source_exports[{index}]")
+        _required(export, {"file", "ecu", "sgbd_prg", "sha256"}, f"{location}.source_exports[{index}]")
+        name = _require_nonempty_string(export["file"], f"{location}.source_exports[{index}].file")
+        digest = _require_nonempty_string(export["sha256"], f"{location}.source_exports[{index}].sha256")
+        if not re.fullmatch(r"[0-9A-F]{64}", digest):
+            raise ValidationError(f"{location}.source_exports[{index}].sha256: expected uppercase SHA-256")
+        actual_hashes[name] = digest
+    if actual_hashes != expected_hashes:
+        raise ValidationError(f"{location}.source_exports: provenance digests changed")
+
+    signals = _require_array(document["signals"], f"{location}.signals")
+    required_results = {
+        "IN_ZAS_SSTADISC", "IN_ZAS_SSTBDISC", "IN_ZAS_RASTDISC", "IN_BLS_DISC",
+        "IN_PK_DISC", "IN_MFS_DISC", "IN_KSTART_DISC", "KS_ANL_SPERRE",
+        "KLEMMENSTATUS", "STAT_KL15_EIN_VERHINDERER", "STAT_KL15_AUS_VERHINDERER",
+        "STAT_KL50_EIN_VERHINDERER", "STAT_MOTORDREHZAHL_WERT",
+    }
+    seen_results: set[str] = set()
+    allowed_runtime_uses = {
+        "OBSERVATION_ONLY", "OBSERVATION_ONLY_NOT_SOFTWARE_AUTHORIZATION",
+        "OBSERVATION_ONLY_NO_BYPASS", "CATALOG_ONLY",
+    }
+    allowed_qualifications = {
+        "DOCUMENTED_NOT_OBSERVED", "CONFIRMED_TEST_VEHICLE",
+        "CONFIRMED_TEST_VEHICLE_VALUES_0X40_0X41_0X45_0X55",
+        "NOT_SUITABLE_AS_LIVE_SIGNAL", "DOCUMENTED_NOT_FUNCTIONALLY_IDENTIFIED",
+        "OBSERVED_BITS_NOT_FUNCTIONALLY_IDENTIFIED",
+        "OBSERVED_NO_TRANSITION_NOT_FUNCTIONALLY_IDENTIFIED",
+    }
+    signal_names: set[str] = set()
+    for index, raw_signal in enumerate(signals):
+        item_location = f"{location}.signals[{index}]"
+        signal = _require_object(raw_signal, item_location)
+        _required(
+            signal,
+            {"signal", "ecu", "job", "result", "type", "documented_meaning",
+             "valid_values", "qualification", "runtime_use"},
+            item_location,
+        )
+        signal_name = _require_nonempty_string(signal["signal"], f"{item_location}.signal")
+        if signal_name in signal_names:
+            raise ValidationError(f"{item_location}.signal: duplicate {signal_name!r}")
+        signal_names.add(signal_name)
+        for field in ("ecu", "job", "result", "type", "documented_meaning"):
+            _require_nonempty_string(signal[field], f"{item_location}.{field}")
+        _require_object(signal["valid_values"], f"{item_location}.valid_values")
+        if signal["qualification"] not in allowed_qualifications:
+            raise ValidationError(f"{item_location}.qualification: unsupported qualification")
+        if signal["runtime_use"] not in allowed_runtime_uses:
+            raise ValidationError(f"{item_location}.runtime_use: action-capable use is forbidden")
+        seen_results.add(signal["result"])
+    missing_results = sorted(required_results - seen_results)
+    if missing_results:
+        raise ValidationError(f"{location}.signals: missing required results: {', '.join(missing_results)}")
+
+    exclusions = set(_require_array(document["excluded_runtime_categories"], f"{location}.excluded_runtime_categories"))
+    required_exclusions = {
+        "WRITE_OR_CONTROL_JOBS", "AUTHENTICATION_OR_PROGRAMMING_JOBS",
+        "EWS_OR_ISN_RUNTIME_DATA", "SECRET_KEY_OR_TRANSPONDER_CREDENTIALS",
+        "CAN_IDENTIFIERS_OR_PAYLOADS",
+    }
+    if not required_exclusions.issubset(exclusions):
+        raise ValidationError(f"{location}.excluded_runtime_categories: mandatory safety exclusion missing")
+
+
 def _parse_arguments() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Validate Phase 3C/3D vehicle-data artifacts")
     parser.add_argument("--evidence", required=True, type=Path)
@@ -1789,6 +1890,7 @@ def _parse_arguments() -> argparse.Namespace:
     parser.add_argument("--cas-dde-correlation", action="append", default=[], type=Path)
     parser.add_argument("--cas-dde-full-cycle", action="append", default=[], type=Path)
     parser.add_argument("--cas-dde-start-comparison", action="append", default=[], type=Path)
+    parser.add_argument("--start-signal-catalog", action="append", default=[], type=Path)
     return parser.parse_args()
 
 
@@ -1823,6 +1925,8 @@ def main() -> int:
         validate_cas_dde_full_cycle(load_json_object(path), evidence_ids)
     for path in arguments.cas_dde_start_comparison:
         validate_cas_dde_start_comparison(load_json_object(path))
+    for path in arguments.start_signal_catalog:
+        validate_start_observation_signal_catalog(load_json_object(path), evidence_ids)
     print("Phase 3C/3D vehicle data: VALID")
     return 0
 

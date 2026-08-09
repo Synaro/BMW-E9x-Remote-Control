@@ -11,6 +11,8 @@ décodeur BMW, ni commande CAS/DDE, ni chemin d'émission CAN.
 - `observations/` : chronologies de démarrages OEM observés en lecture seule ;
 - `evidence/` : index de provenance et preuves partageables anonymisées ;
 - `imports/` : formats intermédiaires et mappings génériques pour données tabulaires.
+- `catalog/` : sélection machine-readable des signaux SGBD de lecture retenus,
+  avec provenance, valeurs documentées et qualification indépendante.
 
 Tous les fichiers suivis dont le nom commence par `EXAMPLE_ONLY` sont fictifs.
 Ils démontrent uniquement le format. Ils ne décrivent aucun véhicule et ne
@@ -128,3 +130,16 @@ python tools/import_vehicle_data.py `
 
 Cette couche ne remplace pas une revue humaine : elle normalise, vérifie la
 forme, la provenance et les incohérences élémentaires seulement.
+
+## Modèle d'observation OEM
+
+Le catalogue de démarrage OEM est dérivé des exports statiques locaux
+`CAS.PRG` et `D71N47C0.PRG`. Les exports complets restent hors Git ; leur
+empreinte SHA-256 est conservée dans la preuve. Le catalogue exclut les jobs
+d'écriture, l'authentification, la programmation, EWS/ISN et tout secret.
+
+Le cœur C++ `VehicleStartObserver` consomme des sous-acquisitions horodatées
+séparément. Il ne fusionne jamais les lectures CAS/DDE en un instant fictif et
+ne produit que des états observationnels. Un signal simplement documenté par
+BMW conserve la qualification `DOCUMENTED_NOT_OBSERVED` jusqu'à une preuve
+réelle sur le véhicule.

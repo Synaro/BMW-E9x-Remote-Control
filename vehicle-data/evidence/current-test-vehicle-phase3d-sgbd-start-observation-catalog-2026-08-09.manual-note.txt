@@ -1,0 +1,23 @@
+READ-ONLY SGBD START-OBSERVATION CATALOG PROVENANCE
+
+Captured/exported: 2026-08-09 (Europe/Paris)
+Extraction source: local TestO static exports from CAS.PRG and D71N47C0.PRG
+Purpose: select documented status results for an observation-only runtime model.
+
+Source files retained outside Git:
+- CAS_STATIC_EXPORT.txt
+  SHA-256: 1087852786672E9A4C4D058B0371BF80EBE4A7034248F489BB468D516F4F387F
+- D71N47C0_STATIC_EXPORT.txt
+  SHA-256: 99CDEC8827867F862807CA46822A7BBDD74C6EADDFCAF98220C848169E9C5E24
+- CAS_DDE_RELEVANT_TABLES.txt
+  SHA-256: CA7FD19A4AC54FA1969B861DA063D2FD5A6AAD2A6AF65618AE049FE9C08C3DD2
+
+Extraction observations:
+- CAS export: 150 documented jobs and 32 table names.
+- DDE export: 218 documented jobs and 117 table names.
+- Only read-only STATUS results required by the observer were selected.
+- Write, control, authentication, programming, secret-key, ISN and EWS runtime
+  material was deliberately excluded.
+- A documented result is not treated as vehicle-validated. Only signals already
+  backed by Phase 3D evidence have a confirmed test-vehicle qualification.
+- No CAN identifier, CAN payload, command or action mechanism was extracted.
