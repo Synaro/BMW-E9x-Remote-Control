@@ -1,0 +1,65 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://bmw-e9x-remote-control.invalid/vehicle-data/schema/cas-kl50-observation.schema.json",
+  "title": "Phase 3D read-only CAS KL50 evidence",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version", "artifact_type", "observation_id", "profile_ref", "evidence_index",
+    "evidence_refs", "source", "signal", "observed_off_value", "observed_on_value",
+    "trace_values", "on_value_repeated_consecutively", "observed_transition", "status",
+    "timestamp_basis", "duration_us", "duration_status", "rpm_alignment_status",
+    "raw_trace_available_in_repository", "forbidden_inferences", "notes"
+  ],
+  "properties": {
+    "schema_version": {"const": 1},
+    "artifact_type": {"const": "CAS_KL50_OBSERVATION"},
+    "observation_id": {"type": "string", "minLength": 1},
+    "profile_ref": {"type": "string", "minLength": 1},
+    "evidence_index": {"type": "string", "minLength": 1},
+    "evidence_refs": {"type": "array", "minItems": 2, "uniqueItems": true, "items": {"type": "string", "minLength": 1}},
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["tools", "artifact", "sgbd_prg", "job", "field", "trace_level", "recorded_at", "session"],
+      "properties": {
+        "tools": {"const": ["Tool32", "EDIABAS IFH trace"]},
+        "artifact": {"const": "ifh.trc"},
+        "sgbd_prg": {"const": "CAS.PRG"},
+        "job": {"const": "status_fzg_zustand"},
+        "field": {"const": "KLEMMENSTATUS bits 4-5"},
+        "trace_level": {"const": 1},
+        "recorded_at": {"type": "string", "format": "date-time"},
+        "session": {"type": "string", "minLength": 1}
+      }
+    },
+    "signal": {"const": "CAS.KLEMMENSTATUS.KL50"},
+    "observed_off_value": {"$ref": "#/$defs/rawValue"},
+    "observed_on_value": {"$ref": "#/$defs/rawValue"},
+    "trace_values": {"type": "array", "minItems": 4, "items": {"$ref": "#/$defs/rawValue"}},
+    "on_value_repeated_consecutively": {"const": true},
+    "observed_transition": {"const": ["OFF", "ON", "OFF"]},
+    "status": {"const": "CONFIRMED"},
+    "timestamp_basis": {"const": "UNAVAILABLE"},
+    "duration_us": {"type": "null"},
+    "duration_status": {"const": "PENDING_LEVEL3_TRACE"},
+    "rpm_alignment_status": {"const": "PENDING"},
+    "raw_trace_available_in_repository": {"const": false},
+    "forbidden_inferences": {
+      "type": "array", "uniqueItems": true,
+      "items": {"enum": ["CAN_IDENTIFIER", "CAS_COMMAND", "KL50_COMMAND", "TRANSMISSION_PATH", "IMMOBILIZER_BYPASS", "REMOTE_START_ACTUATION"]}
+    },
+    "notes": {"type": "string", "minLength": 1}
+  },
+  "$defs": {
+    "rawValue": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["decimal", "hexadecimal"],
+      "properties": {
+        "decimal": {"type": "integer", "minimum": 0, "maximum": 255},
+        "hexadecimal": {"type": "string", "pattern": "^0x[0-9A-F]{2}$"}
+      }
+    }
+  }
+}

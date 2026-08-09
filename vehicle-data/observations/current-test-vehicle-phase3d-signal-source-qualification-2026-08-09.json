@@ -3,7 +3,7 @@
   "qualification_set_id": "CURRENT_TEST_VEHICLE_PHASE3D_SIGNAL_SOURCES_2026_08_09",
   "profile_ref": "../profiles/current-test-vehicle.vehicle-profile.json",
   "evidence_index": "../evidence/current-test-vehicle.evidence-index.json",
-  "updated_at": "2026-08-09T19:17:46+02:00",
+  "updated_at": "2026-08-09T19:27:26+02:00",
   "entries": [
     {
       "qualification_id": "egs.tool32.selector_position",
@@ -74,8 +74,8 @@
       "precondition_eligibility": "PROHIBITED",
       "allowed_interpretations": ["KL50_OFF", "KL50_ON"],
       "forbidden_inferences": ["REMOTE_START_COMMAND_MECHANISM", "OEM_START_REQUEST_SOURCE", "START_AUTHORIZATION", "CAN_IDENTIFIER", "DIAGNOSTIC_COMMAND", "IMMOBILIZER_BYPASS"],
-      "evidence_refs": ["CURRENT_TEST_VEHICLE_PHASE3D_CAS_KL50_2026_08_09"],
-      "notes": "Job-Info documents bits 4-5 and one real OEM start produced 69/0x45 -> 85/0x55 -> 69/0x45, decoded as KL50 OFF -> ON -> OFF. Confirmed as read-only terminal state only."
+      "evidence_refs": ["CURRENT_TEST_VEHICLE_PHASE3D_CAS_KL50_2026_08_09", "CURRENT_TEST_VEHICLE_PHASE3D_CAS_KL50_IFH_LEVEL1_2026_08_09"],
+      "notes": "Job-Info documents bits 4-5 and one real OEM start produced 69/0x45 -> 85/0x55 -> 69/0x45, decoded as KL50 OFF -> ON -> OFF. The transition is corroborated by repeated 85 readings and return to 69 in a real IFH Level 1 trace. Confirmed as read-only terminal state only; no duration inferred."
     },
     {
       "qualification_id": "cas.tool32.klemmenstatus_engine_running",

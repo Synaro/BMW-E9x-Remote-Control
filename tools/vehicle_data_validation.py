@@ -3,7 +3,7 @@
 The module deliberately uses only the Python standard library. It validates
 cross-file provenance and semantic invariants that JSON Schema cannot express
 without application-specific code. It contains no vehicle commands, CAN IDs,
-or BMW signal decoding.
+or runtime BMW decoder.
 """
 
 from __future__ import annotations
@@ -33,6 +33,8 @@ CHECKLIST_STATUSES = {
     "CONFIRMED",
     "UNTRUSTED",
     "NOT_YET_VALIDATED",
+    "PENDING",
+    "PENDING_LEVEL3_TRACE",
     "VALIDATED",
     "BLOCKED",
 }
@@ -66,6 +68,9 @@ REQUIRED_CHECKLIST_ITEMS = {
     "oem_start_architecture",
     "kl15",
     "kl50",
+    "kl50_oem_start_transition",
+    "kl50_duration",
+    "kl50_rpm_temporal_alignment",
     "engine_speed",
     "engine_running_state",
     "stopped_cranking_running_observations",
@@ -637,6 +642,123 @@ def _validate_bitfield_value(value: Any, location: str) -> int:
     return decimal
 
 
+def _validate_raw_byte(value: Any, location: str) -> int:
+    raw = _require_object(value, location)
+    _required(raw, {"decimal", "hexadecimal"}, location)
+    decimal = raw["decimal"]
+    if isinstance(decimal, bool) or not isinstance(decimal, int) or not 0 <= decimal <= 0xFF:
+        raise ValidationError(f"{location}.decimal: expected byte value")
+    if raw["hexadecimal"] != f"0x{decimal:02X}":
+        raise ValidationError(f"{location}.hexadecimal: inconsistent representation")
+    return decimal
+
+
+def validate_cas_kl50_observation(document: Mapping[str, Any], evidence_ids: set[str]) -> None:
+    _required(
+        document,
+        {
+            "schema_version",
+            "artifact_type",
+            "observation_id",
+            "profile_ref",
+            "evidence_index",
+            "evidence_refs",
+            "source",
+            "signal",
+            "observed_off_value",
+            "observed_on_value",
+            "trace_values",
+            "on_value_repeated_consecutively",
+            "observed_transition",
+            "status",
+            "timestamp_basis",
+            "duration_us",
+            "duration_status",
+            "rpm_alignment_status",
+            "raw_trace_available_in_repository",
+            "forbidden_inferences",
+            "notes",
+        },
+        "cas_kl50_observation",
+    )
+    _require_schema_v1(document, "cas_kl50_observation")
+    if document["artifact_type"] != "CAS_KL50_OBSERVATION":
+        raise ValidationError("cas_kl50_observation.artifact_type: unsupported type")
+    for field in ("observation_id", "profile_ref", "evidence_index"):
+        _require_nonempty_string(document[field], f"cas_kl50_observation.{field}")
+    references = _require_array(document["evidence_refs"], "cas_kl50_observation.evidence_refs")
+    if len(references) < 2 or len(references) != len(set(references)):
+        raise ValidationError("cas_kl50_observation.evidence_refs: two distinct corroborating proofs required")
+    for index, reference in enumerate(references):
+        _validate_evidence_ref(reference, evidence_ids, f"cas_kl50_observation.evidence_refs[{index}]")
+
+    source = _require_object(document["source"], "cas_kl50_observation.source")
+    _required(
+        source,
+        {"tools", "artifact", "sgbd_prg", "job", "field", "trace_level", "recorded_at", "session"},
+        "cas_kl50_observation.source",
+    )
+    if source["tools"] != ["Tool32", "EDIABAS IFH trace"]:
+        raise ValidationError("cas_kl50_observation.source.tools: expected Tool32 and EDIABAS IFH trace")
+    expected_source = {
+        "artifact": "ifh.trc",
+        "sgbd_prg": "CAS.PRG",
+        "job": "status_fzg_zustand",
+        "field": "KLEMMENSTATUS bits 4-5",
+        "trace_level": 1,
+    }
+    for field, expected in expected_source.items():
+        if source[field] != expected:
+            raise ValidationError(f"cas_kl50_observation.source.{field}: expected {expected!r}")
+    _require_timestamp(source["recorded_at"], "cas_kl50_observation.source.recorded_at")
+    _require_nonempty_string(source["session"], "cas_kl50_observation.source.session")
+    if document["signal"] != "CAS.KLEMMENSTATUS.KL50":
+        raise ValidationError("cas_kl50_observation.signal: unexpected signal")
+
+    off_value = _validate_raw_byte(document["observed_off_value"], "cas_kl50_observation.observed_off_value")
+    on_value = _validate_raw_byte(document["observed_on_value"], "cas_kl50_observation.observed_on_value")
+    if (off_value, on_value) != (0x45, 0x55):
+        raise ValidationError("cas_kl50_observation: expected observed values 0x45 OFF and 0x55 ON")
+    if ((off_value >> 4) & 0b11, (on_value >> 4) & 0b11) != (0b00, 0b01):
+        raise ValidationError("cas_kl50_observation: KL50 two-bit decode is inconsistent")
+    for value in (off_value, on_value):
+        if ((value >> 2) & 0b11) != 0b01 or (value & 0b11) != 0b01 or ((value >> 6) & 0b11) != 0b01:
+            raise ValidationError("cas_kl50_observation: KL R, KL15 and key-valid fields must remain ON/valid")
+
+    trace_values = [
+        _validate_raw_byte(value, f"cas_kl50_observation.trace_values[{index}]")
+        for index, value in enumerate(_require_array(document["trace_values"], "cas_kl50_observation.trace_values"))
+    ]
+    if trace_values != [64, 65, 85, 69]:
+        raise ValidationError("cas_kl50_observation.trace_values: expected reported Level 1 sequence")
+    if document["on_value_repeated_consecutively"] is not True:
+        raise ValidationError("cas_kl50_observation.on_value_repeated_consecutively: expected true")
+    if document["observed_transition"] != ["OFF", "ON", "OFF"] or document["status"] != "CONFIRMED":
+        raise ValidationError("cas_kl50_observation: expected confirmed OFF/ON/OFF transition")
+
+    if document["timestamp_basis"] != "UNAVAILABLE" or document["duration_us"] is not None:
+        raise ValidationError("cas_kl50_observation: Level 1 trace cannot claim timestamps or duration")
+    if document["duration_status"] != "PENDING_LEVEL3_TRACE":
+        raise ValidationError("cas_kl50_observation.duration_status: Level 3 trace must remain pending")
+    if document["rpm_alignment_status"] != "PENDING":
+        raise ValidationError("cas_kl50_observation.rpm_alignment_status: expected PENDING")
+    if document["raw_trace_available_in_repository"] is not False:
+        raise ValidationError("cas_kl50_observation.raw_trace_available_in_repository: expected false")
+
+    required_forbidden = {
+        "CAN_IDENTIFIER",
+        "CAS_COMMAND",
+        "KL50_COMMAND",
+        "TRANSMISSION_PATH",
+        "IMMOBILIZER_BYPASS",
+        "REMOTE_START_ACTUATION",
+    }
+    forbidden = set(_require_array(document["forbidden_inferences"], "cas_kl50_observation.forbidden_inferences"))
+    if not required_forbidden.issubset(forbidden):
+        raise ValidationError("cas_kl50_observation: all command and bypass inferences must remain forbidden")
+    _require_nonempty_string(document["notes"], "cas_kl50_observation.notes")
+
+
 def validate_synchronized_start_observation(document: Mapping[str, Any], evidence_ids: set[str]) -> None:
     _required(
         document,
@@ -867,7 +989,15 @@ def validate_prerequisites(document: Mapping[str, Any], evidence_ids: set[str]) 
         for index, reference in enumerate(references):
             _validate_evidence_ref(reference, evidence_ids, f"{location}.evidence_refs[{index}]")
         _require_timestamp(item["updated_at"], f"{location}.updated_at")
-        if status in {"OBSERVED", "CONFIRMED", "UNTRUSTED", "NOT_YET_VALIDATED", "VALIDATED"} and not references:
+        if status in {
+            "OBSERVED",
+            "CONFIRMED",
+            "UNTRUSTED",
+            "NOT_YET_VALIDATED",
+            "PENDING",
+            "PENDING_LEVEL3_TRACE",
+            "VALIDATED",
+        } and not references:
             raise ValidationError(f"{location}: {status} requires evidence")
         if status == "UNKNOWN" and references:
             raise ValidationError(f"{location}: UNKNOWN cannot claim evidence")
@@ -876,7 +1006,7 @@ def validate_prerequisites(document: Mapping[str, Any], evidence_ids: set[str]) 
             _require_nonempty_string(blocker, f"{location}.blocker_reason")
         elif blocker is not None:
             raise ValidationError(f"{location}.blocker_reason: only valid for BLOCKED")
-        if status in {"UNTRUSTED", "NOT_YET_VALIDATED"}:
+        if status in {"UNTRUSTED", "NOT_YET_VALIDATED", "PENDING", "PENDING_LEVEL3_TRACE"}:
             _require_nonempty_string(item["notes"], f"{location}.notes")
 
 
@@ -945,6 +1075,7 @@ def _parse_arguments() -> argparse.Namespace:
     parser.add_argument("--engine-timeline", action="append", default=[], type=Path)
     parser.add_argument("--signal-sources", action="append", default=[], type=Path)
     parser.add_argument("--synchronized-start", action="append", default=[], type=Path)
+    parser.add_argument("--kl50-observation", action="append", default=[], type=Path)
     return parser.parse_args()
 
 
@@ -969,6 +1100,8 @@ def main() -> int:
         validate_signal_source_qualifications(load_json_object(path), evidence_ids)
     for path in arguments.synchronized_start:
         validate_synchronized_start_observation(load_json_object(path), evidence_ids)
+    for path in arguments.kl50_observation:
+        validate_cas_kl50_observation(load_json_object(path), evidence_ids)
     print("Phase 3C/3D vehicle data: VALID")
     return 0
 

@@ -39,6 +39,12 @@ La qualification `READ_ONLY_SIGNAL` couvre notamment l'état KL50 confirmé via
 l'état observé et interdit toute déduction de commande, d'autorisation ou de
 transport CAN.
 
+L'artefact `CAS_KL50_OBSERVATION` peut corroborer cette lecture entre Tool32 et
+un trace IFH. Un trace Level 1 sans timestamps doit conserver
+`timestamp_basis: UNAVAILABLE`, `duration_us: null` et
+`duration_status: PENDING_LEVEL3_TRACE`. Une transcription ne doit jamais être
+présentée comme le fichier `ifh.trc` brut.
+
 ## Règles pour les données réelles
 
 1. Placer d'abord les exports bruts et captures dans un sous-dossier `private/`.
@@ -61,7 +67,8 @@ python tools/vehicle_data_validation.py `
 
 Les validateurs Phase 3D acceptent en plus `--signal-sources` et
 `--synchronized-start` pour contrôler la qualification par usage et les
-bitfields des timelines synchronisées.
+bitfields des timelines synchronisées. `--kl50-observation` valide la preuve
+KL50 read-only et interdit toute durée issue d'un trace Level 1.
 
 Les preuves acceptées sont : capture ISTA, export TestO, sortie INPA, sortie
 Tool32, future capture CAN et note manuelle. La catégorie « future capture CAN »

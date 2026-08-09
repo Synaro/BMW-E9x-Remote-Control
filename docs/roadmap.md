@@ -70,6 +70,8 @@ est détaillé dans
 - [x] Conserver les bitfields en décimal, hexadécimal, binaire et bits modifiés
 - [x] Interdire la promotion automatique d'une corrélation vers une sémantique fonctionnelle
 - [x] Confirmer l'état KL50 en lecture sans inférer son mécanisme d'activation
+- [x] Corroborer la transition KL50 par un trace IFH Level 1
+- [ ] Mesurer la durée KL50 et l'alignement RPM avec un trace IFH Level 3
 - [ ] Valider l'algorithme de détection moteur tournant sur plusieurs captures structurées
 - [ ] Identifier Terminal 50, la demande START et l'autorisation OEM par preuves séparées
 

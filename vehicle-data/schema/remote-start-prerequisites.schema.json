@@ -17,7 +17,8 @@
       "additionalProperties": false,
       "required": [
         "exact_cas_identification", "exact_dde_identification", "exact_egs_identification", "oem_start_architecture",
-        "kl15", "kl50", "engine_speed", "engine_running_state", "stopped_cranking_running_observations", "transmission_pn",
+        "kl15", "kl50", "kl50_oem_start_transition", "kl50_duration", "kl50_rpm_temporal_alignment",
+        "engine_speed", "engine_running_state", "stopped_cranking_running_observations", "transmission_pn",
         "transmission_prnd_tool32", "brake", "engine_running_detection_algorithm",
         "terminal_50_start_request", "cas_start_button_request", "oem_start_request_source",
         "remote_start_actuation_mechanism", "msa_start_correlated_bits", "msa_bit_functional_meaning",
@@ -31,6 +32,9 @@
         "oem_start_architecture": {"$ref": "#/$defs/item"},
         "kl15": {"$ref": "#/$defs/item"},
         "kl50": {"$ref": "#/$defs/item"},
+        "kl50_oem_start_transition": {"$ref": "#/$defs/item"},
+        "kl50_duration": {"$ref": "#/$defs/item"},
+        "kl50_rpm_temporal_alignment": {"$ref": "#/$defs/item"},
         "engine_speed": {"$ref": "#/$defs/item"},
         "engine_running_state": {"$ref": "#/$defs/item"},
         "stopped_cranking_running_observations": {"$ref": "#/$defs/item"},
@@ -61,7 +65,7 @@
       "additionalProperties": false,
       "required": ["status", "evidence_refs", "updated_at", "notes", "blocker_reason"],
       "properties": {
-        "status": {"enum": ["UNKNOWN", "OBSERVED", "CONFIRMED", "UNTRUSTED", "NOT_YET_VALIDATED", "VALIDATED", "BLOCKED"]},
+        "status": {"enum": ["UNKNOWN", "OBSERVED", "CONFIRMED", "UNTRUSTED", "NOT_YET_VALIDATED", "PENDING", "PENDING_LEVEL3_TRACE", "VALIDATED", "BLOCKED"]},
         "evidence_refs": {
           "type": "array", "uniqueItems": true,
           "items": {"type": "string", "minLength": 1, "maxLength": 96}

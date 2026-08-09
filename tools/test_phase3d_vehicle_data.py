@@ -15,6 +15,7 @@ from vehicle_data_validation import (
     is_precondition_candidate,
     load_json_object,
     validate_engine_run_timeline,
+    validate_cas_kl50_observation,
     validate_evidence_index,
     validate_prerequisites,
     validate_qualified_observations,
@@ -33,6 +34,7 @@ STATUS_PATH = DATA / "observations" / "current-test-vehicle-phase3d-status-obser
 REAL_TIMELINE_PATH = DATA / "observations" / "current-test-vehicle-testo-oem-start-sequence-2026-08-09.json"
 SIGNAL_SOURCES_PATH = DATA / "observations" / "current-test-vehicle-phase3d-signal-source-qualification-2026-08-09.json"
 SYNCHRONIZED_START_PATH = DATA / "observations" / "current-test-vehicle-phase3d-synchronized-rpm-msa-start-2026-08-09.json"
+KL50_IFH_PATH = DATA / "observations" / "current-test-vehicle-phase3d-cas-kl50-ifh-level1-2026-08-09.json"
 EXAMPLE_EVIDENCE_PATH = DATA / "evidence" / "EXAMPLE_ONLY.evidence-index.json"
 EXAMPLE_ENGINE_INPUT = DATA / "imports" / "EXAMPLE_ONLY.engine-speed.csv"
 EXAMPLE_ENGINE_MAPPING = DATA / "imports" / "EXAMPLE_ONLY.engine-speed.mapping.json"
@@ -51,6 +53,7 @@ class Phase3DVehicleDataTests(unittest.TestCase):
         self.timeline = load_json_object(REAL_TIMELINE_PATH)
         self.signal_sources = load_json_object(SIGNAL_SOURCES_PATH)
         self.synchronized_start = load_json_object(SYNCHRONIZED_START_PATH)
+        self.kl50_ifh = load_json_object(KL50_IFH_PATH)
         self.status_by_id = {
             observation["observation_id"]: observation
             for observation in self.status["observations"]
@@ -68,6 +71,7 @@ class Phase3DVehicleDataTests(unittest.TestCase):
         validate_engine_run_timeline(self.timeline, self.evidence_ids)
         validate_signal_source_qualifications(self.signal_sources, self.evidence_ids)
         validate_synchronized_start_observation(self.synchronized_start, self.evidence_ids)
+        validate_cas_kl50_observation(self.kl50_ifh, self.evidence_ids)
 
     def test_identification_values_are_preserved_as_reported(self):
         expected = {
@@ -156,6 +160,30 @@ class Phase3DVehicleDataTests(unittest.TestCase):
         with self.assertRaisesRegex(ValidationError, "both allowed and forbidden"):
             validate_signal_source_qualifications(modified, self.evidence_ids)
 
+    def test_ifh_level1_corroborates_kl50_without_timing_claim(self):
+        self.assertEqual("CAS_KL50_OBSERVATION", self.kl50_ifh["artifact_type"])
+        self.assertEqual("CAS.KLEMMENSTATUS.KL50", self.kl50_ifh["signal"])
+        self.assertEqual({"decimal": 69, "hexadecimal": "0x45"}, self.kl50_ifh["observed_off_value"])
+        self.assertEqual({"decimal": 85, "hexadecimal": "0x55"}, self.kl50_ifh["observed_on_value"])
+        self.assertEqual([64, 65, 85, 69], [value["decimal"] for value in self.kl50_ifh["trace_values"]])
+        self.assertTrue(self.kl50_ifh["on_value_repeated_consecutively"])
+        self.assertEqual(["OFF", "ON", "OFF"], self.kl50_ifh["observed_transition"])
+        self.assertEqual("UNAVAILABLE", self.kl50_ifh["timestamp_basis"])
+        self.assertIsNone(self.kl50_ifh["duration_us"])
+        self.assertFalse(self.kl50_ifh["raw_trace_available_in_repository"])
+
+    def test_ifh_level1_cannot_claim_kl50_duration(self):
+        modified = copy.deepcopy(self.kl50_ifh)
+        modified["duration_us"] = 750000
+        with self.assertRaisesRegex(ValidationError, "cannot claim timestamps or duration"):
+            validate_cas_kl50_observation(modified, self.evidence_ids)
+
+    def test_ifh_evidence_cannot_drop_command_and_bypass_prohibitions(self):
+        modified = copy.deepcopy(self.kl50_ifh)
+        modified["forbidden_inferences"].remove("CAS_COMMAND")
+        with self.assertRaisesRegex(ValidationError, "command and bypass inferences"):
+            validate_cas_kl50_observation(modified, self.evidence_ids)
+
     def test_tool32_egs_prnd_mapping_is_confirmed(self):
         for position in ("p", "r", "n", "d"):
             observation = self.status_by_id[f"egs.tool32.position.{position}"]
@@ -243,6 +271,9 @@ class Phase3DVehicleDataTests(unittest.TestCase):
             "brake": "OBSERVED",
             "kl15": "CONFIRMED",
             "kl50": "CONFIRMED",
+            "kl50_oem_start_transition": "CONFIRMED",
+            "kl50_duration": "PENDING_LEVEL3_TRACE",
+            "kl50_rpm_temporal_alignment": "PENDING",
             "engine_speed": "CONFIRMED",
             "stopped_cranking_running_observations": "CONFIRMED",
             "engine_running_detection_algorithm": "NOT_YET_VALIDATED",

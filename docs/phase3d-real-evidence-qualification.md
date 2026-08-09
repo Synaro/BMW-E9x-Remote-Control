@@ -69,6 +69,16 @@ Un démarrage OEM réel a produit la séquence ordonnée `69 / 0x45`,
 bits KL50 suivent `00 -> 01 -> 00`. L'état KL50 exposé en lecture est donc
 `CONFIRMED` pour cette observation.
 
+Cette transition est désormais corroborée par la transcription d'un trace IFH
+EDIABAS réel de niveau 1. Le trace contient 64/`0x40`, 65/`0x41`, plusieurs
+lectures consécutives à 85/`0x55`, puis un retour à 69/`0x45`. Elle n'est donc
+pas traitée comme un artefact visuel de Tool32.
+
+Le fichier brut `ifh.trc` n'est pas versionné et les timestamps individuels ne
+sont pas disponibles. La durée KL50 reste `PENDING_LEVEL3_TRACE` et
+l'alignement KL50/RPM reste `PENDING`. Aucune durée n'est reconstruite à partir
+de l'ordre des lignes du trace Level 1.
+
 Cette qualification est `READ_ONLY_SIGNAL` et reste `PROHIBITED` comme
 précondition. Elle ne prouve ni la source de demande OEM, ni une commande de
 démarrage, ni une autorisation, ni un ID CAN ou une commande diagnostique.
@@ -143,6 +153,9 @@ timestamps synchronisés explicitement fournis.
 - algorithme de détection moteur tournant : `NOT_YET_VALIDATED` ;
 - signification fonctionnelle des bits MSA observés : `UNKNOWN` ;
 - état Terminal 50 : `CONFIRMED` en lecture via KLEMMENSTATUS ;
+- transition OEM KL50 OFF/ON/OFF : `CONFIRMED` par Tool32 et trace IFH ;
+- durée KL50 : `PENDING_LEVEL3_TRACE` ;
+- alignement temporel KL50/RPM : `PENDING` ;
 - source de demande de démarrage OEM : `UNKNOWN` ;
 - bouton START / demande de démarrage CAS : `UNKNOWN` ;
 - mécanisme d'actionnement remote-start : `UNKNOWN` ;

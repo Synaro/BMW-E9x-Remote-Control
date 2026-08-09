@@ -1,0 +1,36 @@
+Observation réelle anonymisée — corroboration IFH Level 1 de KL50
+Date de consignation : 2026-08-09
+
+Artefact source observé : ifh.trc
+Outil : EDIABAS IFH Trace Level 1
+SGBD/PRG : CAS.PRG
+Job : status_fzg_zustand
+Champ : KLEMMENSTATUS
+
+Le trace réel contient les valeurs suivantes pendant la session observée :
+- 64 / 0x40 ;
+- 65 / 0x41 ;
+- 85 / 0x55, répété sur plusieurs lectures consécutives ;
+- retour à 69 / 0x45.
+
+Le Job-Info documente :
+- bits 0-1 : Klemme R ;
+- bits 2-3 : Klemme 15 ;
+- bits 4-5 : Klemme 50 ;
+- bits 6-7 : Schl_Valid ;
+- 00 = OFF, 01 = ON, 11 = invalide pour chaque paire.
+
+Décodage limité aux valeurs pertinentes :
+- 0x55 : KL R ON, KL15 ON, KL50 ON, clé valide ;
+- 0x45 : KL R ON, KL15 ON, KL50 OFF, clé valide.
+
+La transition KL50 OFF -> ON -> OFF précédemment vue dans Tool32 est donc
+corroborée dans un trace IFH réel et n'est pas un artefact d'affichage.
+
+Limite : le trace est de niveau 1 et aucun timestamp individuel n'a été fourni.
+Aucune durée KL50 et aucun alignement temporel avec le régime DDE ne sont
+calculés. Le fichier ifh.trc brut n'est pas versionné dans le dépôt ; cette
+preuve est sa transcription manuelle fournie pour la Phase 3D.
+
+Aucune commande CAS/KL50, aucun ID CAN, aucune émission et aucun mécanisme de
+contournement EWS/antidémarrage ne sont déduits.

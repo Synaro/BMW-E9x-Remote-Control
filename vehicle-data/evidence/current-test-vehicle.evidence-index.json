@@ -57,6 +57,17 @@
       "sha256": null,
       "contains_personal_data": false,
       "description": "Manual transcription of CAS.PRG status_fzg_zustand Job-Info and the observed KLEMMENSTATUS 69/85/69 KL50 sequence during one OEM start."
+    },
+    {
+      "evidence_id": "CURRENT_TEST_VEHICLE_PHASE3D_CAS_KL50_IFH_LEVEL1_2026_08_09",
+      "kind": "MANUAL_NOTE",
+      "relative_path": "current-test-vehicle-phase3d-cas-kl50-ifh-level1-2026-08-09.manual-note.txt",
+      "captured_at": "2026-08-09T19:27:26+02:00",
+      "tool_name": "EDIABAS IFH Trace",
+      "tool_version": null,
+      "sha256": null,
+      "contains_personal_data": false,
+      "description": "Manual transcription of a real IFH Trace Level 1 corroborating repeated KLEMMENSTATUS 85 followed by 69; raw ifh.trc is not stored in the repository."
     }
   ]
 }

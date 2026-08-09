@@ -71,7 +71,7 @@ Le premier jalon logiciel est opérationnel :
 - superviseur logiciel des actionneurs avec heartbeat, séquencement, retours
   d'état et défauts mémorisés ;
 - 135 tests C++, 15 scénarios du simulateur, 3 contrôles du configurateur et
-  67 tests Python automatisés en intégration continue.
+  70 tests Python automatisés en intégration continue.
 
 L'adaptateur BMW qui observera réellement le verrouillage, qualifiera la reprise
 conducteur et pilotera les sorties physiques reste à implémenter lorsque le
