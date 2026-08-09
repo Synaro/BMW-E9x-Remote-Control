@@ -18,7 +18,7 @@ sans ajouter de comportement.
 - [x] Ajouter les builds PlatformIO natif et ESP32-S3 à la CI
 - [x] Aligner la documentation sur l'état réellement livré
 - [x] Retirer MCP2515 de la cible matérielle officielle
-- [ ] Valider tous les tests et builds locaux, puis la CI GitHub
+- [x] Valider tous les tests et builds locaux, puis la CI GitHub
 
 ## Phase 2 — Couche CAN en écoute seule
 
