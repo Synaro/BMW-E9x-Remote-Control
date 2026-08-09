@@ -31,6 +31,14 @@ OBSERVATION_PATH = DATA / "observations" / "EXAMPLE_ONLY.oem-start-observation.j
 CHECKLIST_PATH = DATA / "profiles" / "EXAMPLE_ONLY.remote-start-prerequisites.json"
 MAPPING_PATH = DATA / "imports" / "EXAMPLE_ONLY.mapping.json"
 INPUT_PATH = DATA / "imports" / "EXAMPLE_ONLY.input.csv"
+REAL_EVIDENCE_PATH = DATA / "evidence" / "current-test-vehicle.evidence-index.json"
+REAL_PROFILE_PATH = DATA / "profiles" / "current-test-vehicle.vehicle-profile.json"
+REAL_OBSERVATION_PATH = (
+    DATA / "observations" / "current-test-vehicle-tool32-cas-klemmenstatus-2026-08-09.json"
+)
+REAL_CHECKLIST_PATH = (
+    DATA / "profiles" / "current-test-vehicle.remote-start-prerequisites.json"
+)
 
 
 class VehicleDataTests(unittest.TestCase):
@@ -178,6 +186,33 @@ class VehicleDataTests(unittest.TestCase):
             )
             with self.assertRaisesRegex(ValidationError, "requires a boolean"):
                 import_delimited(path, self.mapping, self.evidence_ids)
+
+    def test_confirmed_tool32_kl15_observation_preserves_engine_running_exclusion(self):
+        evidence = load_json_object(REAL_EVIDENCE_PATH)
+        evidence_ids = validate_evidence_index(
+            evidence, evidence_directory=REAL_EVIDENCE_PATH.parent
+        )
+        profile = load_json_object(REAL_PROFILE_PATH)
+        observation = load_json_object(REAL_OBSERVATION_PATH)
+        checklist = load_json_object(REAL_CHECKLIST_PATH)
+        validate_vehicle_profile(profile, evidence_ids)
+        validate_observation_session(observation, evidence_ids)
+        validate_prerequisites(checklist, evidence_ids)
+
+        value_69_records = [
+            record for record in observation["records"] if record["raw_value"] == 69
+        ]
+        self.assertEqual({"KL15_ACTIVE", "ENGINE_RUNNING"}, {record["phase"] for record in value_69_records})
+        self.assertTrue(all(record["signal"] == "KL15" for record in value_69_records))
+        self.assertTrue(all(record["interpreted_value"] is True for record in value_69_records))
+        self.assertEqual("UNAVAILABLE", observation["timestamp_basis"])
+        self.assertTrue(all(record["timestamp_us"] is None for record in observation["records"]))
+        self.assertEqual("CONFIRMED", checklist["items"]["kl15"]["status"])
+        self.assertEqual("UNKNOWN", checklist["items"]["engine_running_state"]["status"])
+        self.assertIn(
+            "disqualified",
+            checklist["items"]["engine_running_state"]["notes"],
+        )
 
 
 if __name__ == "__main__":

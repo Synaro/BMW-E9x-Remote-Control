@@ -1,0 +1,18 @@
+Observation réelle anonymisée — véhicule de test actuel
+Date de consignation : 2026-08-09
+Véhicule : BMW E90, véhicule de test actuel, VIN volontairement omis
+Outil observé : Tool32
+SGBD : CAS.PRG
+Job : status_fzg_zustand
+Résultat : KLEMMENSTATUS
+
+Observations manuelles répétées :
+- 64 : véhicule réveillé, contact coupé ;
+- 65 : clé insérée, contact pas encore établi ;
+- 69 : KL15 actif.
+
+La valeur 69 a été observée moteur arrêté et moteur tournant. Elle confirme donc
+KL15 actif, mais ne permet pas à elle seule de conclure que le moteur tourne.
+
+Cette note est une transcription manuelle de l'observation Tool32. Elle n'est
+pas un export brut du logiciel et ne contient ni VIN ni identifiant CAN.

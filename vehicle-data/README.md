@@ -16,6 +16,12 @@ Tous les fichiers suivis dont le nom commence par `EXAMPLE_ONLY` sont fictifs.
 Ils démontrent uniquement le format. Ils ne décrivent aucun véhicule et ne
 doivent jamais servir à déduire une valeur BMW.
 
+Les fichiers `current-test-vehicle.*` contiennent uniquement des observations
+réelles anonymisées et leur niveau de maturité actuel. La première observation
+Tool32 confirme la correspondance de `KLEMMENSTATUS` avec KL15. Elle consigne
+aussi explicitement que la valeur 69 existe moteur arrêté comme moteur tournant
+et ne constitue donc pas un signal d'état moteur.
+
 ## Règles pour les données réelles
 
 1. Placer d'abord les exports bruts et captures dans un sous-dossier `private/`.

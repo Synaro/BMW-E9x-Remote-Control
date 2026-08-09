@@ -23,6 +23,7 @@
     "profile_ref": "../profiles/EXAMPLE_ONLY.vehicle-profile.json",
     "evidence_index": "../evidence/EXAMPLE_ONLY.evidence-index.json",
     "started_at": "2000-01-01T00:00:00Z",
+    "timestamp_basis": "SESSION_RELATIVE",
     "notes": "Fictional generic import example only."
   },
   "evidence_ref": "EXAMPLE_ONLY_MANUAL_NOTE"

@@ -1,0 +1,18 @@
+{
+  "schema_version": 1,
+  "index_id": "CURRENT_TEST_VEHICLE_EVIDENCE",
+  "example_only": false,
+  "entries": [
+    {
+      "evidence_id": "CURRENT_TEST_VEHICLE_TOOL32_CAS_KLEMMENSTATUS_2026_08_09",
+      "kind": "MANUAL_NOTE",
+      "relative_path": "current-test-vehicle-tool32-cas-klemmenstatus-2026-08-09.manual-note.txt",
+      "captured_at": "2026-08-09T18:11:02+02:00",
+      "tool_name": "Tool32",
+      "tool_version": null,
+      "sha256": null,
+      "contains_personal_data": false,
+      "description": "Manual transcription of repeated CAS.PRG status_fzg_zustand KLEMMENSTATUS observations."
+    }
+  ]
+}

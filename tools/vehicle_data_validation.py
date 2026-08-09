@@ -49,6 +49,7 @@ SIGNALS = {
     "START_AUTHORIZATION",
     "BATTERY_VOLTAGE",
 }
+TIMESTAMP_BASES = {"SESSION_RELATIVE", "SOURCE_ABSOLUTE", "UNAVAILABLE"}
 REQUIRED_CHECKLIST_ITEMS = {
     "exact_cas_identification",
     "exact_dde_identification",
@@ -303,7 +304,16 @@ def _validate_record_semantics(record: Mapping[str, Any], location: str) -> None
 def validate_observation_session(document: Mapping[str, Any], evidence_ids: set[str]) -> None:
     _required(
         document,
-        {"schema_version", "session_id", "example_only", "profile_ref", "evidence_index", "started_at", "records"},
+        {
+            "schema_version",
+            "session_id",
+            "example_only",
+            "profile_ref",
+            "evidence_index",
+            "started_at",
+            "timestamp_basis",
+            "records",
+        },
         "observation",
     )
     _require_schema_v1(document, "observation")
@@ -311,6 +321,9 @@ def validate_observation_session(document: Mapping[str, Any], evidence_ids: set[
     _require_nonempty_string(document["profile_ref"], "observation.profile_ref")
     _require_nonempty_string(document["evidence_index"], "observation.evidence_index")
     _require_timestamp(document["started_at"], "observation.started_at")
+    timestamp_basis = document["timestamp_basis"]
+    if timestamp_basis not in TIMESTAMP_BASES:
+        raise ValidationError("observation.timestamp_basis: unsupported basis")
     if not isinstance(document["example_only"], bool):
         raise ValidationError("observation.example_only: must be boolean")
 
@@ -336,11 +349,15 @@ def validate_observation_session(document: Mapping[str, Any], evidence_ids: set[
         if record["sequence"] != index:
             raise ValidationError(f"{location}.sequence: expected {index}")
         timestamp = record["timestamp_us"]
-        if isinstance(timestamp, bool) or not isinstance(timestamp, int) or timestamp < 0:
-            raise ValidationError(f"{location}.timestamp_us: expected non-negative integer")
-        if timestamp < previous_timestamp:
-            raise ValidationError(f"{location}.timestamp_us: timestamps must be monotonic")
-        previous_timestamp = timestamp
+        if timestamp_basis == "UNAVAILABLE":
+            if timestamp is not None:
+                raise ValidationError(f"{location}.timestamp_us: must be null when timestamp basis is UNAVAILABLE")
+        else:
+            if isinstance(timestamp, bool) or not isinstance(timestamp, int) or timestamp < 0:
+                raise ValidationError(f"{location}.timestamp_us: expected non-negative integer")
+            if timestamp < previous_timestamp:
+                raise ValidationError(f"{location}.timestamp_us: timestamps must be monotonic")
+            previous_timestamp = timestamp
         if record["phase"] not in PHASES:
             raise ValidationError(f"{location}.phase: unsupported phase")
         if record["signal"] not in SIGNALS:
@@ -443,10 +460,16 @@ def validate_import_mapping(document: Mapping[str, Any], evidence_ids: set[str])
         raise ValidationError("mapping.columns: a source column cannot map to multiple canonical fields")
 
     session = _require_object(document["session"], "mapping.session")
-    _required(session, {"session_id", "profile_ref", "evidence_index", "started_at", "notes"}, "mapping.session")
+    _required(
+        session,
+        {"session_id", "profile_ref", "evidence_index", "started_at", "timestamp_basis", "notes"},
+        "mapping.session",
+    )
     for field in ("session_id", "profile_ref", "evidence_index"):
         _require_nonempty_string(session[field], f"mapping.session.{field}")
     _require_timestamp(session["started_at"], "mapping.session.started_at")
+    if session["timestamp_basis"] not in {"SESSION_RELATIVE", "SOURCE_ABSOLUTE"}:
+        raise ValidationError("mapping.session.timestamp_basis: delimited imports require timestamps")
     _validate_evidence_ref(document["evidence_ref"], evidence_ids, "mapping.evidence_ref")
 
 

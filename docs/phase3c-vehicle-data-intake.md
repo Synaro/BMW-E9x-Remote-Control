@@ -57,6 +57,11 @@ contient volontairement aucun champ d'identifiant CAN. Une future capture CAN
 pourra être citée comme preuve uniquement après obtention réelle ; elle ne sera
 pas décodée par cette phase.
 
+`timestamp_basis` distingue un temps relatif de session, un timestamp absolu
+fourni par la source et un temps indisponible. Dans ce dernier cas,
+`timestamp_us` reste obligatoirement `null` : une transcription manuelle ne
+reçoit jamais un horodatage fictif.
+
 ### Checklist de prérequis
 
 Les statuts sont strictement :

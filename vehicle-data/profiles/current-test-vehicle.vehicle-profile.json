@@ -1,0 +1,47 @@
+{
+  "schema_version": 1,
+  "profile_id": "CURRENT_TEST_VEHICLE",
+  "example_only": false,
+  "recorded_at": "2026-08-09T18:11:02+02:00",
+  "evidence_index": "../evidence/current-test-vehicle.evidence-index.json",
+  "vehicle": {
+    "vin": {
+      "value": null,
+      "anonymized": true,
+      "observed_at": null,
+      "confidence": "UNKNOWN",
+      "evidence_refs": [],
+      "notes": "VIN intentionally omitted."
+    },
+    "model": {
+      "value": "BMW E90",
+      "observed_at": "2026-08-09T18:11:02+02:00",
+      "confidence": "HIGH",
+      "evidence_refs": ["CURRENT_TEST_VEHICLE_TOOL32_CAS_KLEMMENSTATUS_2026_08_09"],
+      "notes": "Identified by the owner as the current E90 test vehicle."
+    },
+    "chassis": {
+      "value": "E90",
+      "observed_at": "2026-08-09T18:11:02+02:00",
+      "confidence": "HIGH",
+      "evidence_refs": ["CURRENT_TEST_VEHICLE_TOOL32_CAS_KLEMMENSTATUS_2026_08_09"],
+      "notes": null
+    },
+    "production_date": {"value": null, "observed_at": null, "confidence": "UNKNOWN", "evidence_refs": [], "notes": null},
+    "engine": {"value": null, "observed_at": null, "confidence": "UNKNOWN", "evidence_refs": [], "notes": null},
+    "transmission": {"value": null, "observed_at": null, "confidence": "UNKNOWN", "evidence_refs": [], "notes": null}
+  },
+  "cas": {
+    "type_version": {"value": null, "observed_at": null, "confidence": "UNKNOWN", "evidence_refs": [], "notes": "CAS.PRG identifies the diagnostic family, not the exact CAS version."},
+    "hardware_reference": {"value": null, "observed_at": null, "confidence": "UNKNOWN", "evidence_refs": [], "notes": null},
+    "software_reference": {"value": null, "observed_at": null, "confidence": "UNKNOWN", "evidence_refs": [], "notes": null},
+    "zb_number": {"value": null, "observed_at": null, "confidence": "UNKNOWN", "evidence_refs": [], "notes": null}
+  },
+  "dde": {
+    "type_version": {"value": null, "observed_at": null, "confidence": "UNKNOWN", "evidence_refs": [], "notes": null},
+    "hardware_reference": {"value": null, "observed_at": null, "confidence": "UNKNOWN", "evidence_refs": [], "notes": null},
+    "software_reference": {"value": null, "observed_at": null, "confidence": "UNKNOWN", "evidence_refs": [], "notes": null},
+    "zb_number": {"value": null, "observed_at": null, "confidence": "UNKNOWN", "evidence_refs": [], "notes": null}
+  },
+  "other_control_units": []
+}

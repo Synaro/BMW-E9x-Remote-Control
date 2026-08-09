@@ -6,7 +6,7 @@
   "additionalProperties": false,
   "required": [
     "schema_version", "session_id", "example_only", "profile_ref",
-    "evidence_index", "started_at", "records"
+    "evidence_index", "started_at", "timestamp_basis", "records"
   ],
   "properties": {
     "schema_version": {"const": 1},
@@ -15,6 +15,7 @@
     "profile_ref": {"type": "string", "minLength": 1},
     "evidence_index": {"type": "string", "minLength": 1},
     "started_at": {"type": "string", "format": "date-time"},
+    "timestamp_basis": {"enum": ["SESSION_RELATIVE", "SOURCE_ABSOLUTE", "UNAVAILABLE"]},
     "notes": {"type": ["string", "null"], "maxLength": 2000},
     "records": {
       "type": "array",
@@ -27,7 +28,7 @@
         ],
         "properties": {
           "sequence": {"type": "integer", "minimum": 0},
-          "timestamp_us": {"type": "integer", "minimum": 0},
+          "timestamp_us": {"type": ["integer", "null"], "minimum": 0},
           "phase": {
             "enum": [
               "UNKNOWN", "PRECHECK", "AUTHORIZATION", "KL15_ACTIVE",

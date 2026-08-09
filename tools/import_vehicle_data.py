@@ -90,6 +90,7 @@ def import_delimited(
         "profile_ref": session_config["profile_ref"],
         "evidence_index": session_config["evidence_index"],
         "started_at": session_config["started_at"],
+        "timestamp_basis": session_config["timestamp_basis"],
         "notes": session_config["notes"],
         "records": records,
     }

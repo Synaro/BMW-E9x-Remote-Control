@@ -1,0 +1,26 @@
+{
+  "schema_version": 1,
+  "checklist_id": "CURRENT_TEST_VEHICLE_PREREQUISITES",
+  "example_only": false,
+  "profile_ref": "current-test-vehicle.vehicle-profile.json",
+  "evidence_index": "../evidence/current-test-vehicle.evidence-index.json",
+  "updated_at": "2026-08-09T18:11:02+02:00",
+  "items": {
+    "exact_cas_identification": {"status": "UNKNOWN", "evidence_refs": [], "updated_at": "2026-08-09T18:11:02+02:00", "notes": "CAS.PRG does not prove the exact CAS type, hardware, software or ZB number.", "blocker_reason": null},
+    "exact_dde_identification": {"status": "UNKNOWN", "evidence_refs": [], "updated_at": "2026-08-09T18:11:02+02:00", "notes": null, "blocker_reason": null},
+    "oem_start_architecture": {"status": "UNKNOWN", "evidence_refs": [], "updated_at": "2026-08-09T18:11:02+02:00", "notes": null, "blocker_reason": null},
+    "kl15": {"status": "CONFIRMED", "evidence_refs": ["CURRENT_TEST_VEHICLE_TOOL32_CAS_KLEMMENSTATUS_2026_08_09"], "updated_at": "2026-08-09T18:11:02+02:00", "notes": "KLEMMENSTATUS 64 and 65 map to KL15 inactive; 69 maps to KL15 active. Repeated manual observation.", "blocker_reason": null},
+    "kl50": {"status": "UNKNOWN", "evidence_refs": [], "updated_at": "2026-08-09T18:11:02+02:00", "notes": null, "blocker_reason": null},
+    "engine_speed": {"status": "UNKNOWN", "evidence_refs": [], "updated_at": "2026-08-09T18:11:02+02:00", "notes": null, "blocker_reason": null},
+    "engine_running_state": {"status": "UNKNOWN", "evidence_refs": [], "updated_at": "2026-08-09T18:11:02+02:00", "notes": "KLEMMENSTATUS 69 is present with the engine stopped and running, so it is explicitly disqualified as a standalone engine-running signal.", "blocker_reason": null},
+    "transmission_pn": {"status": "UNKNOWN", "evidence_refs": [], "updated_at": "2026-08-09T18:11:02+02:00", "notes": null, "blocker_reason": null},
+    "brake": {"status": "UNKNOWN", "evidence_refs": [], "updated_at": "2026-08-09T18:11:02+02:00", "notes": null, "blocker_reason": null},
+    "oem_start_authorization": {"status": "UNKNOWN", "evidence_refs": [], "updated_at": "2026-08-09T18:11:02+02:00", "notes": null, "blocker_reason": null},
+    "battery_voltage": {"status": "UNKNOWN", "evidence_refs": [], "updated_at": "2026-08-09T18:11:02+02:00", "notes": null, "blocker_reason": null},
+    "timeout_strategy": {"status": "UNKNOWN", "evidence_refs": [], "updated_at": "2026-08-09T18:11:02+02:00", "notes": null, "blocker_reason": null},
+    "stop_strategy": {"status": "UNKNOWN", "evidence_refs": [], "updated_at": "2026-08-09T18:11:02+02:00", "notes": null, "blocker_reason": null},
+    "communication_loss": {"status": "UNKNOWN", "evidence_refs": [], "updated_at": "2026-08-09T18:11:02+02:00", "notes": null, "blocker_reason": null},
+    "post_reset_behavior": {"status": "UNKNOWN", "evidence_refs": [], "updated_at": "2026-08-09T18:11:02+02:00", "notes": null, "blocker_reason": null},
+    "start_inhibit_conditions": {"status": "UNKNOWN", "evidence_refs": [], "updated_at": "2026-08-09T18:11:02+02:00", "notes": null, "blocker_reason": null}
+  }
+}

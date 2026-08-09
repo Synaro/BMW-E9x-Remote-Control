@@ -38,12 +38,13 @@
     "session": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["session_id", "profile_ref", "evidence_index", "started_at", "notes"],
+      "required": ["session_id", "profile_ref", "evidence_index", "started_at", "timestamp_basis", "notes"],
       "properties": {
         "session_id": {"type": "string", "minLength": 1},
         "profile_ref": {"type": "string", "minLength": 1},
         "evidence_index": {"type": "string", "minLength": 1},
         "started_at": {"type": "string", "format": "date-time"},
+        "timestamp_basis": {"enum": ["SESSION_RELATIVE", "SOURCE_ABSOLUTE"]},
         "notes": {"type": ["string", "null"]}
       }
     },

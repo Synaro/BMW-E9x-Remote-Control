@@ -1,0 +1,68 @@
+{
+  "schema_version": 1,
+  "session_id": "CURRENT_TEST_VEHICLE_TOOL32_CAS_KLEMMENSTATUS_2026_08_09",
+  "example_only": false,
+  "profile_ref": "../profiles/current-test-vehicle.vehicle-profile.json",
+  "evidence_index": "../evidence/current-test-vehicle.evidence-index.json",
+  "started_at": "2026-08-09T18:11:02+02:00",
+  "timestamp_basis": "UNAVAILABLE",
+  "notes": "Repeated manual observations. KLEMMENSTATUS 69 confirms KL15 active but must not be used alone as an engine-running signal.",
+  "records": [
+    {
+      "sequence": 0,
+      "timestamp_us": null,
+      "phase": "PRECHECK",
+      "signal": "KL15",
+      "raw_value": 64,
+      "interpreted_value": false,
+      "unit": null,
+      "source": {
+        "evidence_ref": "CURRENT_TEST_VEHICLE_TOOL32_CAS_KLEMMENSTATUS_2026_08_09",
+        "locator": "CAS.PRG / status_fzg_zustand / KLEMMENSTATUS / awake, ignition OFF"
+      },
+      "confidence": "HIGH"
+    },
+    {
+      "sequence": 1,
+      "timestamp_us": null,
+      "phase": "PRECHECK",
+      "signal": "KL15",
+      "raw_value": 65,
+      "interpreted_value": false,
+      "unit": null,
+      "source": {
+        "evidence_ref": "CURRENT_TEST_VEHICLE_TOOL32_CAS_KLEMMENSTATUS_2026_08_09",
+        "locator": "CAS.PRG / status_fzg_zustand / KLEMMENSTATUS / key inserted, ignition not yet ON"
+      },
+      "confidence": "HIGH"
+    },
+    {
+      "sequence": 2,
+      "timestamp_us": null,
+      "phase": "KL15_ACTIVE",
+      "signal": "KL15",
+      "raw_value": 69,
+      "interpreted_value": true,
+      "unit": null,
+      "source": {
+        "evidence_ref": "CURRENT_TEST_VEHICLE_TOOL32_CAS_KLEMMENSTATUS_2026_08_09",
+        "locator": "CAS.PRG / status_fzg_zustand / KLEMMENSTATUS / engine stopped"
+      },
+      "confidence": "HIGH"
+    },
+    {
+      "sequence": 3,
+      "timestamp_us": null,
+      "phase": "ENGINE_RUNNING",
+      "signal": "KL15",
+      "raw_value": 69,
+      "interpreted_value": true,
+      "unit": null,
+      "source": {
+        "evidence_ref": "CURRENT_TEST_VEHICLE_TOOL32_CAS_KLEMMENSTATUS_2026_08_09",
+        "locator": "CAS.PRG / status_fzg_zustand / KLEMMENSTATUS / engine running"
+      },
+      "confidence": "HIGH"
+    }
+  ]
+}
