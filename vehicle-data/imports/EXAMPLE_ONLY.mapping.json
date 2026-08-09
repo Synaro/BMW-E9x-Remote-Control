@@ -1,0 +1,29 @@
+{
+  "schema_version": 1,
+  "mapping_id": "EXAMPLE_ONLY_GENERIC_MAPPING",
+  "example_only": true,
+  "input": {
+    "format": "delimited",
+    "delimiter": ",",
+    "encoding": "utf-8-sig",
+    "has_header": true
+  },
+  "columns": {
+    "timestamp_us": "time_us",
+    "phase": "stage",
+    "signal": "measurement",
+    "raw_value": "raw",
+    "interpreted_value": "meaning",
+    "unit": "engineering_unit",
+    "confidence": "confidence",
+    "source_locator": "source_row"
+  },
+  "session": {
+    "session_id": "EXAMPLE_ONLY_IMPORTED_OEM_START",
+    "profile_ref": "../profiles/EXAMPLE_ONLY.vehicle-profile.json",
+    "evidence_index": "../evidence/EXAMPLE_ONLY.evidence-index.json",
+    "started_at": "2000-01-01T00:00:00Z",
+    "notes": "Fictional generic import example only."
+  },
+  "evidence_ref": "EXAMPLE_ONLY_MANUAL_NOTE"
+}

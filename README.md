@@ -40,6 +40,10 @@ Le premier jalon logiciel est opérationnel :
   désactivée par défaut et protégée par deux barrières matérielles ;
 - modèle CAN indépendant de BMW, file RX fixe, statistiques et contrat de
   capture V2 avec timestamps microsecondes et séquences monotones ;
+- contrats Phase 3C pour profils observés, preuves, sessions OEM et checklist
+  de prérequis, sans donnée BMW inventée ;
+- import tabulaire générique et validateur de provenance sans dépendance
+  propriétaire ;
 - rejeu temporel de traces CAN et assemblage des signaux avec gestion de fraîcheur ;
 - protocole CAN synthétique réservé aux simulations hors véhicule ;
 - simulateur interactif avec parcours nominal et injection d'un défaut de sécurité ;
@@ -64,7 +68,7 @@ Le premier jalon logiciel est opérationnel :
 - superviseur logiciel des actionneurs avec heartbeat, séquencement, retours
   d'état et défauts mémorisés ;
 - 135 tests C++, 15 scénarios du simulateur, 3 contrôles du configurateur et
-  21 tests Python automatisés en intégration continue.
+  42 tests Python automatisés en intégration continue.
 
 L'adaptateur BMW qui observera réellement le verrouillage, qualifiera la reprise
 conducteur et pilotera les sorties physiques reste à implémenter lorsque le
@@ -126,6 +130,9 @@ L'acquisition passive de Phase 3 et le format Capture V2 sont décrits dans
 Le choix du transceiver, le schéma de banc et la qualification électrique de
 Phase 3B sont figés dans
 [docs/phase3b-can-bench-hardware.md](docs/phase3b-can-bench-hardware.md).
+Les contrats d'intégration des futurs relevés ISTA/TestO, la provenance et la
+checklist de Phase 3C sont décrits dans
+[docs/phase3c-vehicle-data-intake.md](docs/phase3c-vehicle-data-intake.md).
 Le configurateur PC est décrit dans
 [docs/configurator.md](docs/configurator.md).
 Le protocole entre configurateur et boîtier est spécifié dans
@@ -191,6 +198,7 @@ libs/can-core/                       Modèle et réception CAN génériques, san
 src/                                Implémentations et firmware ESP32-S3
 tests/                              Scénarios hôte
 tools/                              Simulateur et importeur de traces PC
+vehicle-data/                       Profils, observations, preuves et imports versionnés
 scenarios/                          Traces synthétiques partageables
 docs/                               Architecture, sécurité et intégration
 ```

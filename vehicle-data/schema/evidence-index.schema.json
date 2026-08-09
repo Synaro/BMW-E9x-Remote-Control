@@ -1,0 +1,40 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://bmw-e9x-remote-control.invalid/vehicle-data/schema/evidence-index.schema.json",
+  "title": "Phase 3C evidence index",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "index_id", "example_only", "entries"],
+  "properties": {
+    "schema_version": {"const": 1},
+    "index_id": {"type": "string", "minLength": 1, "maxLength": 96},
+    "example_only": {"type": "boolean"},
+    "entries": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "evidence_id", "kind", "relative_path", "captured_at",
+          "sha256", "contains_personal_data", "description"
+        ],
+        "properties": {
+          "evidence_id": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,95}$"},
+          "kind": {
+            "enum": [
+              "ISTA_CAPTURE", "TESTO_EXPORT", "INPA_OUTPUT", "TOOL32_OUTPUT",
+              "FUTURE_CAN_CAPTURE", "MANUAL_NOTE"
+            ]
+          },
+          "relative_path": {"type": "string", "minLength": 1, "maxLength": 260},
+          "captured_at": {"type": "string", "format": "date-time"},
+          "tool_name": {"type": ["string", "null"], "maxLength": 100},
+          "tool_version": {"type": ["string", "null"], "maxLength": 100},
+          "sha256": {"type": ["string", "null"], "pattern": "^[0-9a-f]{64}$"},
+          "contains_personal_data": {"type": "boolean"},
+          "description": {"type": "string", "minLength": 1, "maxLength": 1000}
+        }
+      }
+    }
+  }
+}

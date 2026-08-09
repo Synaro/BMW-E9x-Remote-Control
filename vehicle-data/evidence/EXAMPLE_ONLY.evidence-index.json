@@ -1,0 +1,18 @@
+{
+  "schema_version": 1,
+  "index_id": "EXAMPLE_ONLY_EVIDENCE",
+  "example_only": true,
+  "entries": [
+    {
+      "evidence_id": "EXAMPLE_ONLY_MANUAL_NOTE",
+      "kind": "MANUAL_NOTE",
+      "relative_path": "EXAMPLE_ONLY.manual-note.txt",
+      "captured_at": "2000-01-01T00:00:00Z",
+      "tool_name": null,
+      "tool_version": null,
+      "sha256": null,
+      "contains_personal_data": false,
+      "description": "Fictional formatting evidence only; not a vehicle observation."
+    }
+  ]
+}

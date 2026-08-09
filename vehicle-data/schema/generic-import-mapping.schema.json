@@ -1,0 +1,52 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://bmw-e9x-remote-control.invalid/vehicle-data/schema/generic-import-mapping.schema.json",
+  "title": "Phase 3C generic delimited observation import mapping",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "mapping_id", "example_only", "input", "columns", "session", "evidence_ref"],
+  "properties": {
+    "schema_version": {"const": 1},
+    "mapping_id": {"type": "string", "minLength": 1, "maxLength": 96},
+    "example_only": {"type": "boolean"},
+    "input": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["format", "delimiter", "encoding", "has_header"],
+      "properties": {
+        "format": {"const": "delimited"},
+        "delimiter": {"enum": [",", ";", "\\t", "|"]},
+        "encoding": {"enum": ["utf-8", "utf-8-sig"]},
+        "has_header": {"const": true}
+      }
+    },
+    "columns": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["timestamp_us", "phase", "signal", "raw_value", "interpreted_value", "unit", "confidence", "source_locator"],
+      "properties": {
+        "timestamp_us": {"type": "string", "minLength": 1},
+        "phase": {"type": "string", "minLength": 1},
+        "signal": {"type": "string", "minLength": 1},
+        "raw_value": {"type": "string", "minLength": 1},
+        "interpreted_value": {"type": "string", "minLength": 1},
+        "unit": {"type": "string", "minLength": 1},
+        "confidence": {"type": "string", "minLength": 1},
+        "source_locator": {"type": "string", "minLength": 1}
+      }
+    },
+    "session": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["session_id", "profile_ref", "evidence_index", "started_at", "notes"],
+      "properties": {
+        "session_id": {"type": "string", "minLength": 1},
+        "profile_ref": {"type": "string", "minLength": 1},
+        "evidence_index": {"type": "string", "minLength": 1},
+        "started_at": {"type": "string", "format": "date-time"},
+        "notes": {"type": ["string", "null"]}
+      }
+    },
+    "evidence_ref": {"type": "string", "minLength": 1, "maxLength": 96}
+  }
+}

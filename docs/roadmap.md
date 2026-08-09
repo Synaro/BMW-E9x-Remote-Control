@@ -48,6 +48,21 @@ sans ajouter de comportement.
 - [ ] Exécuter et archiver tous les essais électriques
 - [ ] Obtenir un PASS complet avant toute demande de connexion véhicule
 
+## Phase 3C — Préparation des données véhicule
+
+- [x] Définir un profil versionné pour l'identification réelle du véhicule
+- [x] Définir une session ordonnée d'observation du démarrage OEM
+- [x] Indexer la provenance ISTA, TestO, INPA, Tool32, capture CAN ou note manuelle
+- [x] Ajouter un import tabulaire générique sans dépendance propriétaire
+- [x] Créer la checklist versionnée des prérequis remote-start
+- [x] Valider schémas, champs obligatoires, confiance, provenance et cohérence
+- [ ] Intégrer les relevés réels après réception et revue des données utilisateur
+
+La Phase 3C reste strictement documentaire et hors véhicule. Elle ne décode
+aucun signal BMW et n'ajoute ni émission CAN, ni commande CAS/DDE. Son contrat
+est détaillé dans
+[phase3c-vehicle-data-intake.md](phase3c-vehicle-data-intake.md).
+
 ## Phase 4 — Capture et analyse hors ligne
 
 - [ ] Implémenter le transport et l'écriture PC du format Capture V2

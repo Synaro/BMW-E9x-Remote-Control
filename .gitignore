@@ -16,6 +16,10 @@ cmake-build-*/
 .DS_Store
 Thumbs.db
 captures/private/
+vehicle-data/profiles/private/
+vehicle-data/observations/private/
+vehicle-data/evidence/private/
+vehicle-data/imports/private/
 config/user-settings.conf
 config/bench-twai.local.hpp
 config/*.local.conf

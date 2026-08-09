@@ -1,0 +1,42 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://bmw-e9x-remote-control.invalid/vehicle-data/schema/common.schema.json",
+  "title": "Phase 3C common vehicle-data types",
+  "$defs": {
+    "confidence": {
+      "type": "string",
+      "enum": ["UNKNOWN", "LOW", "MEDIUM", "HIGH", "VALIDATED"]
+    },
+    "evidenceKind": {
+      "type": "string",
+      "enum": [
+        "ISTA_CAPTURE",
+        "TESTO_EXPORT",
+        "INPA_OUTPUT",
+        "TOOL32_OUTPUT",
+        "FUTURE_CAN_CAPTURE",
+        "MANUAL_NOTE"
+      ]
+    },
+    "evidenceReference": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,95}$"
+    },
+    "assertion": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["value", "observed_at", "confidence", "evidence_refs"],
+      "properties": {
+        "value": {"type": ["string", "number", "boolean", "null"]},
+        "observed_at": {"type": ["string", "null"], "format": "date-time"},
+        "confidence": {"$ref": "#/$defs/confidence"},
+        "evidence_refs": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {"$ref": "#/$defs/evidenceReference"}
+        },
+        "notes": {"type": ["string", "null"], "maxLength": 1000}
+      }
+    }
+  }
+}

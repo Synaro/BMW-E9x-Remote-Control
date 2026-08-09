@@ -1,0 +1,53 @@
+{
+  "schema_version": 1,
+  "session_id": "EXAMPLE_ONLY_OEM_START",
+  "example_only": true,
+  "profile_ref": "../profiles/EXAMPLE_ONLY.vehicle-profile.json",
+  "evidence_index": "../evidence/EXAMPLE_ONLY.evidence-index.json",
+  "started_at": "2000-01-01T00:00:00Z",
+  "notes": "Fictional structure demonstration. Values are not BMW observations.",
+  "records": [
+    {
+      "sequence": 0,
+      "timestamp_us": 0,
+      "phase": "PRECHECK",
+      "signal": "ENGINE_STATE",
+      "raw_value": "EXAMPLE_ONLY_STOPPED",
+      "interpreted_value": "STOPPED",
+      "unit": null,
+      "source": {
+        "evidence_ref": "EXAMPLE_ONLY_MANUAL_NOTE",
+        "locator": "fictional row 1"
+      },
+      "confidence": "LOW"
+    },
+    {
+      "sequence": 1,
+      "timestamp_us": 1000000,
+      "phase": "CRANKING",
+      "signal": "ENGINE_STATE",
+      "raw_value": "EXAMPLE_ONLY_CRANKING",
+      "interpreted_value": "CRANKING",
+      "unit": null,
+      "source": {
+        "evidence_ref": "EXAMPLE_ONLY_MANUAL_NOTE",
+        "locator": "fictional row 2"
+      },
+      "confidence": "LOW"
+    },
+    {
+      "sequence": 2,
+      "timestamp_us": 2000000,
+      "phase": "ENGINE_RUNNING",
+      "signal": "ENGINE_STATE",
+      "raw_value": "EXAMPLE_ONLY_RUNNING",
+      "interpreted_value": "RUNNING",
+      "unit": null,
+      "source": {
+        "evidence_ref": "EXAMPLE_ONLY_MANUAL_NOTE",
+        "locator": "fictional row 3"
+      },
+      "confidence": "LOW"
+    }
+  ]
+}

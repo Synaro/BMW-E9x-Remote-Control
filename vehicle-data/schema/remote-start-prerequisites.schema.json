@@ -1,0 +1,61 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://bmw-e9x-remote-control.invalid/vehicle-data/schema/remote-start-prerequisites.schema.json",
+  "title": "Phase 3C remote-start prerequisites checklist",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "checklist_id", "example_only", "profile_ref", "evidence_index", "updated_at", "items"],
+  "properties": {
+    "schema_version": {"const": 1},
+    "checklist_id": {"type": "string", "minLength": 1, "maxLength": 96},
+    "example_only": {"type": "boolean"},
+    "profile_ref": {"type": "string", "minLength": 1},
+    "evidence_index": {"type": "string", "minLength": 1},
+    "updated_at": {"type": "string", "format": "date-time"},
+    "items": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "exact_cas_identification", "exact_dde_identification", "oem_start_architecture",
+        "kl15", "kl50", "engine_speed", "engine_running_state", "transmission_pn",
+        "brake", "oem_start_authorization", "battery_voltage", "timeout_strategy",
+        "stop_strategy", "communication_loss", "post_reset_behavior", "start_inhibit_conditions"
+      ],
+      "properties": {
+        "exact_cas_identification": {"$ref": "#/$defs/item"},
+        "exact_dde_identification": {"$ref": "#/$defs/item"},
+        "oem_start_architecture": {"$ref": "#/$defs/item"},
+        "kl15": {"$ref": "#/$defs/item"},
+        "kl50": {"$ref": "#/$defs/item"},
+        "engine_speed": {"$ref": "#/$defs/item"},
+        "engine_running_state": {"$ref": "#/$defs/item"},
+        "transmission_pn": {"$ref": "#/$defs/item"},
+        "brake": {"$ref": "#/$defs/item"},
+        "oem_start_authorization": {"$ref": "#/$defs/item"},
+        "battery_voltage": {"$ref": "#/$defs/item"},
+        "timeout_strategy": {"$ref": "#/$defs/item"},
+        "stop_strategy": {"$ref": "#/$defs/item"},
+        "communication_loss": {"$ref": "#/$defs/item"},
+        "post_reset_behavior": {"$ref": "#/$defs/item"},
+        "start_inhibit_conditions": {"$ref": "#/$defs/item"}
+      }
+    }
+  },
+  "$defs": {
+    "item": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "evidence_refs", "updated_at", "notes", "blocker_reason"],
+      "properties": {
+        "status": {"enum": ["UNKNOWN", "OBSERVED", "CONFIRMED", "VALIDATED", "BLOCKED"]},
+        "evidence_refs": {
+          "type": "array", "uniqueItems": true,
+          "items": {"type": "string", "minLength": 1, "maxLength": 96}
+        },
+        "updated_at": {"type": "string", "format": "date-time"},
+        "notes": {"type": ["string", "null"], "maxLength": 1000},
+        "blocker_reason": {"type": ["string", "null"], "maxLength": 1000}
+      }
+    }
+  }
+}
