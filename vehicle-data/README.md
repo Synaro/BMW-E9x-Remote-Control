@@ -139,7 +139,9 @@ empreinte SHA-256 est conservée dans la preuve. Le catalogue exclut les jobs
 d'écriture, l'authentification, la programmation, EWS/ISN et tout secret.
 
 Le cœur C++ `VehicleStartObserver` consomme des sous-acquisitions horodatées
-séparément. Il ne fusionne jamais les lectures CAS/DDE en un instant fictif et
-ne produit que des états observationnels. Un signal simplement documenté par
-BMW conserve la qualification `DOCUMENTED_NOT_OBSERVED` jusqu'à une preuve
-réelle sur le véhicule.
+séparément. Il ne fusionne jamais les lectures CAS/DDE en un instant fictif.
+Son état véhicule principal et ses valeurs diagnostiques brutes sont deux
+sorties indépendantes : une activité SST/START_DME/MFS/Startfreigabe ne peut
+donc ni disparaître derrière l'état principal, ni être promue en demande ou
+autorisation. Un signal simplement documenté par BMW conserve la qualification
+`DOCUMENTED_NOT_VEHICLE_VALIDATED` jusqu'à une preuve réelle sur le véhicule.

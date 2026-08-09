@@ -563,7 +563,7 @@ class Phase3DVehicleDataTests(unittest.TestCase):
         start_release = next(
             signal for signal in catalog["signals"] if signal["signal"] == "START_RELEASE"
         )
-        self.assertEqual("DOCUMENTED_NOT_OBSERVED", start_release["qualification"])
+        self.assertEqual("DOCUMENTED_NOT_VEHICLE_VALIDATED", start_release["qualification"])
         self.assertEqual(
             "OBSERVATION_ONLY_NOT_SOFTWARE_AUTHORIZATION", start_release["runtime_use"]
         )

@@ -257,13 +257,20 @@ Les exports statiques locaux `CAS.PRG` et `D71N47C0.PRG` alimentent désormais
 un catalogue machine-readable limité aux résultats de statut utiles. Les jobs
 d'écriture, de contrôle, d'authentification, de programmation et les données
 EWS/ISN sont exclus du runtime. L'existence d'un résultat dans le SGBD vaut
-`DOCUMENTED_NOT_OBSERVED`, jamais validation sur le véhicule.
+`DOCUMENTED_NOT_VEHICLE_VALIDATED`, jamais validation sur le véhicule.
 
 Le domaine définit `StartSignalSnapshot` avec un intervalle début/fin propre à
 chaque sous-acquisition. Les quatre jobs CAS/DDE restent donc séquentiels et ne
 sont jamais réduits à un timestamp unique. `VehicleStartObserver`, dans la
-couche application, produit seulement des états suffixés `Observed` et les
-preuves signal/source/intervalle associées. Il n'expose aucune action.
+couche application, sépare `primaryVehicleState` des `observedSignals`.
+L'état principal conserve la séquence véhicule déjà qualifiée, tandis que les
+valeurs brutes SST, MFS, START_DME et Startfreigabe restent visibles en parallèle
+avec leur preuve signal/source/intervalle. Il n'expose aucune action.
+
+La polarité de `KS_ANL_SPERRE` n'étant pas qualifiée sur le véhicule, ses deux
+valeurs 0 et 1 restent des observations brutes
+`DOCUMENTED_NOT_VEHICLE_VALIDATED`. Ni ce résultat, ni MFS, START_DME ou SST ne
+devient une demande ou une autorisation de démarrage avant preuve expérimentale.
 
 Les sessions `OEM_START_SYNC_01` et `OEM_FULL_CYCLE_01` qualifient uniquement
 les reconnaissances déjà observées : `0x55` avec RPM non nul, retour

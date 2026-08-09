@@ -13,8 +13,6 @@ enum class VehicleStartObservedState : std::uint8_t {
     VehicleRest,
     KeyPresent,
     TerminalReady,
-    StartRequestObserved,
-    StartAllowedObserved,
     CrankingObserved,
     EngineRotatingObserved,
     EngineRunningObserved,
@@ -24,7 +22,7 @@ enum class VehicleStartObservedState : std::uint8_t {
 
 enum class StartObservationQualification : std::uint8_t {
     Unknown,
-    DocumentedSignalNotVehicleValidated,
+    DocumentedNotVehicleValidated,
     ConfirmedPhase3dSequence,
 };
 
@@ -34,9 +32,20 @@ struct StartObservationEvidence {
     domain::AcquisitionInterval interval{};
 };
 
+struct DocumentedSignalObservation {
+    domain::StartSignalId signal{domain::StartSignalId::SstA};
+    bool rawValue{false};
+    StartObservationQualification qualification{
+        StartObservationQualification::DocumentedNotVehicleValidated};
+    StartObservationEvidence evidence{};
+};
+
 struct VehicleStartObservation {
-    VehicleStartObservedState state{VehicleStartObservedState::Unknown};
-    StartObservationQualification qualification{StartObservationQualification::Unknown};
+    VehicleStartObservedState primaryVehicleState{VehicleStartObservedState::Unknown};
+    StartObservationQualification primaryStateQualification{
+        StartObservationQualification::Unknown};
+    std::array<DocumentedSignalObservation, 8U> observedSignals{};
+    std::size_t observedSignalCount{0U};
     std::array<StartObservationEvidence, 4U> supportingSignals{};
     std::size_t supportingSignalCount{0U};
     std::array<domain::StartSignalId, static_cast<std::size_t>(domain::StartSignalId::Count)>

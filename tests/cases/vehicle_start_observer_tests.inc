@@ -1,4 +1,5 @@
 using bmw::remote::application::StartObservationQualification;
+using bmw::remote::application::DocumentedSignalObservation;
 using bmw::remote::application::VehicleStartObservedState;
 using bmw::remote::application::VehicleStartObserver;
 using bmw::remote::domain::DiagnosticAvailability;
@@ -24,6 +25,17 @@ StartSignalSnapshot observedCasDdeSnapshot(
     snapshot.engineRpm = DiagnosticSignal<float>::knownValue(
         rpm, DiagnosticSource::DdeStatusMotordrehzahl, ddeStart, ddeEnd);
     return snapshot;
+}
+
+const DocumentedSignalObservation* findObservedSignal(
+    const bmw::remote::application::VehicleStartObservation& observation,
+    const bmw::remote::domain::StartSignalId signal) {
+    for (std::size_t index = 0U; index < observation.observedSignalCount; ++index) {
+        if (observation.observedSignals[index].signal == signal) {
+            return &observation.observedSignals[index];
+        }
+    }
+    return nullptr;
 }
 
 void testKlemmenstatusDecoderPreservesDocumentedAndUnvalidatedStates() {
@@ -86,13 +98,13 @@ void testObserverReconstructsOemStartSync01WithoutInventingMissingSignals() {
     const auto rotating = observedCasDdeSnapshot(0x45U, 981.5F, 1'234U, 1'286U, 1'287U, 1'493U);
     const auto running = observedCasDdeSnapshot(0x45U, 916.0F, 1'494U, 1'545U, 1'546U, 1'749U);
 
-    CHECK(observer.observe(ready).state == VehicleStartObservedState::TerminalReady);
-    CHECK(observer.observe(crank, &ready).state == VehicleStartObservedState::CrankingObserved);
-    CHECK(observer.observe(rotating, &crank).state ==
+    CHECK(observer.observe(ready).primaryVehicleState == VehicleStartObservedState::TerminalReady);
+    CHECK(observer.observe(crank, &ready).primaryVehicleState == VehicleStartObservedState::CrankingObserved);
+    CHECK(observer.observe(rotating, &crank).primaryVehicleState ==
           VehicleStartObservedState::EngineRotatingObserved);
     const auto result = observer.observe(running, &rotating);
-    CHECK(result.state == VehicleStartObservedState::EngineRunningObserved);
-    CHECK(result.qualification == StartObservationQualification::ConfirmedPhase3dSequence);
+    CHECK(result.primaryVehicleState == VehicleStartObservedState::EngineRunningObserved);
+    CHECK(result.primaryStateQualification == StartObservationQualification::ConfirmedPhase3dSequence);
     CHECK(result.supportingSignalCount == 2U);
     CHECK(result.missingSignalCount == 11U);
     CHECK(result.supportingSignals[0U].interval.endedAtMs <
@@ -110,13 +122,13 @@ void testObserverReconstructsOemFullCycle01() {
     const auto rundown = observedCasDdeSnapshot(0x40U, 215.0F, 701U, 750U, 751U, 800U);
     const auto stopped = observedCasDdeSnapshot(0x40U, 0.0F, 801U, 850U, 851U, 900U);
 
-    CHECK(observer.observe(rest).state == VehicleStartObservedState::VehicleRest);
-    CHECK(observer.observe(key, &rest).state == VehicleStartObservedState::KeyPresent);
-    CHECK(observer.observe(crank, &key).state == VehicleStartObservedState::CrankingObserved);
-    CHECK(observer.observe(rotating, &crank).state == VehicleStartObservedState::EngineRotatingObserved);
-    CHECK(observer.observe(running, &rotating).state == VehicleStartObservedState::EngineRunningObserved);
-    CHECK(observer.observe(shutdown, &running).state == VehicleStartObservedState::ShutdownObserved);
-    CHECK(observer.observe(stopped, &rundown).state == VehicleStartObservedState::EngineStoppedObserved);
+    CHECK(observer.observe(rest).primaryVehicleState == VehicleStartObservedState::VehicleRest);
+    CHECK(observer.observe(key, &rest).primaryVehicleState == VehicleStartObservedState::KeyPresent);
+    CHECK(observer.observe(crank, &key).primaryVehicleState == VehicleStartObservedState::CrankingObserved);
+    CHECK(observer.observe(rotating, &crank).primaryVehicleState == VehicleStartObservedState::EngineRotatingObserved);
+    CHECK(observer.observe(running, &rotating).primaryVehicleState == VehicleStartObservedState::EngineRunningObserved);
+    CHECK(observer.observe(shutdown, &running).primaryVehicleState == VehicleStartObservedState::ShutdownObserved);
+    CHECK(observer.observe(stopped, &rundown).primaryVehicleState == VehicleStartObservedState::EngineStoppedObserved);
 }
 
 void testObserverFailsUnknownOnCommunicationAndInvalidKlemmenstatus() {
@@ -124,29 +136,81 @@ void testObserverFailsUnknownOnCommunicationAndInvalidKlemmenstatus() {
     auto communicationError = observedCasDdeSnapshot(0x45U, 0.0F, 1U, 2U, 3U, 4U);
     communicationError.klemmenstatus =
         DiagnosticSignal<std::uint8_t>::unavailable(DiagnosticAvailability::CommunicationError);
-    CHECK(observer.observe(communicationError).state == VehicleStartObservedState::Unknown);
+    CHECK(observer.observe(communicationError).primaryVehicleState == VehicleStartObservedState::Unknown);
 
     const auto invalid = observedCasDdeSnapshot(0x4DU, 0.0F, 1U, 2U, 3U, 4U);
-    CHECK(observer.observe(invalid).state == VehicleStartObservedState::Unknown);
+    CHECK(observer.observe(invalid).primaryVehicleState == VehicleStartObservedState::Unknown);
 }
 
-void testDocumentedCasSignalsRemainObservationsOnly() {
+void testSstActivityDoesNotDisappearBehindPrimaryKeyState() {
+    VehicleStartObserver observer{};
+    auto snapshot = observedCasDdeSnapshot(0x41U, 0.0F, 10U, 20U, 21U, 30U);
+    snapshot.sstA = DiagnosticSignal<bool>::knownValue(
+        true, DiagnosticSource::CasStatusDiagnose, 31U, 40U);
+    snapshot.sstB = DiagnosticSignal<bool>::knownValue(
+        true, DiagnosticSource::CasStatusDiagnose, 31U, 40U);
+
+    const auto result = observer.observe(snapshot);
+    CHECK(result.primaryVehicleState == VehicleStartObservedState::KeyPresent);
+    const auto* sstA = findObservedSignal(result, bmw::remote::domain::StartSignalId::SstA);
+    const auto* sstB = findObservedSignal(result, bmw::remote::domain::StartSignalId::SstB);
+    CHECK(sstA != nullptr);
+    CHECK(sstB != nullptr);
+    CHECK(sstA != nullptr && sstA->rawValue);
+    CHECK(sstB != nullptr && sstB->rawValue);
+    CHECK(sstA != nullptr && sstA->qualification ==
+          StartObservationQualification::DocumentedNotVehicleValidated);
+    CHECK(sstB != nullptr && sstB->qualification ==
+          StartObservationQualification::DocumentedNotVehicleValidated);
+    CHECK(sstA != nullptr && sstA->evidence.source ==
+          DiagnosticSource::CasStatusDiagnose);
+}
+
+void testStartDmeActivityDoesNotReplaceCrankingPrimaryState() {
+    VehicleStartObserver observer{};
+    auto snapshot = observedCasDdeSnapshot(0x55U, 131.0F, 10U, 20U, 21U, 30U);
+    snapshot.startDme = DiagnosticSignal<bool>::knownValue(
+        true, DiagnosticSource::CasStatusDiagnose, 31U, 40U);
+
+    const auto result = observer.observe(snapshot);
+    CHECK(result.primaryVehicleState == VehicleStartObservedState::CrankingObserved);
+    const auto* startDme =
+        findObservedSignal(result, bmw::remote::domain::StartSignalId::StartDme);
+    CHECK(startDme != nullptr);
+    CHECK(startDme != nullptr && startDme->rawValue);
+    CHECK(startDme != nullptr && startDme->qualification ==
+          StartObservationQualification::DocumentedNotVehicleValidated);
+}
+
+void testStartReleaseRawValuesNeverBecomeStartAllowedState() {
+    VehicleStartObserver observer{};
+    for (const bool rawValue : {false, true}) {
+        StartSignalSnapshot snapshot{};
+        snapshot.startRelease = DiagnosticSignal<bool>::knownValue(
+            rawValue, DiagnosticSource::CasStatusDiagnose, 10U, 20U);
+        const auto result = observer.observe(snapshot);
+        CHECK(result.primaryVehicleState == VehicleStartObservedState::Unknown);
+        CHECK(result.primaryStateQualification == StartObservationQualification::Unknown);
+        const auto* startRelease =
+            findObservedSignal(result, bmw::remote::domain::StartSignalId::StartRelease);
+        CHECK(startRelease != nullptr);
+        CHECK(startRelease != nullptr && startRelease->rawValue == rawValue);
+        CHECK(startRelease != nullptr && startRelease->qualification ==
+              StartObservationQualification::DocumentedNotVehicleValidated);
+    }
+}
+
+void testMfsActivityRemainsUnvalidatedRawObservation() {
     VehicleStartObserver observer{};
     StartSignalSnapshot snapshot{};
-    snapshot.startRelease = DiagnosticSignal<bool>::knownValue(
+    snapshot.mfs = DiagnosticSignal<bool>::knownValue(
         true, DiagnosticSource::CasStatusDiagnose, 10U, 20U);
-    auto result = observer.observe(snapshot);
-    CHECK(result.state == VehicleStartObservedState::StartAllowedObserved);
-    CHECK(result.qualification ==
-          StartObservationQualification::DocumentedSignalNotVehicleValidated);
 
-    snapshot = StartSignalSnapshot{};
-    snapshot.sstA = DiagnosticSignal<bool>::knownValue(
-        true, DiagnosticSource::CasStatusDiagnose, 30U, 40U);
-    snapshot.sstB = DiagnosticSignal<bool>::knownValue(
-        true, DiagnosticSource::CasStatusDiagnose, 30U, 40U);
-    result = observer.observe(snapshot);
-    CHECK(result.state == VehicleStartObservedState::StartRequestObserved);
-    CHECK(result.qualification ==
-          StartObservationQualification::DocumentedSignalNotVehicleValidated);
+    const auto result = observer.observe(snapshot);
+    CHECK(result.primaryVehicleState == VehicleStartObservedState::Unknown);
+    const auto* mfs = findObservedSignal(result, bmw::remote::domain::StartSignalId::Mfs);
+    CHECK(mfs != nullptr);
+    CHECK(mfs != nullptr && mfs->rawValue);
+    CHECK(mfs != nullptr && mfs->qualification ==
+          StartObservationQualification::DocumentedNotVehicleValidated);
 }

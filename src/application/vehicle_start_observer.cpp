@@ -19,6 +19,33 @@ void addEvidence(
     }
 }
 
+void addDocumentedSignal(
+    VehicleStartObservation& result,
+    const StartSignalId id,
+    const domain::DiagnosticSignal<bool>& signal) {
+    if (signal.known() && result.observedSignalCount < result.observedSignals.size()) {
+        result.observedSignals[result.observedSignalCount++] = DocumentedSignalObservation{
+            id,
+            signal.value,
+            StartObservationQualification::DocumentedNotVehicleValidated,
+            StartObservationEvidence{id, signal.source, signal.interval}};
+    }
+}
+
+void collectDocumentedSignals(
+    VehicleStartObservation& result,
+    const StartSignalSnapshot& snapshot) {
+    addDocumentedSignal(result, StartSignalId::SstA, snapshot.sstA);
+    addDocumentedSignal(result, StartSignalId::SstB, snapshot.sstB);
+    addDocumentedSignal(result, StartSignalId::KeyRast, snapshot.keyRast);
+    addDocumentedSignal(result, StartSignalId::Brake, snapshot.brake);
+    addDocumentedSignal(
+        result, StartSignalId::ParkNeutralOrClutch, snapshot.parkNeutralOrClutch);
+    addDocumentedSignal(result, StartSignalId::Mfs, snapshot.mfs);
+    addDocumentedSignal(result, StartSignalId::StartDme, snapshot.startDme);
+    addDocumentedSignal(result, StartSignalId::StartRelease, snapshot.startRelease);
+}
+
 template <typename T>
 void addMissing(
     VehicleStartObservation& result,
@@ -61,6 +88,7 @@ VehicleStartObservation VehicleStartObserver::observe(
     const StartSignalSnapshot* previous) const {
     VehicleStartObservation result{};
     collectMissing(result, current);
+    collectDocumentedSignals(result, current);
 
     if (hasCommunicationError(current)) {
         return result;
@@ -74,7 +102,8 @@ VehicleStartObservation VehicleStartObserver::observe(
 
         addEvidence(result, StartSignalId::Klemmenstatus, current.klemmenstatus);
         addEvidence(result, StartSignalId::EngineRpm, current.engineRpm);
-        result.qualification = StartObservationQualification::ConfirmedPhase3dSequence;
+        result.primaryStateQualification =
+            StartObservationQualification::ConfirmedPhase3dSequence;
 
         const bool rpmZero = current.engineRpm.value == 0.0F;
         const bool previousPairKnown = previous != nullptr && isKnownPair(*previous);
@@ -85,57 +114,40 @@ VehicleStartObservation VehicleStartObserver::observe(
 
         if (terminals.raw == 0x40U) {
             if (!rpmZero && previousPairKnown && previousTerminals.raw == 0x45U) {
-                result.state = VehicleStartObservedState::ShutdownObserved;
+                result.primaryVehicleState = VehicleStartObservedState::ShutdownObserved;
             } else if (rpmZero && previousPairKnown && previousTerminals.raw == 0x40U &&
                        previous->engineRpm.value > 0.0F) {
-                result.state = VehicleStartObservedState::EngineStoppedObserved;
+                result.primaryVehicleState = VehicleStartObservedState::EngineStoppedObserved;
             } else if (rpmZero) {
-                result.state = VehicleStartObservedState::VehicleRest;
+                result.primaryVehicleState = VehicleStartObservedState::VehicleRest;
             }
             return result;
         }
         if (terminals.raw == 0x41U && rpmZero) {
-            result.state = VehicleStartObservedState::KeyPresent;
+            result.primaryVehicleState = VehicleStartObservedState::KeyPresent;
             return result;
         }
         if (terminals.raw == 0x45U) {
             if (rpmZero) {
-                result.state = VehicleStartObservedState::TerminalReady;
+                result.primaryVehicleState = VehicleStartObservedState::TerminalReady;
             } else if (previousPairKnown && previousTerminals.raw == 0x55U) {
-                result.state = VehicleStartObservedState::EngineRotatingObserved;
+                result.primaryVehicleState = VehicleStartObservedState::EngineRotatingObserved;
             } else if (previousPairKnown && previousTerminals.raw == 0x45U &&
                        previous->engineRpm.value > 0.0F) {
-                result.state = VehicleStartObservedState::EngineRunningObserved;
+                result.primaryVehicleState = VehicleStartObservedState::EngineRunningObserved;
             }
             return result;
         }
         if (terminals.raw == 0x55U && current.engineRpm.value > 0.0F) {
-            result.state = VehicleStartObservedState::CrankingObserved;
+            result.primaryVehicleState = VehicleStartObservedState::CrankingObserved;
             return result;
         }
     }
 
-    if (current.startDme.known() && current.startDme.value) {
-        result.state = VehicleStartObservedState::StartRequestObserved;
-        result.qualification = StartObservationQualification::DocumentedSignalNotVehicleValidated;
-        addEvidence(result, StartSignalId::StartDme, current.startDme);
-    } else if (current.mfs.known() && current.mfs.value) {
-        result.state = VehicleStartObservedState::StartRequestObserved;
-        result.qualification = StartObservationQualification::DocumentedSignalNotVehicleValidated;
-        addEvidence(result, StartSignalId::Mfs, current.mfs);
-    } else if (current.sstA.known() && current.sstB.known() &&
-               current.sstA.value && current.sstB.value) {
-        result.state = VehicleStartObservedState::StartRequestObserved;
-        result.qualification = StartObservationQualification::DocumentedSignalNotVehicleValidated;
-        addEvidence(result, StartSignalId::SstA, current.sstA);
-        addEvidence(result, StartSignalId::SstB, current.sstB);
-    } else if (current.startRelease.known() && current.startRelease.value) {
-        result.state = VehicleStartObservedState::StartAllowedObserved;
-        result.qualification = StartObservationQualification::DocumentedSignalNotVehicleValidated;
-        addEvidence(result, StartSignalId::StartRelease, current.startRelease);
-    } else if (current.keyRast.known() && current.keyRast.value) {
-        result.state = VehicleStartObservedState::KeyPresent;
-        result.qualification = StartObservationQualification::DocumentedSignalNotVehicleValidated;
+    if (current.keyRast.known() && current.keyRast.value) {
+        result.primaryVehicleState = VehicleStartObservedState::KeyPresent;
+        result.primaryStateQualification =
+            StartObservationQualification::DocumentedNotVehicleValidated;
         addEvidence(result, StartSignalId::KeyRast, current.keyRast);
     }
     return result;
