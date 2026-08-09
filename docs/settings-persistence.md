@@ -17,21 +17,21 @@ jusqu'à la validation complète de la nouvelle.
 | Offset | Taille | Contenu |
 |---:|---:|---|
 | 0 | 4 | Signature ASCII `BMRC` |
-| 4 | 2 | Version de schéma, actuellement `3` |
+| 4 | 2 | Version de schéma pré-V1, actuellement `1` |
 | 6 | 2 | Taille de la charge utile |
 | 8 | 4 | Compteur de génération |
 | 12 | 40 | Valeurs `UserSettings` encodées explicitement |
 | 52 | 4 | CRC-32 de l'en-tête et de la charge utile |
 
-L'enregistrement V3 occupe 56 octets dans chaque emplacement. Les entiers sont
+L'enregistrement courant occupe 56 octets dans chaque emplacement. Les entiers sont
 encodés explicitement en little-endian ; la disposition mémoire du compilateur
 n'est jamais enregistrée directement.
 
 Les octets 24 à 31 du payload contiennent le masque de fonctionnalités
-modulaires. Les octets 32 à 39 contiennent les quatre seuils de télémétrie V1.
-Le lecteur reconnaît aussi les enregistrements V1 de 40 octets et V2 de 48
-octets. Il initialise les champs absents avec leurs valeurs par défaut ; la
-prochaine sauvegarde produit une V3.
+modulaires. Les octets 32 à 39 contiennent les quatre seuils de télémétrie.
+Le lecteur accepte uniquement cette version et ce payload de 40 octets. Les
+anciens formats de développement ont été supprimés avant V1 : aucun matériel
+déployé ne nécessitait leur migration.
 
 ## Chargement
 
@@ -66,9 +66,9 @@ atomiquement la dernière donnée durable.
 ## Port matériel
 
 `SettingsByteStorage` expose seulement `capacity()`, `read()`, `write()` et
-`commit()`. L'adaptateur ESP32 futur pourra s'appuyer sur NVS ou une partition
-dédiée, mais devra préserver les deux emplacements, les erreurs de retour et les
-sémantiques de commit.
+`commit()`. Le prototype ESP32-S3 utilise une EEPROM émulée en flash. La carte
+définitive devra employer un stockage qualifié tout en préservant les deux
+emplacements, les erreurs de retour et les sémantiques de commit.
 
 Le scénario `settings-recovery` du simulateur enregistre deux configurations,
 corrompt volontairement la plus récente et démontre le retour automatique à la

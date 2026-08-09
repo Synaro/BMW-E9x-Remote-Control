@@ -1,119 +1,57 @@
 # Cadre des fonctionnalités modulaires
 
-## Objectif
+## Périmètre actuel
 
-Le projet possède un catalogue stable de 43 fonctionnalités. Chacune peut être
-demandée indépendamment par l'utilisateur avec une clé
-`feature.<code>=true|false`. Toutes sont désactivées par défaut.
+Le catalogue exécutable contient uniquement les trois fonctions dont le
+comportement existe dans `TelemetryMonitor` :
 
-Activer une clé ne suffit jamais à autoriser une action sur le véhicule. Le
-moteur de résolution sépare quatre informations :
-
-1. la préférence de l'utilisateur ;
-2. l'existence réelle de l'implémentation ;
-3. les capacités matérielles et logicielles disponibles ;
-4. la qualification des signaux et des commandes pour la variante automobile.
-
-Une fonctionnalité devient effective uniquement si toutes ces conditions sont
-réunies. En simulation, elle est explicitement marquée `simulated` ; sur le
-véhicule, elle doit atteindre l'état `available`.
-
-## États possibles
-
-| État | Signification |
+| Code de configuration | Comportement |
 |---|---|
-| `disabled_by_user` | option désactivée dans la configuration |
-| `not_implemented` | option demandée mais code fonctionnel absent |
-| `missing_capabilities` | matériel, transport ou application compagnon absent |
-| `signals_unqualified` | données véhicule non qualifiées pour cette variante |
-| `comfort_writes_unqualified` | écriture de confort non autorisée |
-| `critical_control_blocked` | commande critique maintenue bloquée |
-| `simulated` | comportement disponible uniquement dans le simulateur |
-| `available` | toutes les barrières de la cible réelle sont satisfaites |
+| `cold_engine_guard` | alerte de régime élevé lorsque le moteur est froid |
+| `dpf_regeneration_indicator` | alertes de début et fin de régénération FAP |
+| `transmission_overheat_alert` | alerte de température de boîte avec hystérésis |
 
-Ce modèle évite qu'une case cochée transforme une idée future en commande
-réelle. Les fonctions dangereuses restent bloquées même si leur préférence est
-enregistrée.
+Chaque fonction est demandée indépendamment avec
+`feature.<code>=true|false` et reste désactivée par défaut. Le moniteur produit
+uniquement des états et des alertes : il n'envoie aucune commande véhicule.
 
-## Niveaux de livraison
+Les 40 anciennes entrées sans comportement ont été retirées du code et placées
+dans [backlog/features.md](backlog/features.md). Une idée du backlog n'est pas
+une fonctionnalité disponible.
 
-### V1 lecture seule
+## Résolution fermée par défaut
 
-La V1 conserve le démarrage distant comme fonction centrale existante et ouvre
-le chantier télémétrie/alertes sans écriture supplémentaire sur les calculateurs.
-Les candidats du catalogue sont :
+Une fonction du catalogue devient effective uniquement si :
 
-- notification d'alarme ;
-- shift-light externe ;
-- dashboard racing Android ;
-- protection visuelle moteur froid ;
-- indicateur de régénération FAP ;
-- alerte de surchauffe de boîte ;
-- enregistreur de vol ;
-- OBD2 BLE virtuel.
+1. l'utilisateur l'a activée ;
+2. l'implémentation est déclarée disponible par la cible ;
+3. la capacité de lecture de l'état véhicule est présente ;
+4. les signaux nécessaires sont qualifiés.
 
-`v1_read_only` indique une priorité de développement, pas une promesse que le
-signal BMW est déjà identifié. La qualification de chaque donnée reste
-obligatoire.
+Le simulateur fournit ces preuves pour ses trames synthétiques. La cible réelle
+ne les fournit pas encore, car aucun signal BMW n'est qualifié.
 
-La protection moteur froid, l'indicateur de régénération FAP et l'alerte de
-surchauffe de boîte possèdent maintenant leur comportement complet dans le
-simulateur. Ils restent `unavailable` sur une cible réelle tant que leurs
-signaux BMW ne sont pas qualifiés. Voir
-[telemetry-alerts.md](telemetry-alerts.md).
+| État utile aujourd'hui | Signification |
+|---|---|
+| `disabled_by_user` | option désactivée |
+| `not_implemented` | comportement absent de la cible |
+| `missing_capabilities` | lecture de l'état indisponible |
+| `signals_unqualified` | sources véhicule non qualifiées |
+| `simulated` | comportement actif dans le simulateur |
+| `available` | toutes les preuves d'une cible réelle sont présentes |
 
-### Confort futur
+Les autres catégories et statuts du type générique sont du vocabulaire interne
+hérité. Ils ne déclarent aucune fonction d'écriture disponible.
 
-Les automatismes de confort et sorties externes sont classés
-`future_comfort`. Ils nécessitent un adaptateur dédié, des règles d'arbitrage et,
-pour toute écriture véhicule, une qualification explicite.
+## Configuration et persistance
 
-### Banc uniquement
+Le masque de fonctions reste un entier fixe de 64 bits afin de conserver un
+format embarqué simple. Seuls les trois bits du catalogue courant sont valides ;
+tout autre bit est refusé.
 
-Les fonctions touchant au groupe motopropulseur, à l'accès au véhicule ou à une
-signalisation agressive sont classées `bench_only`. Cela couvre notamment le
-kill-switch, le mode valet, l'anti-carjacking, la régénération FAP forcée, le
-turbo timer et les strobes. Elles ne doivent pas être activées sur route par la
-simple configuration utilisateur.
+La configuration pré-V1 utilise un seul payload de 40 octets. Aucune migration
+des anciens formats de développement n'est conservée, puisqu'aucun matériel
+déployé ne dépend de ces formats.
 
-## iPhone et Android
-
-Les fonctions génériques liées au téléphone décrivent une application compagnon
-comme une capacité alternative : iOS **ou** Android peut satisfaire le besoin.
-Le cœur embarqué et le format de configuration ne dépendent donc pas d'une seule
-plateforme.
-
-Le dashboard racing demandé pour l'écran Erisin reste naturellement catalogué
-comme spécifique Android. L'application iPhone sera prioritaire pour le premier
-compagnon mobile ; Android pourra être ajouté plus tard au-dessus du même
-protocole. Aucune application mobile n'est encore livrée dans ce jalon.
-
-## Identifiants et stockage
-
-Les identifiants sont ordonnés et persistés dans un masque fixe de 64 bits. Ils
-ne doivent jamais être réordonnés ni réutilisés après publication. Le catalogue
-compte actuellement 43 entrées, laissant 21 emplacements compatibles sans
-allocation dynamique.
-
-La configuration binaire V2 a ajouté ce masque au payload. La V3 ajoute les
-seuils de télémétrie. Les configurations V1 de 24 octets et V2 de 32 octets
-restent acceptées ; les champs absents prennent leurs valeurs sûres par défaut.
-La sauvegarde suivante les écrit au format V3.
-
-## Inspection
-
-Après compilation du simulateur, le catalogue complet et ses classifications
-peuvent être affichés avec :
-
-```powershell
-.\build\bmw_remote_simulator.exe --list-features
-```
-
-Les options actives d'un fichier peuvent être vérifiées avec :
-
-```powershell
-.\build\bmw_remote_simulator.exe `
-  --show-config .\config\user-settings.conf
-```
-
-Le fichier d'exemple contient les 43 clés avec la valeur `false`.
+Voir [telemetry-alerts.md](telemetry-alerts.md) pour les règles détaillées et
+[user-configuration.md](user-configuration.md) pour les limites utilisateur.

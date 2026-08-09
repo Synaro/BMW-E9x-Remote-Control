@@ -87,9 +87,7 @@ bool decodeUserSettingsPayload(
     const UserSettingsPayload& payload,
     const std::size_t payloadSize,
     application::UserSettings& settings) noexcept {
-    if (payloadSize != LegacyUserSettingsPayloadSize &&
-        payloadSize != FeatureUserSettingsPayloadSize &&
-        payloadSize != UserSettingsPayloadSize) {
+    if (payloadSize != UserSettingsPayloadSize) {
         return false;
     }
     if (payload[0] > 1U) {
@@ -109,16 +107,12 @@ bool decodeUserSettingsPayload(
     decoded.lockMaximumGapMs = readU32(payload.data() + 16U);
     decoded.lockMaximumSequenceMs = readU32(payload.data() + 20U);
     decoded.features = application::FeatureRequests{
-        payloadSize >= FeatureUserSettingsPayloadSize
-            ? readU64(payload.data() + 24U)
-            : 0U};
-    if (payloadSize == UserSettingsPayloadSize) {
-        decoded.coldEngineMaximumRpm = readU16(payload.data() + 32U);
-        decoded.engineWarmTemperatureC = readU16(payload.data() + 34U);
-        decoded.transmissionOverheatTemperatureC =
-            readU16(payload.data() + 36U);
-        decoded.temperatureAlertHysteresisC = readU16(payload.data() + 38U);
-    }
+        readU64(payload.data() + 24U)};
+    decoded.coldEngineMaximumRpm = readU16(payload.data() + 32U);
+    decoded.engineWarmTemperatureC = readU16(payload.data() + 34U);
+    decoded.transmissionOverheatTemperatureC =
+        readU16(payload.data() + 36U);
+    decoded.temperatureAlertHysteresisC = readU16(payload.data() + 38U);
 
     if (!application::validateUserSettings(decoded).valid()) {
         return false;

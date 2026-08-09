@@ -1,6 +1,7 @@
 .pio/
 .vscode/
 build/
+build-cmake*/
 cmake-build-*/
 *.exe
 *.o

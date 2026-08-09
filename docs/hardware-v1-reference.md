@@ -46,25 +46,22 @@ La documentation BMW distingue :
 - le K-CAN à 100 kbit/s, capable de continuer sur un seul fil en cas de défaut ;
 - le PT-CAN à 500 kbit/s, utilisant une couche physique CAN haute vitesse.
 
-L'ESP32-S3 ne possède qu'un contrôleur TWAI. La carte définitive doit donc
-prévoir deux canaux indépendants si les signaux qualifiés imposent l'observation
-des deux réseaux :
+La cible officielle utilise exclusivement le contrôleur **TWAI interne de
+l'ESP32-S3** avec un transceiver CAN externe adapté à la couche physique du bus
+observé. La Phase 1 n'implémente encore aucun pilote TWAI.
 
 ```text
-                           +-- contrôleur TWAI interne -- transceiver K-CAN
-ESP32-S3 -- logique -------+
-                           +-- SPI -- contrôleur CAN externe -- transceiver PT-CAN
+ESP32-S3 -- contrôleur TWAI interne -- transceiver externe -- un bus de test
 ```
 
-L'affectation K-CAN/PT-CAN ci-dessus est provisoire : les contrôleurs CAN traitent
-les trames, tandis que le type de transceiver impose la compatibilité électrique.
-L'affectation définitive dépendra des pilotes, du réveil et des signaux retenus.
+Un seul bus sera étudié à la fois en écoute seule. Si l'observation simultanée de
+plusieurs bus devient un besoin validé, elle fera l'objet d'une nouvelle décision
+d'architecture ; aucun second contrôleur CAN n'est retenu aujourd'hui.
 
 Les composants candidats pour la future carte sont :
 
 - `TJA1055T/3` pour la couche physique K-CAN basse vitesse tolérante aux défauts ;
 - `TCAN1044AV-Q1` pour la couche physique PT-CAN haute vitesse avec E/S 3,3 V ;
-- `MCP2515` comme second contrôleur CAN classique sur SPI ;
 - `LM5164-Q1` comme base d'étude de l'alimentation abaisseuse à large plage.
 
 Ces références sont des **candidats de conception**, pas encore une liste
@@ -104,12 +101,12 @@ Sur une DevKitC-1 qui possède deux connecteurs, utiliser celui identifié
 cas, le premier test tente d'adopter automatiquement l'unique nouveau port. En
 utilisation manuelle, relancer `-ListDevices` et reprendre avec ce numéro.
 
-### Phase B — deux CAN simulés sur table
+### Phase B — un CAN simulé sur table
 
-1. Ajouter les contrôleurs et transceivers sur une carte d'interface protégée.
+1. Ajouter un transceiver externe sur une carte d'interface protégée.
 2. Utiliser une alimentation de laboratoire limitée en courant.
 3. Vérifier d'abord les modes écoute seule sur un bus CAN de test.
-4. Tester les débits 100 et 500 kbit/s sans véhicule.
+4. Tester séparément les débits 100 et 500 kbit/s sans véhicule.
 
 ### Phase C — observation passive du véhicule
 
@@ -128,7 +125,7 @@ Une DevKit facilite le développement, mais elle ne fournit pas à elle seule :
 - la protection contre inversion, surtension, transitoires et décharges ESD ;
 - une consommation de veille maîtrisée pour un branchement permanent ;
 - des composants et connecteurs qualifiés pour l'environnement automobile ;
-- les deux couches physiques CAN adaptées ;
+- la couche physique CAN adaptée et qualifiée ;
 - un watchdog matériel indépendant et des sorties maintenues inactives au reset ;
 - une fixation, un boîtier et un faisceau adaptés aux vibrations et à la chaleur.
 
@@ -141,6 +138,5 @@ avec alimentation, interfaces, protections et interverrouillages qualifiés.
 - [Fiche technique ESP32-S3](https://documentation.espressif.com/esp32-s3_datasheet_en.pdf)
 - [BMW Body Electronics II — Bus Systems](https://bmwtechinfo.bmwgroup.com/tech_training_manual/ST401%20Body%20Electronics%20II.pdf)
 - [NXP TJA1055](https://www.nxp.com/products/TJA1055T)
-- [Microchip MCP2515](https://ww1.microchip.com/downloads/aemDocuments/documents/APID/ProductDocuments/DataSheets/MCP2515-Family-Data-Sheet-DS20001801K.pdf)
 - [TI TCAN1044A-Q1](https://www.ti.com/product/TCAN1044A-Q1)
 - [TI LM5164-Q1](https://www.ti.com/product/LM5164-Q1)

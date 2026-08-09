@@ -21,10 +21,11 @@ Le premier jalon logiciel est opérationnel :
 - machine d'état événementielle complète ;
 - détection applicative configurable de trois impulsions de verrouillage ;
 - garde fermée par défaut sur leur provenance, fraîcheur et ordre ;
-- adaptateur CAN lecture seule désactivé par défaut, avec fronts et compteur roulant ;
+- adaptateur générique de trames CAN testé sur données synthétiques, sans
+  identifiant BMW réel ;
 - profil utilisateur validé avant application, sans recompilation du noyau ;
-- catalogue stable de 43 fonctionnalités, toutes activables séparément et
-  désactivées par défaut ;
+- catalogue exécutable limité aux 3 fonctions de télémétrie réellement
+  implémentées, toutes désactivées par défaut ;
 - résolution fermée par défaut entre préférence, implémentation, capacités et
   qualification véhicule ;
 - configurateur Windows interactif avec enregistrement vérifié et remplacement sûr ;
@@ -58,7 +59,7 @@ Le premier jalon logiciel est opérationnel :
 - campagnes déterministes de perte, retard et corruption des données véhicule ;
 - superviseur logiciel des actionneurs avec heartbeat, séquencement, retours
   d'état et défauts mémorisés ;
-- 132 tests C++, 15 scénarios du simulateur, 3 contrôles du configurateur et
+- 128 tests C++, 15 scénarios du simulateur, 3 contrôles du configurateur et
   21 tests Python automatisés en intégration continue.
 
 L'adaptateur BMW qui observera réellement le verrouillage, qualifiera la reprise
@@ -106,8 +107,9 @@ Le contrat du futur décodeur CAN de verrouillage est défini dans
 [docs/can-lock-command-adapter.md](docs/can-lock-command-adapter.md).
 Les préférences, leurs limites et leur future persistance sont décrites dans
 [docs/user-configuration.md](docs/user-configuration.md).
-Le catalogue modulaire, les niveaux de livraison et la compatibilité iOS/Android
-sont décrits dans [docs/feature-framework.md](docs/feature-framework.md).
+Le catalogue des fonctions actuellement implémentées est décrit dans
+[docs/feature-framework.md](docs/feature-framework.md). Les idées non livrées
+sont isolées dans [docs/backlog/features.md](docs/backlog/features.md).
 Le premier moteur de télémétrie et ses alertes sont décrits dans
 [docs/telemetry-alerts.md](docs/telemetry-alerts.md).
 Le journal binaire redondant est spécifié dans
@@ -246,7 +248,7 @@ Sous Windows, l'exécutable interactif peut être construit avec :
 .\build\bmw_remote_simulator.exe
 ```
 
-Le catalogue complet des options et leur niveau de livraison est affichable
+Le catalogue des fonctions actuellement implémentées est affichable
 sans lancer de scénario :
 
 ```powershell
