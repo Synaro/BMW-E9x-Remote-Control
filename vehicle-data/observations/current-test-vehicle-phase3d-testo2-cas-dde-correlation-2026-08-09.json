@@ -1,6 +1,7 @@
 {
   "schema_version": 1,
   "artifact_type": "CAS_DDE_DIAGNOSTIC_CORRELATION_OBSERVATION",
+  "session_id": "OEM_START_SYNC_01",
   "observation_id": "CURRENT_TEST_VEHICLE_PHASE3D_TESTO2_CAS_DDE_CORRELATION_2026_08_09",
   "profile_ref": "../profiles/current-test-vehicle.vehicle-profile.json",
   "evidence_index": "../evidence/current-test-vehicle.evidence-index.json",
@@ -16,7 +17,14 @@
     "captured_at": "2026-08-09T21:21:16.895+02:00",
     "read_only": true
   },
-  "source_payload_sha256": "0eeed9deb95ab65d6f45142a7a0df4f3de9f9502f1cf51cb85eeef3033da4399",
+  "source_payload_sha256": "cafda7e2b5935c77aa8135d7073bb46294e320a5bf4c1f50733216a000bb5260",
+  "classification_model": {
+    "diagnostic_values": "RAW_OBSERVED",
+    "klemmenstatus_bit_decode": "DERIVED_FROM_DOCUMENTED_BITS",
+    "kl50_rpm_relation": "CORRELATED",
+    "diagnostic_sequence": "CONFIRMED",
+    "physical_transition_order": "UNKNOWN"
+  },
   "recovery": {
     "declared_samples": 300,
     "recovered_samples": 291,
@@ -45,11 +53,22 @@
     "rpm_nonzero": {"after_timestamp_ms_exclusive":1786303279572,"by_timestamp_ms_inclusive":1786303279829,"window_ms":257,"physical_instant_known":false},
     "kl50_off": {"after_timestamp_ms_exclusive":1786303280347,"by_timestamp_ms_inclusive":1786303280653,"window_ms":306,"physical_instant_known":false}
   },
+  "call_aware_transition_bounds": {
+    "kl50_on": {"after_prior_call_start_ms_exclusive":1786303279519,"by_first_new_call_end_ms_inclusive":1786303279829,"window_ms":310,"physical_instant_known":false},
+    "rpm_nonzero": {"after_prior_dde_call_start_ms_exclusive":1786303279572,"by_first_nonzero_dde_call_end_ms_inclusive":1786303280089,"window_ms":517,"physical_instant_known":false},
+    "kl50_off": {"after_prior_call_start_ms_exclusive":1786303280347,"by_first_new_call_end_ms_inclusive":1786303280706,"window_ms":359,"physical_instant_known":false}
+  },
   "observed_kl50_duration_bounds_ms": {
     "minimum": 571,
     "maximum": 1134,
     "exact_physical_duration": null,
     "status": "OBSERVED_BOUNDED_DIAGNOSTIC_SAMPLING"
+  },
+  "conservative_call_aware_kl50_duration_bounds_ms": {
+    "minimum": 518,
+    "maximum": 1187,
+    "exact_physical_duration": null,
+    "status": "OBSERVED_BOUNDED_SEQUENTIAL_CALLS"
   },
   "diagnostic_correlation": {
     "same_clock": true,

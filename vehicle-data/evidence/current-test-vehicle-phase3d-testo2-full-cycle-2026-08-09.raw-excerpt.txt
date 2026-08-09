@@ -1,0 +1,31 @@
+PHASE 3D CURATED RAW EXCERPT — OEM_FULL_CYCLE_01
+================================================
+
+The full source file is intentionally not committed. Source SHA-256:
+562c70ca35358d711402dae0f0f058fd3113687e84cad051eb060482444eb0cf
+
+The source contains 300 JSON records. CAS is called first, DDE second. Each
+timestamp is the start of one diagnostic call; values are not simultaneous.
+
+Communication recovery:
+{"sample":0,"casTimestampMs":1786303783593,"ddeTimestampMs":1786303786111,"endTimestampMs":1786303789170,"klemmenstatus":null,"rpm":null,"casOk":false,"ddeOk":false}
+{"sample":1,"casTimestampMs":1786303789175,"ddeTimestampMs":1786303791124,"endTimestampMs":1786303792606,"klemmenstatus":"64","rpm":"0.000000E+000","casOk":true,"ddeOk":true}
+{"sample":2,"casTimestampMs":1786303792606,"ddeTimestampMs":1786303792661,"endTimestampMs":1786303792865,"klemmenstatus":"65","rpm":"0.000000E+000","casOk":true,"ddeOk":true}
+
+OEM start:
+{"sample":28,"casTimestampMs":1786303799451,"ddeTimestampMs":1786303799502,"endTimestampMs":1786303799706,"klemmenstatus":"65","rpm":"0.000000E+000","casOk":true,"ddeOk":true}
+{"sample":29,"casTimestampMs":1786303799707,"ddeTimestampMs":1786303799760,"endTimestampMs":1786303799964,"klemmenstatus":"85","rpm":"1.300000E+002","casOk":true,"ddeOk":true}
+{"sample":30,"casTimestampMs":1786303799964,"ddeTimestampMs":1786303800016,"endTimestampMs":1786303800221,"klemmenstatus":"85","rpm":"3.415000E+002","casOk":true,"ddeOk":true}
+{"sample":31,"casTimestampMs":1786303800221,"ddeTimestampMs":1786303800275,"endTimestampMs":1786303800530,"klemmenstatus":"85","rpm":"1.022500E+003","casOk":true,"ddeOk":true}
+{"sample":32,"casTimestampMs":1786303800530,"ddeTimestampMs":1786303800583,"endTimestampMs":1786303800786,"klemmenstatus":"69","rpm":"9.620000E+002","casOk":true,"ddeOk":true}
+
+OEM stop and mechanical rundown:
+{"sample":102,"casTimestampMs":1786303818519,"ddeTimestampMs":1786303818572,"endTimestampMs":1786303818776,"klemmenstatus":"69","rpm":"7.785000E+002","casOk":true,"ddeOk":true}
+{"sample":103,"casTimestampMs":1786303818776,"ddeTimestampMs":1786303818829,"endTimestampMs":1786303819033,"klemmenstatus":"64","rpm":"7.795000E+002","casOk":true,"ddeOk":true}
+{"sample":104,"casTimestampMs":1786303819033,"ddeTimestampMs":1786303819086,"endTimestampMs":1786303819291,"klemmenstatus":"64","rpm":"4.385000E+002","casOk":true,"ddeOk":true}
+{"sample":105,"casTimestampMs":1786303819291,"ddeTimestampMs":1786303819343,"endTimestampMs":1786303819547,"klemmenstatus":"64","rpm":"2.150000E+002","casOk":true,"ddeOk":true}
+{"sample":106,"casTimestampMs":1786303819547,"ddeTimestampMs":1786303819599,"endTimestampMs":1786303819801,"klemmenstatus":"64","rpm":"0.000000E+000","casOk":true,"ddeOk":true}
+{"sample":107,"casTimestampMs":1786303819801,"ddeTimestampMs":1786303819854,"endTimestampMs":1786303820058,"klemmenstatus":"64","rpm":"0.000000E+000","casOk":true,"ddeOk":true}
+
+No brake value, START/STOP button value, CAN frame, or vehicle command is
+present in this acquisition.

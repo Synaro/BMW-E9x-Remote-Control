@@ -123,6 +123,13 @@ Les seules bornes soutenues par l'échantillonnage sont :
   `1786303280653`, fenêtre de 306 ms ;
 - durée KL50 ON de cette acquisition bornée entre 571 et 1134 ms.
 
+Ces bornes utilisent les débuts d'appels comme points observés. Une seconde
+lecture, volontairement plus conservatrice, tient compte de la fin possible de
+chaque appel : KL50 ON est alors borné dans une fenêtre de 310 ms, RPM non nul
+dans 517 ms et KL50 OFF dans 359 ms. La durée KL50 compatible avec ces
+intervalles d'appels est comprise entre 518 et 1187 ms. Aucune de ces valeurs
+n'est un instant ou une durée physique exacte.
+
 Les fenêtres KL50 ON et RPM non nul se recouvrent. Les écarts de 53, 52 et
 53 ms observés dans les samples 10, 12 et 13 sont des écarts de lectures
 diagnostiques CAS-puis-DDE, pas des délais physiques. La corrélation est donc
@@ -137,6 +144,48 @@ final de détection moteur tournant.
 Cette qualification est `READ_ONLY_SIGNAL` et reste `PROHIBITED` comme
 précondition. Elle ne prouve ni la source de demande OEM, ni une commande de
 démarrage, ni une autorisation, ni un ID CAN ou une commande diagnostique.
+
+### Deuxième acquisition : cycle OEM complet
+
+La session `OEM_FULL_CYCLE_01` contient 300 enregistrements JSON complets. Le
+sample 0 consigne un échec initial des deux lectures ; les samples 1 à 299 sont
+valides. La suite CAS réellement présente est `64 -> 65 -> 85 -> 69 -> 64`.
+Le décodage documenté donne :
+
+| Décimal | Hex | KL R | KL15 | KL50 | Schl Valid |
+|---:|---:|---|---|---|---|
+| 64 | `0x40` | OFF | OFF | OFF | ON |
+| 65 | `0x41` | ON | OFF | OFF | ON |
+| 69 | `0x45` | ON | ON | OFF | ON |
+| 85 | `0x55` | ON | ON | ON | ON |
+
+Au démarrage, les samples 29 à 31 rapportent KL50 ON avec 130, 341,5 puis
+1022,5 rpm. Le sample 32 rapporte KL50 OFF avec 962 rpm. Les bornes fondées sur
+les débuts d'appels donnent 514 à 1079 ms pour la durée observée ; les bornes
+conservatrices tenant compte des appels séquentiels donnent 461 à 1132 ms.
+Ces deux intervalles restent des bornes diagnostiques.
+
+À l'arrêt, les samples 102 à 106 donnent respectivement `(69, 778,5)`,
+`(64, 779,5)`, `(64, 438,5)`, `(64, 215)` puis `(64, 0)` pour
+`(KLEMMENSTATUS, rpm)`. Le retour `69 -> 64` est donc observé avant que la
+lecture DDE atteigne zéro, puis le régime décroît. Cela confirme uniquement la
+séquence OEM lue ; aucune « commande stop » n'est identifiée.
+
+Le passage `64 -> 65` coïncide avec la séquence d'insertion de clé déclarée
+par l'utilisateur. Sa qualification reste `OBSERVED_CORRELATION`, sans
+causalité. L'appui frein, les appuis START/STOP, le codage autorisant le départ
+sans frein et l'éjection automatique de clé sont conservés séparément comme
+`USER_DECLARED_ACTION`. Les captures ne mesurent ni frein, ni bouton, ni
+éjection de clé.
+
+### Comparaison des deux démarrages
+
+Les deux sessions ont chacune trois samples KL50 ON accompagnés d'un régime
+croissant. Le retour KL50 OFF est lu à 981,5 rpm dans `OEM_START_SYNC_01` et à
+962 rpm dans `OEM_FULL_CYCLE_01`. Les différences entre bornes de durée sont
+de 57 ms pour les minima et 55 ms pour les maxima ; l'écart de régime au
+retour OFF est de 19,5 rpm. Deux démarrages ne suffisent pas à définir un seuil
+moteur tournant ou un algorithme de désengagement du démarreur.
 
 ### Transmission et frein
 
@@ -204,7 +253,7 @@ timestamps synchronisés explicitement fournis.
 
 ## Inconnues et blocages actuels
 
-- exports TestO bruts : `BLOCKED` par absence des fichiers source dans le dépôt ;
+- fichiers TestO bruts : analysés et hachés, mais volontairement conservés hors Git ;
 - algorithme de détection moteur tournant : `NOT_YET_VALIDATED` ;
 - signification fonctionnelle des bits MSA observés : `UNKNOWN` ;
 - état Terminal 50 : `CONFIRMED` en lecture via KLEMMENSTATUS ;
@@ -216,7 +265,7 @@ timestamps synchronisés explicitement fournis.
 - bouton START / demande de démarrage CAS : `UNKNOWN` ;
 - mécanisme d'actionnement remote-start : `UNKNOWN` ;
 - autorisation OEM de démarrage : `UNKNOWN` ;
-- stratégie d'arrêt : `UNKNOWN` ;
+- séquence d'arrêt OEM : `CONFIRMED_AS_SEQUENCE`, mécanisme d'arrêt : `UNKNOWN` ;
 - stratégie de timeout définitive : `UNKNOWN` ;
 - perte de communication et comportement après reset : `UNKNOWN` ;
 - politique complète des conditions empêchant le démarrage : `UNKNOWN` ;

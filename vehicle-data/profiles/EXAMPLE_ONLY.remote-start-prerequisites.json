@@ -35,6 +35,19 @@
     "communication_loss": {"status": "UNKNOWN", "evidence_refs": [], "updated_at": "2000-01-01T00:00:00Z", "notes": null, "blocker_reason": null},
     "post_reset_behavior": {"status": "UNKNOWN", "evidence_refs": [], "updated_at": "2000-01-01T00:00:00Z", "notes": null, "blocker_reason": null},
     "start_inhibit_conditions": {"status": "UNKNOWN", "evidence_refs": [], "updated_at": "2000-01-01T00:00:00Z", "notes": null, "blocker_reason": null},
-    "can_identifiers": {"status": "UNKNOWN", "evidence_refs": [], "updated_at": "2000-01-01T00:00:00Z", "notes": "No BMW CAN identifier is present in the example.", "blocker_reason": null}
+    "can_identifiers": {"status": "UNKNOWN", "evidence_refs": [], "updated_at": "2000-01-01T00:00:00Z", "notes": "No BMW CAN identifier is present in the example.", "blocker_reason": null},
+    "klemmenstatus_decoding": {"status": "UNKNOWN", "evidence_refs": [], "updated_at": "2000-01-01T00:00:00Z", "notes": null, "blocker_reason": null},
+    "kl_r_state_observation": {"status": "UNKNOWN", "evidence_refs": [], "updated_at": "2000-01-01T00:00:00Z", "notes": null, "blocker_reason": null},
+    "kl15_state_observation": {"status": "UNKNOWN", "evidence_refs": [], "updated_at": "2000-01-01T00:00:00Z", "notes": null, "blocker_reason": null},
+    "kl50_cranking_correlation": {"status": "UNKNOWN", "evidence_refs": [], "updated_at": "2000-01-01T00:00:00Z", "notes": null, "blocker_reason": null},
+    "synchronized_diagnostic_acquisition": {"status": "UNKNOWN", "evidence_refs": [], "updated_at": "2000-01-01T00:00:00Z", "notes": null, "blocker_reason": null},
+    "oem_start_sequence_observation": {"status": "UNKNOWN", "evidence_refs": [], "updated_at": "2000-01-01T00:00:00Z", "notes": null, "blocker_reason": null},
+    "oem_stop_sequence_observation": {"status": "UNKNOWN", "evidence_refs": [], "updated_at": "2000-01-01T00:00:00Z", "notes": null, "blocker_reason": null},
+    "key_insertion_correlation": {"status": "UNKNOWN", "evidence_refs": [], "updated_at": "2000-01-01T00:00:00Z", "notes": null, "blocker_reason": null},
+    "brake_press_signal_this_session": {"status": "UNKNOWN", "evidence_refs": [], "updated_at": "2000-01-01T00:00:00Z", "notes": null, "blocker_reason": null},
+    "automatic_key_ejection": {"status": "UNKNOWN", "evidence_refs": [], "updated_at": "2000-01-01T00:00:00Z", "notes": null, "blocker_reason": null},
+    "starter_disengagement_algorithm": {"status": "UNKNOWN", "evidence_refs": [], "updated_at": "2000-01-01T00:00:00Z", "notes": null, "blocker_reason": null},
+    "physical_start_stop_button_signal": {"status": "UNKNOWN", "evidence_refs": [], "updated_at": "2000-01-01T00:00:00Z", "notes": null, "blocker_reason": null},
+    "remote_stop_actuation_mechanism": {"status": "UNKNOWN", "evidence_refs": [], "updated_at": "2000-01-01T00:00:00Z", "notes": null, "blocker_reason": null}
   }
 }

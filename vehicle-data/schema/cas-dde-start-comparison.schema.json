@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://bmw-e9x-remote-control.invalid/vehicle-data/schema/cas-dde-start-comparison.schema.json",
+  "title": "Phase 3D comparison of sequential CAS/DDE OEM-start observations",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version", "artifact_type", "comparison_id", "session_refs", "starts",
+    "observed_variability", "classification", "causal_inference", "algorithm_status",
+    "sample_count_sufficient_for_control_algorithm", "forbidden_inferences", "notes"
+  ],
+  "properties": {
+    "schema_version": {"const": 1},
+    "artifact_type": {"const": "CAS_DDE_START_COMPARISON"},
+    "comparison_id": {"type": "string", "minLength": 1},
+    "session_refs": {"type": "array", "minItems": 2, "maxItems": 2, "uniqueItems": true},
+    "starts": {"type": "array", "minItems": 2, "maxItems": 2},
+    "observed_variability": {"type": "object"},
+    "classification": {"const": "CORRELATED"},
+    "causal_inference": {"const": false},
+    "algorithm_status": {"const": "NOT_YET_VALIDATED"},
+    "sample_count_sufficient_for_control_algorithm": {"const": false},
+    "forbidden_inferences": {"type": "array", "uniqueItems": true, "minItems": 5},
+    "notes": {"type": "string", "minLength": 1}
+  }
+}

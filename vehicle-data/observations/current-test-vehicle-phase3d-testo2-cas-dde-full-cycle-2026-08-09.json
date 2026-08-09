@@ -1,0 +1,127 @@
+{
+  "schema_version": 1,
+  "artifact_type": "CAS_DDE_FULL_CYCLE_OBSERVATION",
+  "session_id": "OEM_FULL_CYCLE_01",
+  "observation_id": "CURRENT_TEST_VEHICLE_PHASE3D_TESTO2_CAS_DDE_FULL_CYCLE_2026_08_09",
+  "profile_ref": "../profiles/current-test-vehicle.vehicle-profile.json",
+  "evidence_index": "../evidence/current-test-vehicle.evidence-index.json",
+  "evidence_ref": "CURRENT_TEST_VEHICLE_PHASE3D_TESTO2_CAS_DDE_FULL_CYCLE_2026_08_09",
+  "source": {
+    "tool": "TestO 2.0", "process_count": 1, "session_count": 1,
+    "clock": "Date.now() milliseconds", "acquisition_order": ["CAS", "DDE"],
+    "timestamp_semantics": "DIAGNOSTIC_CALL_START", "read_only": true,
+    "captured_at": "2026-08-09T21:29:43.593+02:00",
+    "cas": {"sgbd_prg":"CAS.PRG","job":"STATUS_FZG_ZUSTAND","field":"KLEMMENSTATUS"},
+    "dde": {"sgbd_prg":"D71N47C0.PRG","job":"STATUS_MOTORDREHZAHL","field":"STAT_MOTORDREHZAHL_WERT"}
+  },
+  "source_file": {
+    "original_name": "[212943] --- Running script ---.txt",
+    "sha256": "562c70ca35358d711402dae0f0f058fd3113687e84cad051eb060482444eb0cf",
+    "full_raw_file_in_repository": false,
+    "curated_excerpt_in_repository": true
+  },
+  "recovery": {"declared_samples":300,"recovered_samples":300,"missing_samples":[],"duplicate_samples":[],"invalid_json_records":0},
+  "signal_inventory": {
+    "measured": ["CAS.KLEMMENSTATUS", "DDE.ENGINE_SPEED_RPM"],
+    "not_measured": ["BRAKE", "START_STOP_BUTTON", "KEY_EJECTION"],
+    "brake_signal_captured": false
+  },
+  "communication_event": {
+    "sample": 0, "classification": "RAW_OBSERVED", "cas_ok": false, "dde_ok": false,
+    "cas_timestamp_ms": 1786303783593, "dde_timestamp_ms": 1786303786111,
+    "end_timestamp_ms": 1786303789170, "klemmenstatus": null, "rpm": null,
+    "interpretation": "INITIAL_DIAGNOSTIC_COMMUNICATION_FAILURE"
+  },
+  "decoded_klemmenstatus": [
+    {"decimal":64,"hex":"0x40","binary":"0b01000000","classification":"DERIVED_FROM_DOCUMENTED_BITS","kl_r":"OFF","kl15":"OFF","kl50":"OFF","schl_valid":"ON"},
+    {"decimal":65,"hex":"0x41","binary":"0b01000001","classification":"DERIVED_FROM_DOCUMENTED_BITS","kl_r":"ON","kl15":"OFF","kl50":"OFF","schl_valid":"ON"},
+    {"decimal":69,"hex":"0x45","binary":"0b01000101","classification":"DERIVED_FROM_DOCUMENTED_BITS","kl_r":"ON","kl15":"ON","kl50":"OFF","schl_valid":"ON"},
+    {"decimal":85,"hex":"0x55","binary":"0b01010101","classification":"DERIVED_FROM_DOCUMENTED_BITS","kl_r":"ON","kl15":"ON","kl50":"ON","schl_valid":"ON"}
+  ],
+  "user_declared_context": [
+    {"action":"KEY_INSERTION","classification":"USER_DECLARED_ACTION","measured_signal":false,"timestamp_ms":null},
+    {"action":"BRAKE_PRESS","classification":"USER_DECLARED_ACTION","measured_signal":false,"timestamp_ms":null},
+    {"action":"START_STOP_PRESS_FOR_START","classification":"USER_DECLARED_ACTION","measured_signal":false,"timestamp_ms":null},
+    {"action":"START_STOP_PRESS_FOR_STOP","classification":"USER_DECLARED_ACTION","measured_signal":false,"timestamp_ms":null},
+    {"action":"AUTOMATIC_KEY_EJECTION","classification":"USER_DECLARED_ACTION","measured_signal":false,"timestamp_ms":null}
+  ],
+  "coding_context": [
+    {"statement":"START_WITHOUT_BRAKE_REQUIREMENT","classification":"USER_DECLARED_ACTION","directly_measured":false},
+    {"statement":"AUTOMATIC_KEY_EJECTION_AFTER_STOP","classification":"USER_DECLARED_ACTION","directly_measured":false}
+  ],
+  "critical_samples": [
+    {"sample":1,"cas_timestamp_ms":1786303789175,"dde_timestamp_ms":1786303791124,"end_timestamp_ms":1786303792606,"klemmenstatus":64,"rpm":0,"classification":"RAW_OBSERVED"},
+    {"sample":2,"cas_timestamp_ms":1786303792606,"dde_timestamp_ms":1786303792661,"end_timestamp_ms":1786303792865,"klemmenstatus":65,"rpm":0,"classification":"RAW_OBSERVED"},
+    {"sample":28,"cas_timestamp_ms":1786303799451,"dde_timestamp_ms":1786303799502,"end_timestamp_ms":1786303799706,"klemmenstatus":65,"rpm":0,"classification":"RAW_OBSERVED"},
+    {"sample":29,"cas_timestamp_ms":1786303799707,"dde_timestamp_ms":1786303799760,"end_timestamp_ms":1786303799964,"klemmenstatus":85,"rpm":130,"classification":"RAW_OBSERVED"},
+    {"sample":30,"cas_timestamp_ms":1786303799964,"dde_timestamp_ms":1786303800016,"end_timestamp_ms":1786303800221,"klemmenstatus":85,"rpm":341.5,"classification":"RAW_OBSERVED"},
+    {"sample":31,"cas_timestamp_ms":1786303800221,"dde_timestamp_ms":1786303800275,"end_timestamp_ms":1786303800530,"klemmenstatus":85,"rpm":1022.5,"classification":"RAW_OBSERVED"},
+    {"sample":32,"cas_timestamp_ms":1786303800530,"dde_timestamp_ms":1786303800583,"end_timestamp_ms":1786303800786,"klemmenstatus":69,"rpm":962,"classification":"RAW_OBSERVED"},
+    {"sample":102,"cas_timestamp_ms":1786303818519,"dde_timestamp_ms":1786303818572,"end_timestamp_ms":1786303818776,"klemmenstatus":69,"rpm":778.5,"classification":"RAW_OBSERVED"},
+    {"sample":103,"cas_timestamp_ms":1786303818776,"dde_timestamp_ms":1786303818829,"end_timestamp_ms":1786303819033,"klemmenstatus":64,"rpm":779.5,"classification":"RAW_OBSERVED"},
+    {"sample":104,"cas_timestamp_ms":1786303819033,"dde_timestamp_ms":1786303819086,"end_timestamp_ms":1786303819291,"klemmenstatus":64,"rpm":438.5,"classification":"RAW_OBSERVED"},
+    {"sample":105,"cas_timestamp_ms":1786303819291,"dde_timestamp_ms":1786303819343,"end_timestamp_ms":1786303819547,"klemmenstatus":64,"rpm":215,"classification":"RAW_OBSERVED"},
+    {"sample":106,"cas_timestamp_ms":1786303819547,"dde_timestamp_ms":1786303819599,"end_timestamp_ms":1786303819801,"klemmenstatus":64,"rpm":0,"classification":"RAW_OBSERVED"},
+    {"sample":107,"cas_timestamp_ms":1786303819801,"dde_timestamp_ms":1786303819854,"end_timestamp_ms":1786303820058,"klemmenstatus":64,"rpm":0,"classification":"RAW_OBSERVED"}
+  ],
+  "observed_segments": [
+    {"first_sample":1,"last_sample":1,"klemmenstatus":64,"rpm_state":"ZERO","classification":"RAW_OBSERVED"},
+    {"first_sample":2,"last_sample":28,"klemmenstatus":65,"rpm_state":"ZERO","classification":"RAW_OBSERVED"},
+    {"first_sample":29,"last_sample":31,"klemmenstatus":85,"rpm_state":"RISING","classification":"CORRELATED"},
+    {"first_sample":32,"last_sample":102,"klemmenstatus":69,"rpm_state":"RUNNING_OBSERVATION","classification":"CORRELATED"},
+    {"first_sample":103,"last_sample":299,"klemmenstatus":64,"rpm_state":"RUNDOWN_THEN_ZERO","classification":"CONFIRMED"}
+  ],
+  "transition_bounds": {
+    "kl_r_on_64_to_65": {
+      "poll_start":{"after_ms_exclusive":1786303789175,"by_ms_inclusive":1786303792606,"window_ms":3431},
+      "call_aware":{"after_prior_call_start_ms_exclusive":1786303789175,"by_first_new_call_end_ms_inclusive":1786303792661,"window_ms":3486}
+    },
+    "kl50_on_65_to_85": {
+      "poll_start":{"after_ms_exclusive":1786303799451,"by_ms_inclusive":1786303799707,"window_ms":256},
+      "call_aware":{"after_prior_call_start_ms_exclusive":1786303799451,"by_first_new_call_end_ms_inclusive":1786303799760,"window_ms":309}
+    },
+    "rpm_nonzero": {
+      "poll_start":{"after_ms_exclusive":1786303799502,"by_ms_inclusive":1786303799760,"window_ms":258},
+      "call_aware":{"after_prior_call_start_ms_exclusive":1786303799502,"by_first_new_call_end_ms_inclusive":1786303799964,"window_ms":462}
+    },
+    "kl50_off_85_to_69": {
+      "poll_start":{"after_ms_exclusive":1786303800221,"by_ms_inclusive":1786303800530,"window_ms":309},
+      "call_aware":{"after_prior_call_start_ms_exclusive":1786303800221,"by_first_new_call_end_ms_inclusive":1786303800583,"window_ms":362}
+    },
+    "kl15_klr_off_69_to_64": {
+      "poll_start":{"after_ms_exclusive":1786303818519,"by_ms_inclusive":1786303818776,"window_ms":257},
+      "call_aware":{"after_prior_call_start_ms_exclusive":1786303818519,"by_first_new_call_end_ms_inclusive":1786303818829,"window_ms":310}
+    },
+    "rpm_zero": {
+      "poll_start":{"after_ms_exclusive":1786303819343,"by_ms_inclusive":1786303819599,"window_ms":256},
+      "call_aware":{"after_prior_call_start_ms_exclusive":1786303819343,"by_first_new_call_end_ms_inclusive":1786303819801,"window_ms":458}
+    }
+  },
+  "start_summary": {
+    "kl50_on_samples":[29,30,31], "rpm_during_kl50_on":[130,341.5,1022.5],
+    "first_kl50_off_sample_after_start":32, "rpm_at_first_kl50_off":962,
+    "poll_start_duration_min_ms":514, "poll_start_duration_max_ms":1079,
+    "call_aware_duration_min_ms":461, "call_aware_duration_max_ms":1132,
+    "exact_physical_duration_ms":null, "classification":"CORRELATED"
+  },
+  "stop_summary": {
+    "samples":[102,103,104,105,106], "klemmenstatus":[69,64,64,64,64],
+    "rpm":[778.5,779.5,438.5,215,0], "first_64_to_first_zero_dde_start_gap_ms":823,
+    "first_64_to_last_nonzero_dde_start_gap_ms":567,
+    "exact_physical_stop_time_ms":null, "classification":"CONFIRMED"
+  },
+  "correlations": [
+    {"statement":"64_TO_65_DURING_USER_DECLARED_KEY_INSERTION_SEQUENCE","classification":"CORRELATED","causal":false},
+    {"statement":"KL50_ON_WITH_RISING_RPM_DURING_OEM_START","classification":"CORRELATED","causal":false},
+    {"statement":"KL15_KLR_OFF_OBSERVED_BEFORE_DIAGNOSTIC_RPM_REACHED_ZERO","classification":"CORRELATED","causal":false}
+  ],
+  "confirmations": [
+    {"statement":"OBSERVED_CAS_SEQUENCE_64_65_85_69_64","classification":"CONFIRMED"},
+    {"statement":"OBSERVED_OEM_STOP_RUNDOWN_SEQUENCE","classification":"CONFIRMED"}
+  ],
+  "unknowns": ["EXACT_PHYSICAL_TRANSITION_TIMES","PHYSICAL_START_STOP_BUTTON_SIGNAL","BRAKE_SIGNAL","KEY_EJECTION_SIGNAL","OEM_START_REQUEST_SOURCE","OEM_AUTHORIZATION_MECHANISM","REMOTE_START_ACTUATION","REMOTE_STOP_ACTUATION","CAN_IDENTIFIERS"],
+  "causal_inference": false,
+  "qualification": "CONFIRMED_AS_SEQUENCE",
+  "forbidden_inferences": ["BRAKE_FROM_KLEMMENSTATUS","KEY_INSERTION_CAUSALITY","EXACT_PHYSICAL_TIMING","KL50_COMMAND","CAS_COMMAND","DDE_COMMAND","CAN_IDENTIFIER","CAN_PAYLOAD","OEM_START_REQUEST","OEM_START_AUTHORIZATION","REMOTE_START_ACTUATION","REMOTE_STOP_ACTUATION","ENGINE_RUNNING_THRESHOLD","IMMOBILIZER_BYPASS"],
+  "notes": "The trace records sequential diagnostic call starts. CAS and DDE values are correlated on one clock but are neither simultaneous nor exact physical transition timestamps. User-declared actions remain context only."
+}

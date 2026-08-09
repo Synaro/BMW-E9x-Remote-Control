@@ -18,6 +18,8 @@ from vehicle_data_validation import (
     validate_cas_kl50_observation,
     validate_cas_kl50_timing_observation,
     validate_cas_dde_diagnostic_correlation,
+    validate_cas_dde_full_cycle,
+    validate_cas_dde_start_comparison,
     validate_evidence_index,
     validate_prerequisites,
     validate_qualified_observations,
@@ -39,6 +41,8 @@ SYNCHRONIZED_START_PATH = DATA / "observations" / "current-test-vehicle-phase3d-
 KL50_IFH_PATH = DATA / "observations" / "current-test-vehicle-phase3d-cas-kl50-ifh-level1-2026-08-09.json"
 KL50_IFH_LEVEL3_PATH = DATA / "observations" / "current-test-vehicle-phase3d-cas-kl50-ifh-level3-2026-08-09.json"
 CAS_DDE_CORRELATION_PATH = DATA / "observations" / "current-test-vehicle-phase3d-testo2-cas-dde-correlation-2026-08-09.json"
+CAS_DDE_FULL_CYCLE_PATH = DATA / "observations" / "current-test-vehicle-phase3d-testo2-cas-dde-full-cycle-2026-08-09.json"
+CAS_DDE_START_COMPARISON_PATH = DATA / "observations" / "current-test-vehicle-phase3d-testo2-start-comparison-2026-08-09.json"
 EXAMPLE_EVIDENCE_PATH = DATA / "evidence" / "EXAMPLE_ONLY.evidence-index.json"
 EXAMPLE_ENGINE_INPUT = DATA / "imports" / "EXAMPLE_ONLY.engine-speed.csv"
 EXAMPLE_ENGINE_MAPPING = DATA / "imports" / "EXAMPLE_ONLY.engine-speed.mapping.json"
@@ -60,6 +64,8 @@ class Phase3DVehicleDataTests(unittest.TestCase):
         self.kl50_ifh = load_json_object(KL50_IFH_PATH)
         self.kl50_ifh_level3 = load_json_object(KL50_IFH_LEVEL3_PATH)
         self.cas_dde_correlation = load_json_object(CAS_DDE_CORRELATION_PATH)
+        self.cas_dde_full_cycle = load_json_object(CAS_DDE_FULL_CYCLE_PATH)
+        self.cas_dde_start_comparison = load_json_object(CAS_DDE_START_COMPARISON_PATH)
         self.status_by_id = {
             observation["observation_id"]: observation
             for observation in self.status["observations"]
@@ -80,6 +86,8 @@ class Phase3DVehicleDataTests(unittest.TestCase):
         validate_cas_kl50_observation(self.kl50_ifh, self.evidence_ids)
         validate_cas_kl50_timing_observation(self.kl50_ifh_level3, self.evidence_ids)
         validate_cas_dde_diagnostic_correlation(self.cas_dde_correlation, self.evidence_ids)
+        validate_cas_dde_full_cycle(self.cas_dde_full_cycle, self.evidence_ids)
+        validate_cas_dde_start_comparison(self.cas_dde_start_comparison)
 
     def test_identification_values_are_preserved_as_reported(self):
         expected = {
@@ -251,7 +259,7 @@ class Phase3DVehicleDataTests(unittest.TestCase):
             ],
         )
         self.assertEqual(
-            "0eeed9deb95ab65d6f45142a7a0df4f3de9f9502f1cf51cb85eeef3033da4399",
+            "cafda7e2b5935c77aa8135d7073bb46294e320a5bf4c1f50733216a000bb5260",
             observation["source_payload_sha256"],
         )
         self.assertEqual(["CAS", "DDE"], observation["source"]["acquisition_order"])
@@ -280,6 +288,83 @@ class Phase3DVehicleDataTests(unittest.TestCase):
         duration = self.cas_dde_correlation["observed_kl50_duration_bounds_ms"]
         self.assertEqual((571, 1134), (duration["minimum"], duration["maximum"]))
         self.assertIsNone(duration["exact_physical_duration"])
+        call_duration = self.cas_dde_correlation["conservative_call_aware_kl50_duration_bounds_ms"]
+        self.assertEqual((518, 1187), (call_duration["minimum"], call_duration["maximum"]))
+        self.assertIsNone(call_duration["exact_physical_duration"])
+
+    def test_testo2_call_aware_bounds_include_sequential_job_latency(self):
+        bounds = self.cas_dde_correlation["call_aware_transition_bounds"]
+        self.assertEqual(310, bounds["kl50_on"]["window_ms"])
+        self.assertEqual(517, bounds["rpm_nonzero"]["window_ms"])
+        self.assertEqual(359, bounds["kl50_off"]["window_ms"])
+        modified = copy.deepcopy(self.cas_dde_correlation)
+        modified["call_aware_transition_bounds"]["rpm_nonzero"]["window_ms"] = 516
+        with self.assertRaisesRegex(ValidationError, "sequential-call bound"):
+            validate_cas_dde_diagnostic_correlation(modified, self.evidence_ids)
+
+    def test_full_cycle_exact_raw_sequence_and_stop_rundown(self):
+        observation = self.cas_dde_full_cycle
+        self.assertEqual("OEM_FULL_CYCLE_01", observation["session_id"])
+        self.assertEqual(
+            "562c70ca35358d711402dae0f0f058fd3113687e84cad051eb060482444eb0cf",
+            observation["source_file"]["sha256"],
+        )
+        samples = {sample["sample"]: sample for sample in observation["critical_samples"]}
+        self.assertEqual([64, 65, 85, 69, 64], [samples[index]["klemmenstatus"] for index in (1, 2, 29, 32, 103)])
+        self.assertEqual(
+            [(69, 778.5), (64, 779.5), (64, 438.5), (64, 215), (64, 0)],
+            [(samples[index]["klemmenstatus"], samples[index]["rpm"]) for index in range(102, 107)],
+        )
+        self.assertEqual((False, False, None, None), tuple(observation["communication_event"][key] for key in ("cas_ok", "dde_ok", "klemmenstatus", "rpm")))
+
+    def test_full_cycle_documented_two_bit_decode_is_preserved(self):
+        decodes = {entry["decimal"]: entry for entry in self.cas_dde_full_cycle["decoded_klemmenstatus"]}
+        self.assertEqual(("OFF", "OFF", "OFF", "ON"), tuple(decodes[64][field] for field in ("kl_r", "kl15", "kl50", "schl_valid")))
+        self.assertEqual(("ON", "OFF", "OFF", "ON"), tuple(decodes[65][field] for field in ("kl_r", "kl15", "kl50", "schl_valid")))
+        self.assertEqual(("ON", "ON", "OFF", "ON"), tuple(decodes[69][field] for field in ("kl_r", "kl15", "kl50", "schl_valid")))
+        self.assertEqual(("ON", "ON", "ON", "ON"), tuple(decodes[85][field] for field in ("kl_r", "kl15", "kl50", "schl_valid")))
+
+    def test_user_declared_actions_cannot_become_confirmed_signals(self):
+        self.assertTrue(all(item["classification"] == "USER_DECLARED_ACTION" for item in self.cas_dde_full_cycle["user_declared_context"]))
+        modified = copy.deepcopy(self.cas_dde_full_cycle)
+        modified["user_declared_context"][1]["classification"] = "CONFIRMED_SIGNAL"
+        with self.assertRaisesRegex(ValidationError, "cannot become CONFIRMED_SIGNAL"):
+            validate_cas_dde_full_cycle(modified, self.evidence_ids)
+
+    def test_brake_press_remains_not_captured_in_this_session(self):
+        inventory = self.cas_dde_full_cycle["signal_inventory"]
+        self.assertFalse(inventory["brake_signal_captured"])
+        self.assertIn("BRAKE", inventory["not_measured"])
+        modified = copy.deepcopy(self.cas_dde_full_cycle)
+        modified["signal_inventory"]["brake_signal_captured"] = True
+        with self.assertRaisesRegex(ValidationError, "brake must remain NOT_CAPTURED"):
+            validate_cas_dde_full_cycle(modified, self.evidence_ids)
+
+    def test_full_cycle_correlation_cannot_become_causality_or_kl50_command(self):
+        self.assertFalse(self.cas_dde_full_cycle["causal_inference"])
+        self.assertIn("KL50_COMMAND", self.cas_dde_full_cycle["forbidden_inferences"])
+        modified = copy.deepcopy(self.cas_dde_full_cycle)
+        modified["correlations"][0]["causal"] = True
+        with self.assertRaisesRegex(ValidationError, "cannot become causality"):
+            validate_cas_dde_full_cycle(modified, self.evidence_ids)
+
+    def test_full_cycle_sequential_transition_uncertainty_is_recomputed(self):
+        transition = self.cas_dde_full_cycle["transition_bounds"]["kl50_on_65_to_85"]
+        self.assertEqual((256, 309), (transition["poll_start"]["window_ms"], transition["call_aware"]["window_ms"]))
+        modified = copy.deepcopy(self.cas_dde_full_cycle)
+        modified["transition_bounds"]["rpm_zero"]["call_aware"]["window_ms"] = 457
+        with self.assertRaisesRegex(ValidationError, "sequential-call bound changed"):
+            validate_cas_dde_full_cycle(modified, self.evidence_ids)
+
+    def test_two_starts_do_not_validate_threshold_or_disengagement_algorithm(self):
+        comparison = self.cas_dde_start_comparison
+        self.assertEqual("NOT_YET_VALIDATED", comparison["algorithm_status"])
+        self.assertFalse(comparison["sample_count_sufficient_for_control_algorithm"])
+        self.assertIn("ENGINE_RUNNING_THRESHOLD", comparison["forbidden_inferences"])
+        modified = copy.deepcopy(comparison)
+        modified["algorithm_status"] = "VALIDATED"
+        with self.assertRaisesRegex(ValidationError, "cannot validate a control algorithm"):
+            validate_cas_dde_start_comparison(modified)
 
     def test_testo2_sequential_reads_do_not_assign_physical_order(self):
         observation = self.cas_dde_correlation
@@ -425,6 +510,19 @@ class Phase3DVehicleDataTests(unittest.TestCase):
             "oem_start_authorization": "UNKNOWN",
             "stop_strategy": "UNKNOWN",
             "can_identifiers": "UNKNOWN",
+            "klemmenstatus_decoding": "CONFIRMED",
+            "kl_r_state_observation": "CONFIRMED",
+            "kl15_state_observation": "CONFIRMED",
+            "kl50_cranking_correlation": "CONFIRMED_BY_MULTIPLE_OBSERVATIONS",
+            "synchronized_diagnostic_acquisition": "CONFIRMED",
+            "oem_start_sequence_observation": "CONFIRMED",
+            "oem_stop_sequence_observation": "CONFIRMED_AS_SEQUENCE",
+            "key_insertion_correlation": "OBSERVED_CORRELATION",
+            "brake_press_signal_this_session": "NOT_CAPTURED_IN_THIS_SESSION",
+            "automatic_key_ejection": "USER_DECLARED_CONTEXT",
+            "starter_disengagement_algorithm": "NOT_YET_VALIDATED",
+            "physical_start_stop_button_signal": "UNKNOWN",
+            "remote_stop_actuation_mechanism": "UNKNOWN",
         }
         for item, status in expected.items():
             self.assertEqual(status, self.checklist["items"][item]["status"])

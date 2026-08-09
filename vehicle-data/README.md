@@ -87,6 +87,10 @@ KL50 read-only et interdit toute durée issue d'un trace Level 1.
 timestamps du trace Level 3.
 `--cas-dde-correlation` protège les observations TestO CAS/DDE séquentielles,
 leur qualité de récupération et l'absence de conclusion physique excessive.
+`--cas-dde-full-cycle` protège le cycle diagnostic `64/65/85/69/64`, la
+décroissance RPM à l'arrêt et la séparation stricte entre signaux mesurés et
+actions déclarées. `--cas-dde-start-comparison` vérifie les calculs comparant
+les deux démarrages sans permettre d'en déduire un algorithme.
 
 Les preuves acceptées sont : capture ISTA, export TestO, sortie INPA, sortie
 Tool32, future capture CAN et note manuelle. La catégorie « future capture CAN »
@@ -99,9 +103,12 @@ Une donnée utilise `UNKNOWN`, `LOW`, `MEDIUM`, `HIGH` ou `VALIDATED`.
 `UNKNOWN` impose une valeur absente et aucune preuve. Tout autre niveau impose
 une valeur, une date et une preuve existante.
 
-La checklist emploie une maturité distincte : `UNKNOWN`, `OBSERVED`,
-`CONFIRMED`, `VALIDATED` ou `BLOCKED`. Une observation isolée ne devient donc
-pas automatiquement une donnée validée.
+La checklist emploie une maturité distincte. Outre `UNKNOWN`, `OBSERVED`,
+`CONFIRMED`, `VALIDATED` et `BLOCKED`, elle distingue notamment
+`OBSERVED_CORRELATION`, `CONFIRMED_AS_SEQUENCE`,
+`CONFIRMED_BY_MULTIPLE_OBSERVATIONS`, `NOT_CAPTURED_IN_THIS_SESSION` et
+`USER_DECLARED_CONTEXT`. Une action racontée ou une corrélation ne devient donc
+jamais automatiquement un signal confirmé.
 
 ## Imports
 

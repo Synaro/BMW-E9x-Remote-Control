@@ -1,0 +1,34 @@
+{
+  "schema_version": 1,
+  "artifact_type": "CAS_DDE_START_COMPARISON",
+  "comparison_id": "CURRENT_TEST_VEHICLE_PHASE3D_TESTO2_TWO_START_COMPARISON_2026_08_09",
+  "session_refs": ["OEM_START_SYNC_01", "OEM_FULL_CYCLE_01"],
+  "starts": [
+    {
+      "session_id":"OEM_START_SYNC_01", "kl50_on_samples":[10,11,12],
+      "rpm_during_kl50_on":[131,224.5,863], "rpm_at_first_return_to_kl50_off":981.5,
+      "poll_start_duration_min_ms":571, "poll_start_duration_max_ms":1134,
+      "call_aware_duration_min_ms":518, "call_aware_duration_max_ms":1187
+    },
+    {
+      "session_id":"OEM_FULL_CYCLE_01", "kl50_on_samples":[29,30,31],
+      "rpm_during_kl50_on":[130,341.5,1022.5], "rpm_at_first_return_to_kl50_off":962,
+      "poll_start_duration_min_ms":514, "poll_start_duration_max_ms":1079,
+      "call_aware_duration_min_ms":461, "call_aware_duration_max_ms":1132
+    }
+  ],
+  "observed_variability": {
+    "poll_start_minimum_difference_ms":57,
+    "poll_start_maximum_difference_ms":55,
+    "call_aware_minimum_difference_ms":57,
+    "call_aware_maximum_difference_ms":55,
+    "return_to_kl50_off_rpm_absolute_difference":19.5,
+    "unit_rpm":"rpm"
+  },
+  "classification": "CORRELATED",
+  "causal_inference": false,
+  "algorithm_status": "NOT_YET_VALIDATED",
+  "sample_count_sufficient_for_control_algorithm": false,
+  "forbidden_inferences": ["STARTER_DISENGAGEMENT_ALGORITHM","ENGINE_RUNNING_THRESHOLD","KL50_COMMAND","OEM_START_REQUEST","OEM_START_AUTHORIZATION","CAN_IDENTIFIER","CAN_PAYLOAD"],
+  "notes": "Both starts show KL50 ON with increasing RPM and KL50 OFF at elevated RPM. Two starts are insufficient to define a command, threshold, or disengagement algorithm."
+}

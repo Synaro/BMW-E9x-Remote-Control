@@ -5,15 +5,17 @@
   "type": "object",
   "additionalProperties": false,
   "required": [
-    "schema_version", "artifact_type", "observation_id", "profile_ref", "evidence_index",
-    "evidence_ref", "source", "source_payload_sha256", "recovery", "critical_samples",
-    "transition_bounds", "observed_kl50_duration_bounds_ms", "diagnostic_correlation",
+    "schema_version", "artifact_type", "session_id", "observation_id", "profile_ref", "evidence_index",
+    "evidence_ref", "source", "source_payload_sha256", "classification_model", "recovery", "critical_samples",
+    "transition_bounds", "call_aware_transition_bounds", "observed_kl50_duration_bounds_ms",
+    "conservative_call_aware_kl50_duration_bounds_ms", "diagnostic_correlation",
     "stabilized_rpm_summary", "qualification", "physical_transition_order",
     "rpm_alignment_status", "forbidden_inferences", "notes"
   ],
   "properties": {
     "schema_version": {"const": 1},
     "artifact_type": {"const": "CAS_DDE_DIAGNOSTIC_CORRELATION_OBSERVATION"},
+    "session_id": {"const": "OEM_START_SYNC_01"},
     "observation_id": {"type": "string", "minLength": 1},
     "profile_ref": {"type": "string", "minLength": 1},
     "evidence_index": {"type": "string", "minLength": 1},
@@ -35,6 +37,18 @@
       }
     },
     "source_payload_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "classification_model": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["diagnostic_values", "klemmenstatus_bit_decode", "kl50_rpm_relation", "diagnostic_sequence", "physical_transition_order"],
+      "properties": {
+        "diagnostic_values": {"const": "RAW_OBSERVED"},
+        "klemmenstatus_bit_decode": {"const": "DERIVED_FROM_DOCUMENTED_BITS"},
+        "kl50_rpm_relation": {"const": "CORRELATED"},
+        "diagnostic_sequence": {"const": "CONFIRMED"},
+        "physical_transition_order": {"const": "UNKNOWN"}
+      }
+    },
     "recovery": {
       "type": "object",
       "additionalProperties": false,
@@ -60,6 +74,16 @@
         "kl50_off": {"$ref": "#/$defs/transitionBound"}
       }
     },
+    "call_aware_transition_bounds": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kl50_on", "rpm_nonzero", "kl50_off"],
+      "properties": {
+        "kl50_on": {"$ref": "#/$defs/casCallBound"},
+        "rpm_nonzero": {"$ref": "#/$defs/ddeCallBound"},
+        "kl50_off": {"$ref": "#/$defs/casCallBound"}
+      }
+    },
     "observed_kl50_duration_bounds_ms": {
       "type": "object",
       "additionalProperties": false,
@@ -69,6 +93,17 @@
         "maximum": {"type": "integer", "minimum": 0},
         "exact_physical_duration": {"type": "null"},
         "status": {"const": "OBSERVED_BOUNDED_DIAGNOSTIC_SAMPLING"}
+      }
+    },
+    "conservative_call_aware_kl50_duration_bounds_ms": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["minimum", "maximum", "exact_physical_duration", "status"],
+      "properties": {
+        "minimum": {"type": "integer", "minimum": 0},
+        "maximum": {"type": "integer", "minimum": 0},
+        "exact_physical_duration": {"type": "null"},
+        "status": {"const": "OBSERVED_BOUNDED_SEQUENTIAL_CALLS"}
       }
     },
     "diagnostic_correlation": {
@@ -143,6 +178,28 @@
       "properties": {
         "after_timestamp_ms_exclusive": {"type": "integer", "minimum": 0},
         "by_timestamp_ms_inclusive": {"type": "integer", "minimum": 0},
+        "window_ms": {"type": "integer", "minimum": 0},
+        "physical_instant_known": {"const": false}
+      }
+    },
+    "casCallBound": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["after_prior_call_start_ms_exclusive", "by_first_new_call_end_ms_inclusive", "window_ms", "physical_instant_known"],
+      "properties": {
+        "after_prior_call_start_ms_exclusive": {"type": "integer", "minimum": 0},
+        "by_first_new_call_end_ms_inclusive": {"type": "integer", "minimum": 0},
+        "window_ms": {"type": "integer", "minimum": 0},
+        "physical_instant_known": {"const": false}
+      }
+    },
+    "ddeCallBound": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["after_prior_dde_call_start_ms_exclusive", "by_first_nonzero_dde_call_end_ms_inclusive", "window_ms", "physical_instant_known"],
+      "properties": {
+        "after_prior_dde_call_start_ms_exclusive": {"type": "integer", "minimum": 0},
+        "by_first_nonzero_dde_call_end_ms_inclusive": {"type": "integer", "minimum": 0},
         "window_ms": {"type": "integer", "minimum": 0},
         "physical_instant_known": {"const": false}
       }

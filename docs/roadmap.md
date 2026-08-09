@@ -73,6 +73,9 @@ est détaillé dans
 - [x] Corroborer la transition KL50 par un trace IFH Level 1
 - [x] Borner la durée KL50 avec les timestamps d'un trace IFH Level 3
 - [x] Archiver une corrélation diagnostique CAS/DDE sur une horloge commune
+- [x] Archiver deux démarrages CAS/DDE et comparer leurs bornes sans créer d'algorithme
+- [x] Archiver un cycle OEM complet incluant la décroissance RPM après arrêt
+- [x] Séparer les actions utilisateur déclarées des signaux réellement mesurés
 - [ ] Résoudre l'ordre physique KL50/RPM avec une acquisition non ambiguë
 - [ ] Valider l'algorithme de détection moteur tournant sur plusieurs captures structurées
 - [ ] Identifier Terminal 50, la demande START et l'autorisation OEM par preuves séparées

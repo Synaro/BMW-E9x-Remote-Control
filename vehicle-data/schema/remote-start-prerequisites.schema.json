@@ -23,7 +23,13 @@
         "terminal_50_start_request", "cas_start_button_request", "oem_start_request_source",
         "remote_start_actuation_mechanism", "msa_start_correlated_bits", "msa_bit_functional_meaning",
         "oem_start_authorization", "battery_voltage", "timeout_strategy",
-        "stop_strategy", "communication_loss", "post_reset_behavior", "start_inhibit_conditions", "can_identifiers"
+        "stop_strategy", "communication_loss", "post_reset_behavior", "start_inhibit_conditions", "can_identifiers",
+        "klemmenstatus_decoding", "kl_r_state_observation", "kl15_state_observation",
+        "kl50_cranking_correlation", "synchronized_diagnostic_acquisition",
+        "oem_start_sequence_observation", "oem_stop_sequence_observation",
+        "key_insertion_correlation", "brake_press_signal_this_session", "automatic_key_ejection",
+        "starter_disengagement_algorithm", "physical_start_stop_button_signal",
+        "remote_stop_actuation_mechanism"
       ],
       "properties": {
         "exact_cas_identification": {"$ref": "#/$defs/item"},
@@ -56,6 +62,19 @@
         "post_reset_behavior": {"$ref": "#/$defs/item"},
         "start_inhibit_conditions": {"$ref": "#/$defs/item"},
         "can_identifiers": {"$ref": "#/$defs/item"}
+        ,"klemmenstatus_decoding": {"$ref": "#/$defs/item"}
+        ,"kl_r_state_observation": {"$ref": "#/$defs/item"}
+        ,"kl15_state_observation": {"$ref": "#/$defs/item"}
+        ,"kl50_cranking_correlation": {"$ref": "#/$defs/item"}
+        ,"synchronized_diagnostic_acquisition": {"$ref": "#/$defs/item"}
+        ,"oem_start_sequence_observation": {"$ref": "#/$defs/item"}
+        ,"oem_stop_sequence_observation": {"$ref": "#/$defs/item"}
+        ,"key_insertion_correlation": {"$ref": "#/$defs/item"}
+        ,"brake_press_signal_this_session": {"$ref": "#/$defs/item"}
+        ,"automatic_key_ejection": {"$ref": "#/$defs/item"}
+        ,"starter_disengagement_algorithm": {"$ref": "#/$defs/item"}
+        ,"physical_start_stop_button_signal": {"$ref": "#/$defs/item"}
+        ,"remote_stop_actuation_mechanism": {"$ref": "#/$defs/item"}
       }
     }
   },
@@ -65,7 +84,7 @@
       "additionalProperties": false,
       "required": ["status", "evidence_refs", "updated_at", "notes", "blocker_reason"],
       "properties": {
-        "status": {"enum": ["UNKNOWN", "OBSERVED", "OBSERVED_BOUNDED", "CONFIRMED", "UNTRUSTED", "NOT_YET_VALIDATED", "PENDING", "PENDING_LEVEL3_TRACE", "VALIDATED", "BLOCKED"]},
+        "status": {"enum": ["UNKNOWN", "OBSERVED", "OBSERVED_BOUNDED", "CONFIRMED", "UNTRUSTED", "NOT_YET_VALIDATED", "PENDING", "PENDING_LEVEL3_TRACE", "VALIDATED", "BLOCKED", "CONFIRMED_BY_MULTIPLE_OBSERVATIONS", "CONFIRMED_AS_SEQUENCE", "OBSERVED_CORRELATION", "NOT_CAPTURED_IN_THIS_SESSION", "USER_DECLARED_CONTEXT"]},
         "evidence_refs": {
           "type": "array", "uniqueItems": true,
           "items": {"type": "string", "minLength": 1, "maxLength": 96}
