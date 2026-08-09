@@ -32,16 +32,17 @@ sans ajouter de comportement.
 
 ## Phase 3 — TWAI en écoute seule
 
-- [ ] Définir le port de réception CAN indépendant d'Espressif
-- [ ] Implémenter l'adaptateur ESP32-S3/TWAI en mode écoute seule
-- [ ] Garantir par construction l'absence d'émission
-- [ ] Ajouter compteurs, erreurs et horodatage bornés
+- [x] Définir le port de réception CAN indépendant d'Espressif et de BMW
+- [x] Implémenter l'adaptateur ESP32-S3/TWAI en mode écoute seule
+- [x] Garantir par construction et en CI l'absence d'émission
+- [x] Ajouter file fixe, compteurs, erreurs et horodatage bornés
+- [x] Définir le format Capture V2 et son manifeste de session
 - [ ] Valider sur bus de banc avant toute connexion véhicule
 
 ## Phase 4 — Capture et analyse hors ligne
 
-- [ ] Stabiliser le format de capture canonique
-- [ ] Relier les captures TWAI au format canonique
+- [ ] Implémenter le transport et l'écriture PC du format Capture V2
+- [ ] Valider et stabiliser le format avec des captures de banc
 - [ ] Renforcer l'analyse différentielle et les rapports reproductibles
 - [ ] Ajouter les jeux de validation sans données personnelles
 

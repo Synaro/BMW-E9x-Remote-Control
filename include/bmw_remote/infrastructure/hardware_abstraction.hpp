@@ -33,15 +33,18 @@ public:
     virtual void delayMs(std::uint32_t durationMs) noexcept = 0;
 };
 
-// Safety-only contract reserved for the future TWAI adapter. It intentionally
-// exposes no receive or transmit operation in Phase 2.
-class FutureTwaiSafetyHal {
+// Safety-only contract used before the receive-only TWAI driver is installed.
+// It intentionally exposes no CAN operation and no way to release either
+// hardware barrier.
+class TwaiSafetyHal {
 public:
-    virtual ~FutureTwaiSafetyHal() = default;
+    virtual ~TwaiSafetyHal() = default;
 
     virtual bool holdHardwareSilent() noexcept = 0;
     virtual bool holdTransmitInhibited() noexcept = 0;
     [[nodiscard]] virtual bool safeStateConfirmed() const noexcept = 0;
 };
+
+using FutureTwaiSafetyHal = TwaiSafetyHal;
 
 }  // namespace bmw::remote::infrastructure

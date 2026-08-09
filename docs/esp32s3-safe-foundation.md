@@ -1,4 +1,4 @@
-# Socle ESP32-S3 sûr — Phase 2
+# Socle ESP32-S3 sûr — Phase 2, étendu en Phase 3
 
 ## Périmètre livré
 
@@ -8,10 +8,11 @@ une commande de build unique pour les développeurs et la CI. Le code vérifie
 aussi la version à la compilation ; un changement d'ESP-IDF doit donc être une
 décision explicite.
 
-La Phase 2 dessert uniquement le protocole USB de configuration existant et sa
-persistance. Elle ne configure aucun bus véhicule, aucune broche d'actionneur et
-aucun pilote TWAI. Elle ne reçoit ni ne transmet de trame CAN et ne contient
-aucun identifiant BMW.
+La Phase 2 a livré le protocole USB de configuration existant et sa persistance.
+La Phase 3 ajoute un récepteur TWAI générique en écoute seule pour bus de banc.
+Il reste désactivé par défaut, ne configure aucune broche arbitraire, ne possède
+aucun chemin d'émission et ne contient aucun identifiant BMW. Aucune broche
+d'actionneur ni aucun bus véhicule ne sont configurés.
 
 ## Décision ESP-IDF et erratum TWAI
 
@@ -24,9 +25,10 @@ Sur ESP32-S3, le contrôleur peut encore produire des bits dominants lorsqu'il
 détecte une erreur en mode listen-only. Espressif fournit le correctif
 `CONFIG_TWAI_ERRATA_FIX_LISTEN_ONLY_DOM`, qui force l'état error-passive à
 l'initialisation. Le correctif est activé dans `sdkconfig.defaults` et sa
-présence dans la configuration générée est vérifiée par la CI. Le composant de
-configuration du pilote reste visible au build pour exposer cette option, mais
-aucun symbole d'installation ou d'émission TWAI ne doit être lié au firmware.
+présence dans la configuration générée est vérifiée par la CI. Depuis la Phase
+3, les symboles d'installation et de réception sont liés au firmware afin de
+permettre le banc ; la CI interdit toujours tout symbole d'émission TWAI et
+vérifie explicitement le mode `TWAI_MODE_LISTEN_ONLY`.
 
 Cette option est une défense logicielle future, pas une autorisation de
 connexion au véhicule. Le mode silencieux matériel et l'inhibition TX restent
@@ -43,12 +45,12 @@ obligatoires.
 - le `sdkconfig` généré localement est ignoré afin que les valeurs par défaut
   versionnées restent la source de vérité.
 
-Le firmware utilise la tâche `app_main` fournie par ESP-IDF. Aucune tâche et
-aucune file applicative supplémentaire ne sont créées : le flux USB est borné à
-64 octets traités par cycle, les buffers du pilote USB à 256 octets, puis la
-tâche cède le processeur. Les watchdogs d'interruptions et de tâches surveillent
-les tâches idle des deux cœurs. Une file dédiée ne sera ajoutée que lorsqu'un
-besoin mesuré le justifiera.
+Le firmware utilise la tâche `app_main` fournie par ESP-IDF. Le flux USB reste
+borné à 64 octets traités par cycle et les buffers du pilote USB à 256 octets.
+Lorsque le banc TWAI est explicitement activé, une tâche RX à pile statique de
+4096 octets alimente une file SPSC fixe de 128 trames ; aucune allocation n'a
+lieu dans le chemin critique. Les watchdogs d'interruptions et de tâches
+surveillent les tâches idle des deux cœurs.
 
 ## Stockage
 
@@ -70,11 +72,12 @@ silencieux masquerait une corruption et détruirait les preuves de diagnostic.
 - GPIO avec configuration explicite de l'état sûr avant passage en sortie ;
 - temps monotone et délai borné ;
 - stockage via le contrat existant `SettingsByteStorage` ;
-- un contrat de sûreté du futur TWAI limité au maintien du silence matériel et
-  de l'inhibition TX.
+- un contrat de sûreté TWAI limité au maintien et à la confirmation du silence
+  matériel et de l'inhibition TX.
 
-L'adaptateur ESP-IDF implémente GPIO et temps. Le contrat TWAI n'expose
-volontairement ni réception ni émission et n'est pas instancié en Phase 2.
+L'adaptateur ESP-IDF implémente GPIO et temps. Le port `CanFrameReceiver` de
+`libs/can-core` expose uniquement la réception et les statistiques. Son
+implémentation ESP-IDF n'expose aucune opération d'émission.
 
 ## Chaîne matérielle future et état sûr
 
@@ -114,7 +117,8 @@ Avant toute connexion au véhicule :
    débits, pendant erreurs, saturation, reboot et watchdog ;
 5. couper/figer le firmware et vérifier que le transceiver reste silencieux ;
 6. archiver schéma, mesures, versions et critères de réussite ;
-7. demander l'autorisation de Phase 3 avant d'implémenter TWAI listen-only.
+7. valider les statistiques, l'ordre et les pertes de l'acquisition Phase 3 sur
+   ce banc avant toute demande d'étape suivante.
 
 Un échec à une seule étape interdit la connexion au véhicule.
 

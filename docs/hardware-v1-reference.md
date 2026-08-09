@@ -48,7 +48,9 @@ La documentation BMW distingue :
 
 La cible officielle utilise exclusivement le contrôleur **TWAI interne de
 l'ESP32-S3** avec un transceiver CAN externe adapté à la couche physique du bus
-observé. Le socle de Phase 2 n'initialise encore aucun pilote TWAI.
+observé. Depuis la Phase 3, le firmware contient un récepteur TWAI listen-only,
+mais il reste désactivé sans configuration locale `BENCH_ONLY` et refuse de
+démarrer tant que ses deux barrières de silence ne sont pas confirmées.
 
 ```text
 ESP32-S3 -- contrôleur TWAI interne -- transceiver externe -- un bus de test

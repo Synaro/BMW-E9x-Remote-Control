@@ -57,15 +57,16 @@ CanLockDecodeResult CanLockCommandAdapter::process(
     if (frame.dataLength != config_.dataLength) {
         return reject(CanLockDecodeStatus::RejectedInvalidFrame);
     }
-    if (initialized_ && frame.timestampMs != lastTimestampMs_ &&
-        !strictlyNewer(frame.timestampMs, lastTimestampMs_)) {
+    const std::uint32_t timestampMs = frame.timestampMilliseconds();
+    if (initialized_ && timestampMs != lastTimestampMs_ &&
+        !strictlyNewer(timestampMs, lastTimestampMs_)) {
         return reject(CanLockDecodeStatus::RejectedTimestampRegression);
     }
 
     const std::uint8_t rawCounter = config_.rollingCounter.extract(frame);
     const bool commandActive = config_.lockCommand.matches(frame);
     if (!initialized_) {
-        lastTimestampMs_ = frame.timestampMs;
+        lastTimestampMs_ = timestampMs;
         lastRawCounter_ = rawCounter;
         lastCommandActive_ = commandActive;
         initialized_ = true;
@@ -84,7 +85,7 @@ CanLockDecodeResult CanLockCommandAdapter::process(
         return reject(CanLockDecodeStatus::RejectedOutOfOrderCounter);
     }
 
-    lastTimestampMs_ = frame.timestampMs;
+    lastTimestampMs_ = timestampMs;
     lastRawCounter_ = rawCounter;
     expandedSequence_ += distance;
     const bool risingEdge = commandActive && !lastCommandActive_;
@@ -99,7 +100,7 @@ CanLockDecodeResult CanLockCommandAdapter::process(
             application::LockCommandSource::VehicleAdapter,
             config_.trust,
             expandedSequence_,
-            frame.timestampMs,
+            timestampMs,
             config_.vehicleSecured.matches(frame)}};
 }
 

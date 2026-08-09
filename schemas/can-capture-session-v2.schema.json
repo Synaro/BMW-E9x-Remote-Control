@@ -1,0 +1,46 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Synaro/BMW-E9x-Remote-Control/blob/main/schemas/can-capture-session-v2.schema.json",
+  "title": "Generic CAN capture session manifest V2",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "format_version",
+    "session_id",
+    "firmware_version",
+    "interface",
+    "configuration_id",
+    "bitrate",
+    "mode",
+    "total_frames",
+    "software_queue_overruns",
+    "driver_queue_missed",
+    "driver_fifo_overruns",
+    "bus_errors"
+  ],
+  "properties": {
+    "format_version": { "const": 2 },
+    "session_id": { "type": "string", "minLength": 1, "maxLength": 63 },
+    "firmware_version": { "type": "string", "minLength": 1, "maxLength": 63 },
+    "interface": { "type": "string", "minLength": 1, "maxLength": 63 },
+    "configuration_id": { "type": "string", "minLength": 1, "maxLength": 63 },
+    "bitrate": { "enum": [100000, 500000] },
+    "mode": { "const": "listen-only" },
+    "total_frames": { "type": "integer", "minimum": 0 },
+    "frames_queued": { "type": "integer", "minimum": 0 },
+    "frames_dequeued": { "type": "integer", "minimum": 0 },
+    "software_queue_overruns": { "type": "integer", "minimum": 0 },
+    "driver_queue_missed": { "type": "integer", "minimum": 0 },
+    "driver_fifo_overruns": { "type": "integer", "minimum": 0 },
+    "bus_errors": { "type": "integer", "minimum": 0 },
+    "error_warning_transitions": { "type": "integer", "minimum": 0 },
+    "error_passive_transitions": { "type": "integer", "minimum": 0 },
+    "bus_off_transitions": { "type": "integer", "minimum": 0 },
+    "peripheral_resets": { "type": "integer", "minimum": 0 },
+    "vehicle_information": {
+      "type": "object",
+      "description": "Optional non-personal notes; VIN and owner data are never required.",
+      "additionalProperties": { "type": "string", "maxLength": 128 }
+    }
+  }
+}

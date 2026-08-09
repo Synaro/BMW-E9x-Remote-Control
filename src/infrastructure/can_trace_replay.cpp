@@ -18,7 +18,9 @@ ReplayBatch CanTraceReplay::advanceTo(
         return batch;
     }
 
-    while (cursor_ < frameCount_ && frames_[cursor_].timestampMs <= elapsedMs) {
+    const std::uint64_t elapsedUs =
+        static_cast<std::uint64_t>(elapsedMs) * 1'000U;
+    while (cursor_ < frameCount_ && frames_[cursor_].timestampUs <= elapsedUs) {
         if (!consumer.consume(frames_[cursor_])) {
             batch.status = ReplayStatus::ConsumerRejected;
             batch.nextFrameIndex = cursor_;
@@ -48,7 +50,8 @@ bool CanTraceReplay::validate() const noexcept {
             return false;
         }
 
-        if (index > 0U && frames_[index].timestampMs < frames_[index - 1U].timestampMs) {
+        if (index > 0U &&
+            frames_[index].timestampUs < frames_[index - 1U].timestampUs) {
             return false;
         }
     }

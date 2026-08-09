@@ -19,6 +19,7 @@
 #include "bmw_remote/domain/vehicle_state.hpp"
 #include "bmw_remote/infrastructure/actuator_safety_supervisor.hpp"
 #include "bmw_remote/infrastructure/can_lock_command_adapter.hpp"
+#include "bmw_remote/infrastructure/twai_listen_only.hpp"
 #include "bmw_remote/infrastructure/replay_vehicle_gateway.hpp"
 #include "bmw_remote/infrastructure/runtime.hpp"
 #include "bmw_remote/infrastructure/settings_payload.hpp"
@@ -31,6 +32,8 @@
 #include "tools/sandbox_session.hpp"
 #include "tools/settings_device_client.hpp"
 #include "tools/user_settings_file.hpp"
+#include "can_core/bounded_spsc_queue.hpp"
+#include "can_core/capture_v2.hpp"
 
 namespace {
 
@@ -185,7 +188,7 @@ CanFrame testCanLockFrame(
     const bool commandActive,
     const bool vehicleSecured = true) {
     CanFrame frame{};
-    frame.timestampMs = timestampMs;
+    frame.timestampUs = static_cast<std::uint64_t>(timestampMs) * 1'000U;
     frame.identifier = 0x321U;
     frame.dataLength = 2U;
     frame.data[0U] = static_cast<std::uint8_t>(
@@ -538,6 +541,7 @@ void testCanLockAdapterRejectsInvalidBindingsAndCounterAnomalies() {
 }
 
 #include "cases/feature_and_telemetry_tests.inc"
+#include "cases/can_core_tests.inc"
 
 void testDefaultUserSettingsAreValidAndPreserved() {
     const UserSettings settings{};
@@ -3202,11 +3206,11 @@ void testCanonicalTraceParserLoadsValidClassicFrames() {
     CHECK(bmw::remote::host::parseCanonicalCanTrace(input, frames, 10U, error));
     CHECK(error.empty());
     CHECK(frames.size() == 2U);
-    CHECK(frames[0].timestampMs == 0U);
+    CHECK(frames[0].timestampUs == 0U);
     CHECK(frames[0].identifier == 0x123U);
     CHECK(frames[0].data[0] == 0x0AU);
     CHECK(frames[0].data[1] == 0xFFU);
-    CHECK(frames[1].timestampMs == 125U);
+    CHECK(frames[1].timestampUs == 125'000U);
     CHECK(frames[1].extended);
 }
 
@@ -3403,6 +3407,13 @@ int main() {
         {"CAN lock trust boundaries", testCanLockPipelinePreservesCandidateAndSecuredTrustBoundaries},
         {"CAN lock structural reset", testCanLockPipelineResetsGestureAfterStructuralFrameRejection},
         {"CAN lock binding validation", testCanLockAdapterRejectsInvalidBindingsAndCounterAnomalies},
+        {"CAN core frame model", testCanCoreFrameModelIsStrictAndReceiveOnly},
+        {"CAN core bounded queue", testCanCoreQueueIsBoundedAndReportsOverflow},
+        {"CAN core ordering", testCanCoreQueuePreservesTimestampAndSequenceOrder},
+        {"TWAI unsafe barriers", testTwaiStartupRejectsUnsafeHardwareBarriers},
+        {"TWAI 100 kbit bench config", testTwaiListenOnlyConfigurationAccepts100KbitBenchRate},
+        {"TWAI 500 kbit bench config", testTwaiListenOnlyConfigurationAccepts500KbitBenchRate},
+        {"capture V2 manifest", testCaptureV2SchemaAndManifestRemainReceiveOnly},
         {"default user settings", testDefaultUserSettingsAreValidAndPreserved},
         {"feature catalog stability", testFeatureCatalogHasStableCompleteIdentifiers},
         {"feature request mask", testFeatureRequestsDefaultOffAndRejectUnknownBits},

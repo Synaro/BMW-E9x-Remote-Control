@@ -24,11 +24,15 @@ endforeach()
 
 idf_component_register(
     SRCS ${BMW_REMOTE_FIRMWARE_SOURCES}
-    INCLUDE_DIRS "${BMW_REMOTE_PROJECT_ROOT}/include"
+    INCLUDE_DIRS
+        "${BMW_REMOTE_PROJECT_ROOT}/include"
+        "${BMW_REMOTE_PROJECT_ROOT}/libs/can-core/include"
+        "${BMW_REMOTE_PROJECT_ROOT}"
     REQUIRES
         esp_driver_gpio
         esp_driver_usb_serial_jtag
         esp_timer
+        driver
         nvs_flash)
 
 target_compile_features(${COMPONENT_LIB} PUBLIC cxx_std_17)

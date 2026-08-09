@@ -404,7 +404,8 @@ int inspectExternalTrace(
     simulation::SyntheticCanDecoder decoder{};
     infrastructure::ReplayVehicleGateway gateway{
         trace.data(), trace.size(), decoder};
-    if (!gateway.setElapsedTime(trace.back().timestampMs) || !gateway.requestState()) {
+    if (!gateway.setElapsedTime(trace.back().timestampMilliseconds()) ||
+        !gateway.requestState()) {
         std::cerr << "Replay rejected the trace\n";
         return 2;
     }
@@ -417,7 +418,7 @@ int inspectExternalTrace(
         application::SafetyPolicy{policyConfig}.assessStart(vehicle);
 
     std::cout << "trace: " << trace.size() << " classic CAN frame(s), duration "
-              << trace.back().timestampMs << " ms\n"
+              << trace.back().timestampMilliseconds() << " ms\n"
               << "hood_requirement: "
               << (requireHoodClosed ? "required" : "optional") << '\n'
               << "decoder: " << stats.decodedFrames << " decoded, "
@@ -804,7 +805,7 @@ infrastructure::CanFrame simulatedLockFrame(
     const std::uint8_t counter,
     const bool commandActive) noexcept {
     infrastructure::CanFrame frame{};
-    frame.timestampMs = timestampMs;
+    frame.timestampUs = static_cast<std::uint64_t>(timestampMs) * 1'000U;
     frame.identifier = 0x321U;
     frame.dataLength = 2U;
     frame.data[0U] = static_cast<std::uint8_t>(

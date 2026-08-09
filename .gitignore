@@ -5,6 +5,7 @@ sdkconfig.*
 !sdkconfig.defaults
 build/
 build-cmake*/
+build-phase*/
 cmake-build-*/
 *.exe
 *.o
@@ -16,6 +17,7 @@ cmake-build-*/
 Thumbs.db
 captures/private/
 config/user-settings.conf
+config/bench-twai.local.hpp
 config/*.local.conf
 config/*.tmp
 config/*.bak

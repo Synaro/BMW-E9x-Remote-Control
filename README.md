@@ -6,8 +6,9 @@ matériel.
 
 > [!WARNING]
 > Ce dépôt n'est pas un produit prêt à installer dans un véhicule. Le firmware
-> fourni est volontairement inerte : aucun bus véhicule, GPIO ou actionneur réel
-> n'est configuré. Toute intégration physique exige une analyse de risques, des
+> fourni reste interdit de connexion au véhicule : l'acquisition TWAI passive
+> est désactivée par défaut et réservée à un bus de banc qualifié. Aucun GPIO
+> d'actionneur réel n'est configuré. Toute intégration physique exige une analyse de risques, des
 > interverrouillages matériels, des essais sur banc et l'intervention d'une
 > personne qualifiée. Le projet ne doit pas servir à contourner un antidémarrage,
 > un système antivol ou une réglementation applicable.
@@ -35,7 +36,10 @@ Le premier jalon logiciel est opérationnel :
 - décisions et listes d'actions de taille fixe, sans allocation dynamique ;
 - arrêt fail-safe en cas de défaut d'un adaptateur ;
 - ports abstraits pour véhicule, actionneurs, minuterie et notifications ;
-- socle ESP32-S3 sous ESP-IDF 5.5.0, limité à la configuration USB et NVS ;
+- socle ESP32-S3 sous ESP-IDF 5.5.0 avec acquisition TWAI listen-only générique,
+  désactivée par défaut et protégée par deux barrières matérielles ;
+- modèle CAN indépendant de BMW, file RX fixe, statistiques et contrat de
+  capture V2 avec timestamps microsecondes et séquences monotones ;
 - rejeu temporel de traces CAN et assemblage des signaux avec gestion de fraîcheur ;
 - protocole CAN synthétique réservé aux simulations hors véhicule ;
 - simulateur interactif avec parcours nominal et injection d'un défaut de sécurité ;
@@ -59,7 +63,7 @@ Le premier jalon logiciel est opérationnel :
 - campagnes déterministes de perte, retard et corruption des données véhicule ;
 - superviseur logiciel des actionneurs avec heartbeat, séquencement, retours
   d'état et défauts mémorisés ;
-- 128 tests C++, 15 scénarios du simulateur, 3 contrôles du configurateur et
+- 135 tests C++, 15 scénarios du simulateur, 3 contrôles du configurateur et
   21 tests Python automatisés en intégration continue.
 
 L'adaptateur BMW qui observera réellement le verrouillage, qualifiera la reprise
@@ -116,6 +120,9 @@ Le journal binaire redondant est spécifié dans
 [docs/settings-persistence.md](docs/settings-persistence.md).
 Le socle ESP-IDF, ses garde-fous et sa procédure de banc sont documentés dans
 [docs/esp32s3-safe-foundation.md](docs/esp32s3-safe-foundation.md).
+L'acquisition passive de Phase 3 et le format Capture V2 sont décrits dans
+[docs/twai-listen-only-acquisition.md](docs/twai-listen-only-acquisition.md) et
+[docs/capture-format-v2.md](docs/capture-format-v2.md).
 Le configurateur PC est décrit dans
 [docs/configurator.md](docs/configurator.md).
 Le protocole entre configurateur et boîtier est spécifié dans
@@ -144,7 +151,7 @@ Les tests de l'importeur Python n'installent aucune dépendance externe :
 python -m unittest discover -s tools -p 'test_*.py' -v
 ```
 
-Compilation du firmware natif inerte avec PlatformIO :
+Compilation du firmware natif avec PlatformIO :
 
 ```powershell
 pio run -e native
@@ -157,8 +164,10 @@ pio run -e esp32s3dev
 ```
 
 Cette carte est la cible du prototype de banc, pas celle de l'installation
-automobile définitive. Le firmware dessert uniquement le protocole local de
-configuration sur USB ; il n'active aucun bus véhicule ni aucune sortie.
+automobile définitive. Le firmware dessert le protocole local de configuration
+sur USB. L'acquisition TWAI n'est activable que par une configuration locale
+`BENCH_ONLY` et ne possède aucun chemin d'émission ; aucune sortie véhicule
+n'est activée.
 
 Avec CMake :
 
@@ -175,7 +184,8 @@ include/bmw_remote/domain/          Modèle métier du véhicule
 include/bmw_remote/application/     Sécurité, événements, décisions, contrôleur
 include/bmw_remote/infrastructure/  Contrats des adaptateurs et runtime
 include/bmw_remote/simulation/      Protocole synthétique hors véhicule
-src/                                Implémentations et firmware inerte
+libs/can-core/                       Modèle et réception CAN génériques, sans BMW
+src/                                Implémentations et firmware ESP32-S3
 tests/                              Scénarios hôte
 tools/                              Simulateur et importeur de traces PC
 scenarios/                          Traces synthétiques partageables

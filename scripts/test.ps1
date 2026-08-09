@@ -23,6 +23,7 @@ New-Item -ItemType Directory -Path $buildDirectory -Force | Out-Null
     -Wconversion `
     -Werror `
     -I (Join-Path $projectRoot 'include') `
+    -I (Join-Path $projectRoot 'libs/can-core/include') `
     -I $projectRoot `
     $sources `
     -o $testExecutable

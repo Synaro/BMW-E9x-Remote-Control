@@ -121,13 +121,15 @@ template <typename T>
 [[nodiscard]] bool parseFrame(
     const std::array<std::string, 5U>& fields,
     infrastructure::CanFrame& frame) {
-    if (!parseUnsigned(fields[0], 10, frame.timestampMs) ||
+    std::uint32_t timestampMs = 0U;
+    if (!parseUnsigned(fields[0], 10, timestampMs) ||
         !parseIdentifier(fields[1], frame.identifier) ||
         !parseBoolean(fields[2], frame.extended) ||
         !parseUnsigned(fields[3], 10, frame.dataLength) ||
         !parseData(fields[4], frame.dataLength, frame)) {
         return false;
     }
+    frame.timestampUs = static_cast<std::uint64_t>(timestampMs) * 1'000U;
     return frame.isValid();
 }
 
@@ -183,12 +185,12 @@ bool parseCanonicalCanTrace(
             setError(error, lineNumber, "invalid CAN frame");
             return false;
         }
-        if (parsedFrames.empty() && frame.timestampMs != 0U) {
+        if (parsedFrames.empty() && frame.timestampUs != 0U) {
             setError(error, lineNumber, "first timestamp must be zero");
             return false;
         }
         if (!parsedFrames.empty() &&
-            frame.timestampMs < parsedFrames.back().timestampMs) {
+            frame.timestampUs < parsedFrames.back().timestampUs) {
             setError(error, lineNumber, "timestamps must be monotonic");
             return false;
         }

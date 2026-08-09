@@ -51,17 +51,20 @@ jobs:
         run: |
           grep -q '#define CONFIG_TWAI_ERRATA_FIX_LISTEN_ONLY_DOM 1' \
             .pio/build/esp32s3dev/config/sdkconfig.h
+          grep -q 'TWAI_MODE_LISTEN_ONLY' \
+            src/infrastructure/esp_idf_twai_receiver.cpp
           if grep -ERn \
-            'twai_(transmit|receive|driver_install|start|node_[a-z_]+)|twai_new_node' \
-            src include; then
-            echo 'Forbidden TWAI initialization, reception or transmission API in firmware sources.'
+            'twai_transmit|twai_node_transmit|TWAI_MODE_NORMAL|TWAI_MODE_NO_ACK' \
+            src include libs; then
+            echo 'Forbidden TWAI transmission API or active mode in firmware sources.'
             exit 1
           fi
-          if pio pkg exec --package toolchain-xtensa-esp-elf -- \
+          symbols="$(pio pkg exec --package toolchain-xtensa-esp-elf -- \
             xtensa-esp32s3-elf-nm -C \
-            .pio/build/esp32s3dev/firmware.elf | \
-            grep -E 'twai_(transmit|receive|driver_install|start|node_[a-z_]+)|twai_new_node'; then
-            echo 'Forbidden TWAI driver symbol linked in firmware.'
+            .pio/build/esp32s3dev/firmware.elf)"
+          echo "$symbols" | grep -q 'twai_receive'
+          if echo "$symbols" | grep -E 'twai_transmit|twai_node_transmit'; then
+            echo 'Forbidden TWAI transmission symbol linked in firmware.'
             exit 1
           fi
 

@@ -1,0 +1,19 @@
+#pragma once
+
+// BENCH_ONLY: copy this file to config/bench-twai.local.hpp, then replace every
+// -1 with pins from a reviewed bench schematic. These values are never a BMW
+// wiring recommendation. The local file is ignored by Git.
+#define BMW_REMOTE_BENCH_ONLY_TWAI_ENABLED 1
+#define BMW_REMOTE_BENCH_ONLY_TWAI_RX_GPIO -1
+#define BMW_REMOTE_BENCH_ONLY_TWAI_TX_GPIO -1
+#define BMW_REMOTE_BENCH_ONLY_SILENT_GPIO -1
+#define BMW_REMOTE_BENCH_ONLY_TX_INHIBIT_GPIO -1
+
+// 1 means that a high level holds the corresponding barrier active. Change
+// only after checking the selected transceiver and independent TX gate.
+#define BMW_REMOTE_BENCH_ONLY_SILENT_LEVEL 1
+#define BMW_REMOTE_BENCH_ONLY_TX_INHIBIT_LEVEL 1
+
+// Only 100000 and 500000 are supported in Phase 3.
+#define BMW_REMOTE_BENCH_ONLY_BITRATE 100000
+#define BMW_REMOTE_BENCH_ONLY_CHANNEL 0

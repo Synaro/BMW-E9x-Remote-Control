@@ -17,6 +17,7 @@ core|src/infrastructure/crc32.cpp
 core|src/infrastructure/diagnostic_journal.cpp
 core|src/infrastructure/esp_idf_hal.cpp
 core|src/infrastructure/esp_idf_settings.cpp
+core|src/infrastructure/esp_idf_twai_receiver.cpp
 core|src/infrastructure/replay_vehicle_gateway.cpp
 core|src/infrastructure/runtime.cpp
 core|src/infrastructure/settings_identity.cpp
@@ -24,6 +25,7 @@ core|src/infrastructure/settings_payload.cpp
 core|src/infrastructure/settings_protocol.cpp
 core|src/infrastructure/settings_storage.cpp
 core|src/infrastructure/settings_stream.cpp
+core|src/infrastructure/twai_listen_only.cpp
 core|src/infrastructure/vehicle_state_assembler.cpp
 host|tools/can_trace_csv.cpp
 host|tools/serial_settings_channel.cpp

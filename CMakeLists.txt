@@ -38,7 +38,8 @@ endforeach()
 
 add_library(bmw_remote_core ${BMW_REMOTE_CORE_SOURCES})
 
-target_include_directories(bmw_remote_core PUBLIC include)
+target_include_directories(
+    bmw_remote_core PUBLIC include libs/can-core/include)
 target_compile_features(bmw_remote_core PUBLIC cxx_std_17)
 
 if(MSVC)

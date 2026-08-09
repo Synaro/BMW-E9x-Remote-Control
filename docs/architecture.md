@@ -41,9 +41,11 @@ flowchart LR
 - **Application** : politique de sécurité, machine d'état, événements et actions.
 - **Infrastructure** : exécution des actions au travers de ports abstraits.
 - **Simulation** : décodeur synthétique et génération de scénarios hors véhicule.
+- **CAN Core** : modèle de trame, réception, file bornée, statistiques et contrat
+  de capture génériques ; cette bibliothèque ne dépend ni de BMW ni d'ESP-IDF.
 - **Firmware** : assemblage ESP-IDF spécifique à l'ESP32-S3. La version actuelle
-  dessert uniquement le protocole de configuration USB et NVS ; elle reste
-  inerte vis-à-vis du véhicule.
+  dessert le protocole USB/NVS et peut acquérir un bus de banc en listen-only
+  lorsque sa configuration locale `BENCH_ONLY` est explicitement activée.
 
 Le domaine et l'application ne dépendent d'aucun framework embarqué.
 
@@ -81,11 +83,22 @@ et fournit un retour fail-safe si aucune ne peut être chargée. Voir
 [settings-persistence.md](settings-persistence.md).
 
 Sur l'ESP32-S3, `EspIdfNvsSettingsStorage` adapte ce contrat à une partition NVS
-explicite. `GpioHal` et `MonotonicTimeHal` forment la HAL minimale du socle. Le
-contrat `FutureTwaiSafetyHal` ne permet que de maintenir les deux barrières
-matérielles de silence ; il n'expose aucune opération CAN. La composition
-embarquée n'instancie ni runtime véhicule, ni GPIO d'actionneur, ni pilote TWAI.
-Voir [esp32s3-safe-foundation.md](esp32s3-safe-foundation.md).
+explicite. `GpioHal` et `MonotonicTimeHal` forment la HAL minimale du socle.
+`TwaiSafetyHal` ne permet que d'imposer et confirmer les deux barrières
+matérielles de silence. `EspIdfTwaiReceiver` implémente séparément le port RX
+générique de `libs/can-core`, uniquement en `TWAI_MODE_LISTEN_ONLY`, sans API
+d'émission publique. L'acquisition est désactivée sans configuration locale de
+banc validée. Voir [esp32s3-safe-foundation.md](esp32s3-safe-foundation.md) et
+[twai-listen-only-acquisition.md](twai-listen-only-acquisition.md).
+
+```mermaid
+flowchart LR
+    Bench["Bus CAN de banc"] --> Transceiver["Transceiver externe silencieux"]
+    Transceiver --> Twai["TWAI listen-only"]
+    Twai --> Adapter["Adaptateur ESP-IDF RX"]
+    Adapter --> Core["libs/can-core"]
+    Core --> Consumer["Consommateur de capture futur"]
+```
 
 Le protocole de configuration transporte le même payload pré-V1 fixe de 40 octets que
 le journal, sans exposer son format de stockage. Le codec vérifie la version, la
