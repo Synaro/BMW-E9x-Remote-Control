@@ -16,28 +16,34 @@
       "type": "object",
       "additionalProperties": false,
       "required": [
-        "exact_cas_identification", "exact_dde_identification", "oem_start_architecture",
+        "exact_cas_identification", "exact_dde_identification", "exact_egs_identification", "oem_start_architecture",
         "kl15", "kl50", "engine_speed", "engine_running_state", "transmission_pn",
-        "brake", "oem_start_authorization", "battery_voltage", "timeout_strategy",
-        "stop_strategy", "communication_loss", "post_reset_behavior", "start_inhibit_conditions"
+        "transmission_prnd_tool32", "brake", "engine_running_detection_algorithm",
+        "terminal_50_start_request", "oem_start_authorization", "battery_voltage", "timeout_strategy",
+        "stop_strategy", "communication_loss", "post_reset_behavior", "start_inhibit_conditions", "can_identifiers"
       ],
       "properties": {
         "exact_cas_identification": {"$ref": "#/$defs/item"},
         "exact_dde_identification": {"$ref": "#/$defs/item"},
+        "exact_egs_identification": {"$ref": "#/$defs/item"},
         "oem_start_architecture": {"$ref": "#/$defs/item"},
         "kl15": {"$ref": "#/$defs/item"},
         "kl50": {"$ref": "#/$defs/item"},
         "engine_speed": {"$ref": "#/$defs/item"},
         "engine_running_state": {"$ref": "#/$defs/item"},
         "transmission_pn": {"$ref": "#/$defs/item"},
+        "transmission_prnd_tool32": {"$ref": "#/$defs/item"},
         "brake": {"$ref": "#/$defs/item"},
+        "engine_running_detection_algorithm": {"$ref": "#/$defs/item"},
+        "terminal_50_start_request": {"$ref": "#/$defs/item"},
         "oem_start_authorization": {"$ref": "#/$defs/item"},
         "battery_voltage": {"$ref": "#/$defs/item"},
         "timeout_strategy": {"$ref": "#/$defs/item"},
         "stop_strategy": {"$ref": "#/$defs/item"},
         "communication_loss": {"$ref": "#/$defs/item"},
         "post_reset_behavior": {"$ref": "#/$defs/item"},
-        "start_inhibit_conditions": {"$ref": "#/$defs/item"}
+        "start_inhibit_conditions": {"$ref": "#/$defs/item"},
+        "can_identifiers": {"$ref": "#/$defs/item"}
       }
     }
   },
@@ -47,7 +53,7 @@
       "additionalProperties": false,
       "required": ["status", "evidence_refs", "updated_at", "notes", "blocker_reason"],
       "properties": {
-        "status": {"enum": ["UNKNOWN", "OBSERVED", "CONFIRMED", "VALIDATED", "BLOCKED"]},
+        "status": {"enum": ["UNKNOWN", "OBSERVED", "CONFIRMED", "UNTRUSTED", "NOT_YET_VALIDATED", "VALIDATED", "BLOCKED"]},
         "evidence_refs": {
           "type": "array", "uniqueItems": true,
           "items": {"type": "string", "minLength": 1, "maxLength": 96}

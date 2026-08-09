@@ -1,0 +1,32 @@
+{
+  "schema_version": 1,
+  "mapping_id": "CURRENT_TEST_VEHICLE_TESTO_ENGINE_SPEED_MAPPING_CANDIDATE",
+  "example_only": false,
+  "input": {"delimiter": ";", "encoding": "utf-8-sig", "timestamp_unit": "s"},
+  "columns": {
+    "timestamp": "REPLACE_WITH_ACTUAL_TESTO_TIME_COLUMN",
+    "rpm": "REPLACE_WITH_ACTUAL_TESTO_RPM_COLUMN"
+  },
+  "timeline": {
+    "timeline_id": "CURRENT_TEST_VEHICLE_TESTO_OEM_START_FROM_CSV_PENDING",
+    "profile_ref": "../profiles/current-test-vehicle.vehicle-profile.json",
+    "evidence_index": "../evidence/current-test-vehicle.evidence-index.json",
+    "evidence_ref": "CURRENT_TEST_VEHICLE_PHASE3D_TESTO_OEM_START_2026_08_09",
+    "source": {
+      "tool": "TestO",
+      "sgbd_prg": "47C0 / DDE 7.1 N47",
+      "job": "STATUS_MOTORDREHZAHL",
+      "session": "PENDING_RAW_TESTO_CSV",
+      "observed_at": "2026-08-09T18:39:03+02:00",
+      "notes": "Replace only the delimiter, timestamp unit and column names after inspecting the raw CSV."
+    }
+  },
+  "candidate_thresholds": {
+    "candidate_only": true,
+    "stopped_max_rpm": 0,
+    "running_band_min_rpm": 650,
+    "running_band_max_rpm": 1100,
+    "running_exit_rpm": 500,
+    "consecutive_samples": 3
+  }
+}

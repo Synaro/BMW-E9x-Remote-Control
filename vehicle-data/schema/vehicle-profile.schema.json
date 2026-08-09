@@ -58,6 +58,7 @@
         "value": {"type": ["string", "number", "boolean", "null"]},
         "observed_at": {"type": ["string", "null"], "format": "date-time"},
         "confidence": {"$ref": "#/$defs/confidence"},
+        "qualification": {"$ref": "#/$defs/qualification"},
         "evidence_refs": {
           "type": "array", "uniqueItems": true,
           "items": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,95}$"}
@@ -74,6 +75,7 @@
         "anonymized": {"type": "boolean"},
         "observed_at": {"type": ["string", "null"], "format": "date-time"},
         "confidence": {"$ref": "#/$defs/confidence"},
+        "qualification": {"$ref": "#/$defs/qualification"},
         "evidence_refs": {
           "type": "array", "uniqueItems": true,
           "items": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,95}$"}
@@ -91,6 +93,10 @@
         "software_reference": {"$ref": "#/$defs/assertion"},
         "zb_number": {"$ref": "#/$defs/assertion"}
       }
+    },
+    "qualification": {
+      "type": "string",
+      "enum": ["UNKNOWN", "OBSERVED", "CONFIRMED", "UNTRUSTED", "BLOCKED"]
     }
   }
 }

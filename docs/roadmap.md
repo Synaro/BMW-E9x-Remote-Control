@@ -63,6 +63,21 @@ aucun signal BMW et n'ajoute ni émission CAN, ni commande CAS/DDE. Son contrat
 est détaillé dans
 [phase3c-vehicle-data-intake.md](phase3c-vehicle-data-intake.md).
 
+## Phase 3D — Qualification des preuves réelles
+
+- [x] Intégrer les identifications réelles CAS, DDE et EGS avec provenance
+- [x] Qualifier KL15, P/R/N/D, frein et régime moteur par source
+- [x] Marquer le mapping ISTA Transmission position comme `UNTRUSTED`
+- [x] Interdire structurellement les données `UNTRUSTED` ou `BLOCKED` comme préconditions candidates
+- [x] Ajouter le modèle observationnel `EngineRunStateObservation`
+- [x] Préparer l'import générique d'un CSV de régime TestO
+- [x] Archiver l'ordre réel des RPM sans inventer de timestamps
+- [ ] Importer le CSV TestO brut et produire sa timeline réellement horodatée
+- [ ] Valider les seuils candidats sur plusieurs démarrages OEM indépendants
+
+Les résultats et limites de cette phase sont détaillés dans
+[phase3d-real-evidence-qualification.md](phase3d-real-evidence-qualification.md).
+
 ## Phase 4 — Capture et analyse hors ligne
 
 - [ ] Implémenter le transport et l'écriture PC du format Capture V2

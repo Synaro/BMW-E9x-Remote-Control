@@ -1,4 +1,4 @@
-"""Strict Phase 3C validation for vehicle profiles and OEM observations.
+"""Strict Phase 3C/3D validation for vehicle profiles and OEM observations.
 
 The module deliberately uses only the Python standard library. It validates
 cross-file provenance and semantic invariants that JSON Schema cannot express
@@ -26,7 +26,16 @@ EVIDENCE_KINDS = {
     "FUTURE_CAN_CAPTURE",
     "MANUAL_NOTE",
 }
-CHECKLIST_STATUSES = {"UNKNOWN", "OBSERVED", "CONFIRMED", "VALIDATED", "BLOCKED"}
+QUALIFICATION_LEVELS = {"UNKNOWN", "OBSERVED", "CONFIRMED", "UNTRUSTED", "BLOCKED"}
+CHECKLIST_STATUSES = {
+    "UNKNOWN",
+    "OBSERVED",
+    "CONFIRMED",
+    "UNTRUSTED",
+    "NOT_YET_VALIDATED",
+    "VALIDATED",
+    "BLOCKED",
+}
 PHASES = {
     "UNKNOWN",
     "PRECHECK",
@@ -53,13 +62,17 @@ TIMESTAMP_BASES = {"SESSION_RELATIVE", "SOURCE_ABSOLUTE", "UNAVAILABLE"}
 REQUIRED_CHECKLIST_ITEMS = {
     "exact_cas_identification",
     "exact_dde_identification",
+    "exact_egs_identification",
     "oem_start_architecture",
     "kl15",
     "kl50",
     "engine_speed",
     "engine_running_state",
     "transmission_pn",
+    "transmission_prnd_tool32",
     "brake",
+    "engine_running_detection_algorithm",
+    "terminal_50_start_request",
     "oem_start_authorization",
     "battery_voltage",
     "timeout_strategy",
@@ -67,6 +80,7 @@ REQUIRED_CHECKLIST_ITEMS = {
     "communication_loss",
     "post_reset_behavior",
     "start_inhibit_conditions",
+    "can_identifiers",
 }
 
 
@@ -196,7 +210,14 @@ def validate_evidence_index(
     return evidence_ids
 
 
-def _validate_assertion(value: Any, evidence_ids: set[str], location: str, *, vin: bool = False) -> None:
+def _validate_assertion(
+    value: Any,
+    evidence_ids: set[str],
+    location: str,
+    *,
+    vin: bool = False,
+    require_qualification: bool = False,
+) -> None:
     assertion = _require_object(value, location)
     required = {"value", "observed_at", "confidence", "evidence_refs"}
     if vin:
@@ -206,6 +227,9 @@ def _validate_assertion(value: Any, evidence_ids: set[str], location: str, *, vi
     if confidence not in CONFIDENCE_LEVELS:
         raise ValidationError(f"{location}.confidence: unsupported level")
     references = _require_array(assertion["evidence_refs"], f"{location}.evidence_refs")
+    qualification = assertion.get("qualification")
+    if qualification is not None and qualification not in QUALIFICATION_LEVELS:
+        raise ValidationError(f"{location}.qualification: unsupported level")
     if len(references) != len(set(references)):
         raise ValidationError(f"{location}.evidence_refs: duplicate reference")
     for index, reference in enumerate(references):
@@ -220,6 +244,10 @@ def _validate_assertion(value: Any, evidence_ids: set[str], location: str, *, vi
         _require_timestamp(assertion["observed_at"], f"{location}.observed_at")
         if not references:
             raise ValidationError(f"{location}.evidence_refs: observed data requires provenance")
+        if require_qualification and qualification is None:
+            raise ValidationError(f"{location}.qualification: real observed data requires qualification")
+        if qualification in {"UNKNOWN", "BLOCKED"}:
+            raise ValidationError(f"{location}.qualification: incompatible with an observed value")
     if vin and not isinstance(assertion["anonymized"], bool):
         raise ValidationError(f"{location}.anonymized: must be boolean")
 
@@ -251,14 +279,25 @@ def validate_vehicle_profile(document: Mapping[str, Any], evidence_ids: set[str]
     vehicle_fields = {"vin", "model", "chassis", "production_date", "engine", "transmission"}
     _required(vehicle, vehicle_fields, "profile.vehicle")
     for field in sorted(vehicle_fields):
-        _validate_assertion(vehicle[field], evidence_ids, f"profile.vehicle.{field}", vin=field == "vin")
+        _validate_assertion(
+            vehicle[field],
+            evidence_ids,
+            f"profile.vehicle.{field}",
+            vin=field == "vin",
+            require_qualification=not document["example_only"],
+        )
 
     for ecu_name in ("cas", "dde"):
         ecu = _require_object(document[ecu_name], f"profile.{ecu_name}")
         ecu_fields = {"type_version", "hardware_reference", "software_reference", "zb_number"}
         _required(ecu, ecu_fields, f"profile.{ecu_name}")
         for field in sorted(ecu_fields):
-            _validate_assertion(ecu[field], evidence_ids, f"profile.{ecu_name}.{field}")
+            _validate_assertion(
+                ecu[field],
+                evidence_ids,
+                f"profile.{ecu_name}.{field}",
+                require_qualification=not document["example_only"],
+            )
 
     roles: set[str] = set()
     for index, raw_ecu in enumerate(_require_array(document["other_control_units"], "profile.other_control_units")):
@@ -271,7 +310,213 @@ def validate_vehicle_profile(document: Mapping[str, Any], evidence_ids: set[str]
             raise ValidationError(f"{location}.role: duplicate role {role!r}")
         roles.add(role)
         for field in sorted(fields - {"role"}):
-            _validate_assertion(ecu[field], evidence_ids, f"{location}.{field}")
+            _validate_assertion(
+                ecu[field],
+                evidence_ids,
+                f"{location}.{field}",
+                require_qualification=not document["example_only"],
+            )
+
+
+def is_precondition_candidate(qualification: str, eligibility: str) -> bool:
+    """Return true only for reviewed facts that remain future candidates.
+
+    This is a host-side data qualification gate, not vehicle control logic.
+    UNTRUSTED and BLOCKED facts are structurally incapable of passing it.
+    """
+
+    return qualification == "CONFIRMED" and eligibility == "CANDIDATE"
+
+
+def validate_qualified_observations(document: Mapping[str, Any], evidence_ids: set[str]) -> None:
+    _required(
+        document,
+        {
+            "schema_version",
+            "bundle_id",
+            "example_only",
+            "profile_ref",
+            "evidence_index",
+            "recorded_at",
+            "observations",
+        },
+        "qualified_observations",
+    )
+    _require_schema_v1(document, "qualified_observations")
+    _require_nonempty_string(document["bundle_id"], "qualified_observations.bundle_id")
+    _require_nonempty_string(document["profile_ref"], "qualified_observations.profile_ref")
+    _require_nonempty_string(document["evidence_index"], "qualified_observations.evidence_index")
+    _require_timestamp(document["recorded_at"], "qualified_observations.recorded_at")
+    if not isinstance(document["example_only"], bool):
+        raise ValidationError("qualified_observations.example_only: must be boolean")
+
+    identifiers: set[str] = set()
+    valid_categories = {
+        "IDENTIFICATION",
+        "KL15",
+        "TRANSMISSION_POSITION",
+        "ACTUAL_GEAR",
+        "BRAKE",
+        "ENGINE_SPEED",
+        "ENGINE_STATE",
+        "SOURCE_QUALITY",
+    }
+    for index, raw_observation in enumerate(
+        _require_array(document["observations"], "qualified_observations.observations")
+    ):
+        location = f"qualified_observations.observations[{index}]"
+        observation = _require_object(raw_observation, location)
+        _required(
+            observation,
+            {
+                "observation_id",
+                "category",
+                "qualification",
+                "precondition_eligibility",
+                "source",
+                "raw_value",
+                "interpreted_value",
+                "unit",
+                "notes",
+            },
+            location,
+        )
+        identifier = _require_nonempty_string(observation["observation_id"], f"{location}.observation_id")
+        if identifier in identifiers:
+            raise ValidationError(f"{location}.observation_id: duplicate {identifier!r}")
+        identifiers.add(identifier)
+        if observation["category"] not in valid_categories:
+            raise ValidationError(f"{location}.category: unsupported category")
+        qualification = observation["qualification"]
+        if qualification not in QUALIFICATION_LEVELS:
+            raise ValidationError(f"{location}.qualification: unsupported level")
+        eligibility = observation["precondition_eligibility"]
+        if eligibility not in {"PROHIBITED", "CANDIDATE"}:
+            raise ValidationError(f"{location}.precondition_eligibility: unsupported value")
+        if qualification in {"UNKNOWN", "OBSERVED", "UNTRUSTED", "BLOCKED"} and eligibility != "PROHIBITED":
+            raise ValidationError(f"{location}: {qualification} data must be PROHIBITED as a precondition")
+        if observation["raw_value"] is None and observation["interpreted_value"] is None:
+            raise ValidationError(f"{location}: raw and interpreted values cannot both be null")
+
+        source = _require_object(observation["source"], f"{location}.source")
+        _required(
+            source,
+            {"tool", "sgbd_prg", "job", "field", "physical_context", "observed_at", "session", "evidence_ref"},
+            f"{location}.source",
+        )
+        _require_nonempty_string(source["tool"], f"{location}.source.tool")
+        for optional_name in ("sgbd_prg", "job"):
+            if source[optional_name] is not None:
+                _require_nonempty_string(source[optional_name], f"{location}.source.{optional_name}")
+        _require_nonempty_string(source["field"], f"{location}.source.field")
+        _require_nonempty_string(source["physical_context"], f"{location}.source.physical_context")
+        _require_timestamp(source["observed_at"], f"{location}.source.observed_at")
+        _require_nonempty_string(source["session"], f"{location}.source.session")
+        _validate_evidence_ref(source["evidence_ref"], evidence_ids, f"{location}.source.evidence_ref")
+
+        category = observation["category"]
+        interpreted = observation["interpreted_value"]
+        unit = observation["unit"]
+        if category == "TRANSMISSION_POSITION" and (interpreted not in {"P", "R", "N", "D"} or unit is not None):
+            raise ValidationError(f"{location}: invalid transmission position")
+        if category == "BRAKE" and (not isinstance(interpreted, bool) or unit is not None):
+            raise ValidationError(f"{location}: BRAKE requires boolean interpreted value")
+        if category == "ENGINE_SPEED":
+            if isinstance(interpreted, bool) or not isinstance(interpreted, (int, float)) or interpreted < 0 or unit != "rpm":
+                raise ValidationError(f"{location}: ENGINE_SPEED requires non-negative rpm")
+        if category == "ENGINE_STATE" and (interpreted not in {"UNKNOWN", "STOPPED", "CRANKING", "RUNNING"} or unit is not None):
+            raise ValidationError(f"{location}: invalid engine state")
+
+
+def validate_engine_run_timeline(document: Mapping[str, Any], evidence_ids: set[str]) -> None:
+    _required(
+        document,
+        {
+            "schema_version",
+            "timeline_id",
+            "example_only",
+            "profile_ref",
+            "evidence_index",
+            "evidence_ref",
+            "source",
+            "timestamp_basis",
+            "candidate_thresholds",
+            "samples",
+            "qualification",
+        },
+        "engine_timeline",
+    )
+    _require_schema_v1(document, "engine_timeline")
+    for field in ("timeline_id", "profile_ref", "evidence_index"):
+        _require_nonempty_string(document[field], f"engine_timeline.{field}")
+    _validate_evidence_ref(document["evidence_ref"], evidence_ids, "engine_timeline.evidence_ref")
+    if document["timestamp_basis"] not in {"SESSION_RELATIVE", "UNAVAILABLE"}:
+        raise ValidationError("engine_timeline.timestamp_basis: unsupported basis")
+    if document["qualification"] not in {"OBSERVED", "CONFIRMED", "UNTRUSTED", "BLOCKED"}:
+        raise ValidationError("engine_timeline.qualification: unsupported level")
+    source = _require_object(document["source"], "engine_timeline.source")
+    _required(source, {"tool", "sgbd_prg", "job", "session", "observed_at", "notes"}, "engine_timeline.source")
+    for field in ("tool", "sgbd_prg", "job", "session"):
+        _require_nonempty_string(source[field], f"engine_timeline.source.{field}")
+    _require_timestamp(source["observed_at"], "engine_timeline.source.observed_at")
+
+    thresholds = document["candidate_thresholds"]
+    if thresholds is not None:
+        thresholds = _require_object(thresholds, "engine_timeline.candidate_thresholds")
+        _required(
+            thresholds,
+            {
+                "candidate_only",
+                "stopped_max_rpm",
+                "running_band_min_rpm",
+                "running_band_max_rpm",
+                "running_exit_rpm",
+                "consecutive_samples",
+            },
+            "engine_timeline.candidate_thresholds",
+        )
+        if thresholds["candidate_only"] is not True:
+            raise ValidationError("engine_timeline.candidate_thresholds: must remain candidate_only")
+        numeric = [thresholds[name] for name in ("stopped_max_rpm", "running_exit_rpm", "running_band_min_rpm", "running_band_max_rpm")]
+        if any(isinstance(value, bool) or not isinstance(value, (int, float)) or value < 0 for value in numeric):
+            raise ValidationError("engine_timeline.candidate_thresholds: values must be non-negative numbers")
+        if not (numeric[0] < numeric[1] <= numeric[2] < numeric[3]):
+            raise ValidationError("engine_timeline.candidate_thresholds: incoherent hysteresis ordering")
+        if isinstance(thresholds["consecutive_samples"], bool) or not isinstance(thresholds["consecutive_samples"], int) or thresholds["consecutive_samples"] < 2:
+            raise ValidationError("engine_timeline.candidate_thresholds.consecutive_samples: expected integer >= 2")
+
+    previous_timestamp = -1
+    previous_state: str | None = None
+    for index, raw_sample in enumerate(_require_array(document["samples"], "engine_timeline.samples")):
+        location = f"engine_timeline.samples[{index}]"
+        sample = _require_object(raw_sample, location)
+        _required(sample, {"sequence", "timestamp_us", "rpm", "observed_state", "transition", "source_row", "notes"}, location)
+        if sample["sequence"] != index:
+            raise ValidationError(f"{location}.sequence: expected {index}")
+        timestamp = sample["timestamp_us"]
+        if document["timestamp_basis"] == "UNAVAILABLE":
+            if timestamp is not None:
+                raise ValidationError(f"{location}.timestamp_us: must be null when unavailable")
+        else:
+            if isinstance(timestamp, bool) or not isinstance(timestamp, int) or timestamp < previous_timestamp:
+                raise ValidationError(f"{location}.timestamp_us: expected monotonic non-negative integer")
+            previous_timestamp = timestamp
+        rpm = sample["rpm"]
+        if isinstance(rpm, bool) or not isinstance(rpm, (int, float)) or rpm < 0:
+            raise ValidationError(f"{location}.rpm: expected non-negative number")
+        state = sample["observed_state"]
+        if state not in {"UNKNOWN", "STOPPED", "CRANKING", "RUNNING"}:
+            raise ValidationError(f"{location}.observed_state: unsupported state")
+        allowed_transition = None
+        if previous_state is not None and previous_state != state:
+            allowed_transition = {
+                ("STOPPED", "CRANKING"): "STOPPED_TO_CRANKING",
+                ("CRANKING", "RUNNING"): "CRANKING_TO_RUNNING",
+                ("RUNNING", "STOPPED"): "RUNNING_TO_STOPPED",
+            }.get((previous_state, state), "TO_UNKNOWN")
+        if sample["transition"] != allowed_transition:
+            raise ValidationError(f"{location}.transition: inconsistent with state change")
+        previous_state = state
 
 
 def _validate_record_semantics(record: Mapping[str, Any], location: str) -> None:
@@ -408,7 +653,7 @@ def validate_prerequisites(document: Mapping[str, Any], evidence_ids: set[str]) 
         for index, reference in enumerate(references):
             _validate_evidence_ref(reference, evidence_ids, f"{location}.evidence_refs[{index}]")
         _require_timestamp(item["updated_at"], f"{location}.updated_at")
-        if status in {"OBSERVED", "CONFIRMED", "VALIDATED"} and not references:
+        if status in {"OBSERVED", "CONFIRMED", "UNTRUSTED", "NOT_YET_VALIDATED", "VALIDATED"} and not references:
             raise ValidationError(f"{location}: {status} requires evidence")
         if status == "UNKNOWN" and references:
             raise ValidationError(f"{location}: UNKNOWN cannot claim evidence")
@@ -417,6 +662,8 @@ def validate_prerequisites(document: Mapping[str, Any], evidence_ids: set[str]) 
             _require_nonempty_string(blocker, f"{location}.blocker_reason")
         elif blocker is not None:
             raise ValidationError(f"{location}.blocker_reason: only valid for BLOCKED")
+        if status in {"UNTRUSTED", "NOT_YET_VALIDATED"}:
+            _require_nonempty_string(item["notes"], f"{location}.notes")
 
 
 def validate_import_mapping(document: Mapping[str, Any], evidence_ids: set[str]) -> None:
@@ -474,12 +721,14 @@ def validate_import_mapping(document: Mapping[str, Any], evidence_ids: set[str])
 
 
 def _parse_arguments() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Validate Phase 3C vehicle-data artifacts")
+    parser = argparse.ArgumentParser(description="Validate Phase 3C/3D vehicle-data artifacts")
     parser.add_argument("--evidence", required=True, type=Path)
     parser.add_argument("--profile", type=Path)
     parser.add_argument("--observation", type=Path)
     parser.add_argument("--checklist", type=Path)
     parser.add_argument("--mapping", type=Path)
+    parser.add_argument("--qualified-observations", action="append", default=[], type=Path)
+    parser.add_argument("--engine-timeline", action="append", default=[], type=Path)
     return parser.parse_args()
 
 
@@ -496,7 +745,11 @@ def main() -> int:
     for path, validator in validators:
         if path is not None:
             validator(load_json_object(path), evidence_ids)
-    print("Phase 3C vehicle data: VALID")
+    for path in arguments.qualified_observations:
+        validate_qualified_observations(load_json_object(path), evidence_ids)
+    for path in arguments.engine_timeline:
+        validate_engine_run_timeline(load_json_object(path), evidence_ids)
+    print("Phase 3C/3D vehicle data: VALID")
     return 0
 
 
@@ -504,5 +757,5 @@ if __name__ == "__main__":
     try:
         raise SystemExit(main())
     except ValidationError as error:
-        print(f"Phase 3C vehicle data: INVALID: {error}")
+        print(f"Phase 3C/3D vehicle data: INVALID: {error}")
         raise SystemExit(2) from error

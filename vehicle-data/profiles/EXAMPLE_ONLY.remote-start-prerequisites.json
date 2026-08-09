@@ -8,19 +8,24 @@
   "items": {
     "exact_cas_identification": {"status": "UNKNOWN", "evidence_refs": [], "updated_at": "2000-01-01T00:00:00Z", "notes": null, "blocker_reason": null},
     "exact_dde_identification": {"status": "UNKNOWN", "evidence_refs": [], "updated_at": "2000-01-01T00:00:00Z", "notes": null, "blocker_reason": null},
+    "exact_egs_identification": {"status": "UNKNOWN", "evidence_refs": [], "updated_at": "2000-01-01T00:00:00Z", "notes": null, "blocker_reason": null},
     "oem_start_architecture": {"status": "UNKNOWN", "evidence_refs": [], "updated_at": "2000-01-01T00:00:00Z", "notes": null, "blocker_reason": null},
     "kl15": {"status": "UNKNOWN", "evidence_refs": [], "updated_at": "2000-01-01T00:00:00Z", "notes": null, "blocker_reason": null},
     "kl50": {"status": "UNKNOWN", "evidence_refs": [], "updated_at": "2000-01-01T00:00:00Z", "notes": null, "blocker_reason": null},
     "engine_speed": {"status": "UNKNOWN", "evidence_refs": [], "updated_at": "2000-01-01T00:00:00Z", "notes": null, "blocker_reason": null},
     "engine_running_state": {"status": "UNKNOWN", "evidence_refs": [], "updated_at": "2000-01-01T00:00:00Z", "notes": null, "blocker_reason": null},
     "transmission_pn": {"status": "UNKNOWN", "evidence_refs": [], "updated_at": "2000-01-01T00:00:00Z", "notes": null, "blocker_reason": null},
+    "transmission_prnd_tool32": {"status": "UNKNOWN", "evidence_refs": [], "updated_at": "2000-01-01T00:00:00Z", "notes": null, "blocker_reason": null},
     "brake": {"status": "UNKNOWN", "evidence_refs": [], "updated_at": "2000-01-01T00:00:00Z", "notes": null, "blocker_reason": null},
+    "engine_running_detection_algorithm": {"status": "UNKNOWN", "evidence_refs": [], "updated_at": "2000-01-01T00:00:00Z", "notes": null, "blocker_reason": null},
+    "terminal_50_start_request": {"status": "UNKNOWN", "evidence_refs": [], "updated_at": "2000-01-01T00:00:00Z", "notes": null, "blocker_reason": null},
     "oem_start_authorization": {"status": "UNKNOWN", "evidence_refs": [], "updated_at": "2000-01-01T00:00:00Z", "notes": null, "blocker_reason": null},
     "battery_voltage": {"status": "UNKNOWN", "evidence_refs": [], "updated_at": "2000-01-01T00:00:00Z", "notes": null, "blocker_reason": null},
     "timeout_strategy": {"status": "UNKNOWN", "evidence_refs": [], "updated_at": "2000-01-01T00:00:00Z", "notes": null, "blocker_reason": null},
     "stop_strategy": {"status": "UNKNOWN", "evidence_refs": [], "updated_at": "2000-01-01T00:00:00Z", "notes": null, "blocker_reason": null},
     "communication_loss": {"status": "UNKNOWN", "evidence_refs": [], "updated_at": "2000-01-01T00:00:00Z", "notes": null, "blocker_reason": null},
     "post_reset_behavior": {"status": "UNKNOWN", "evidence_refs": [], "updated_at": "2000-01-01T00:00:00Z", "notes": null, "blocker_reason": null},
-    "start_inhibit_conditions": {"status": "UNKNOWN", "evidence_refs": [], "updated_at": "2000-01-01T00:00:00Z", "notes": null, "blocker_reason": null}
+    "start_inhibit_conditions": {"status": "UNKNOWN", "evidence_refs": [], "updated_at": "2000-01-01T00:00:00Z", "notes": null, "blocker_reason": null},
+    "can_identifiers": {"status": "UNKNOWN", "evidence_refs": [], "updated_at": "2000-01-01T00:00:00Z", "notes": "No BMW CAN identifier is present in the example.", "blocker_reason": null}
   }
 }

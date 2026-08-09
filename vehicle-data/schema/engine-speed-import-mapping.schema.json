@@ -1,0 +1,45 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://bmw-e9x-remote-control.invalid/vehicle-data/schema/engine-speed-import-mapping.schema.json",
+  "title": "Phase 3D generic engine-speed CSV mapping",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "mapping_id", "example_only", "input", "columns", "timeline", "candidate_thresholds"],
+  "properties": {
+    "schema_version": {"const": 1},
+    "mapping_id": {"type": "string", "minLength": 1},
+    "example_only": {"type": "boolean"},
+    "input": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["delimiter", "encoding", "timestamp_unit"],
+      "properties": {
+        "delimiter": {"enum": [",", ";", "\\t", "|"]},
+        "encoding": {"enum": ["utf-8", "utf-8-sig"]},
+        "timestamp_unit": {"enum": ["s", "ms", "us"]}
+      }
+    },
+    "columns": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["timestamp", "rpm"],
+      "properties": {
+        "timestamp": {"type": "string", "minLength": 1},
+        "rpm": {"type": "string", "minLength": 1}
+      }
+    },
+    "timeline": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["timeline_id", "profile_ref", "evidence_index", "evidence_ref", "source"],
+      "properties": {
+        "timeline_id": {"type": "string", "minLength": 1},
+        "profile_ref": {"type": "string", "minLength": 1},
+        "evidence_index": {"type": "string", "minLength": 1},
+        "evidence_ref": {"type": "string", "minLength": 1},
+        "source": {"type": "object"}
+      }
+    },
+    "candidate_thresholds": {"type": "object"}
+  }
+}

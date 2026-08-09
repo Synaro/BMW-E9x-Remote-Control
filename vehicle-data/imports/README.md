@@ -12,3 +12,12 @@ L'importeur refuse notamment : colonne absente, timestamp non entier ou non
 monotone, séquence incohérente, signal/phase inconnu, preuve absente, valeur sans
 provenance et unité incohérente. Il n'infère aucun signal BMW et n'accepte aucun
 identifiant CAN.
+
+`tools/import_engine_speed_log.py` traite séparément les CSV de régime moteur.
+Son mapping configure les colonnes, l'unité de temps et des seuils explicitement
+`candidate_only`. La classification exige plusieurs échantillons consécutifs et
+une hystérésis ; elle reste observationnelle et n'alimente aucun contrôleur.
+
+Le mapping `current-test-vehicle-testo-engine-speed.mapping.json` est incomplet
+par conception tant que le CSV brut n'est pas disponible : ses noms de colonnes
+doivent être remplacés après inspection du fichier réel.

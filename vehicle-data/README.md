@@ -22,6 +22,11 @@ Tool32 confirme la correspondance de `KLEMMENSTATUS` avec KL15. Elle consigne
 aussi explicitement que la valeur 69 existe moteur arrêté comme moteur tournant
 et ne constitue donc pas un signal d'état moteur.
 
+Les fichiers Phase 3D ajoutent les identifications CAS/DDE/EGS, les observations
+Tool32/ISTA et la séquence RPM TestO. Les valeurs sont qualifiées `OBSERVED`,
+`CONFIRMED`, `UNTRUSTED` ou `BLOCKED`. Une donnée `UNTRUSTED` ou `BLOCKED` ne
+peut jamais être marquée candidate par le validateur.
+
 ## Règles pour les données réelles
 
 1. Placer d'abord les exports bruts et captures dans un sous-dossier `private/`.

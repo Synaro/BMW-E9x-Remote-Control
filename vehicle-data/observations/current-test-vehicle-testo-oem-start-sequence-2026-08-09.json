@@ -1,0 +1,33 @@
+{
+  "schema_version": 1,
+  "timeline_id": "CURRENT_TEST_VEHICLE_TESTO_OEM_START_SEQUENCE_2026_08_09",
+  "example_only": false,
+  "profile_ref": "../profiles/current-test-vehicle.vehicle-profile.json",
+  "evidence_index": "../evidence/current-test-vehicle.evidence-index.json",
+  "evidence_ref": "CURRENT_TEST_VEHICLE_PHASE3D_TESTO_OEM_START_2026_08_09",
+  "source": {
+    "tool": "TestO",
+    "sgbd_prg": "47C0 / DDE 7.1 N47",
+    "job": "STATUS_MOTORDREHZAHL",
+    "session": "PHASE3D_USER_REPORT_2026_08_09",
+    "observed_at": "2026-08-09T18:39:03+02:00",
+    "notes": "Order and RPM values are real observations transcribed from the user report; source CSV timestamps are unavailable."
+  },
+  "timestamp_basis": "UNAVAILABLE",
+  "candidate_thresholds": null,
+  "qualification": "OBSERVED",
+  "samples": [
+    {"sequence":0,"timestamp_us":null,"rpm":0,"observed_state":"STOPPED","transition":null,"source_row":null,"notes":"Engine stopped."},
+    {"sequence":1,"timestamp_us":null,"rpm":103,"observed_state":"CRANKING","transition":"STOPPED_TO_CRANKING","source_row":null,"notes":"Intermediate non-zero launch speed."},
+    {"sequence":2,"timestamp_us":null,"rpm":125,"observed_state":"CRANKING","transition":null,"source_row":null,"notes":null},
+    {"sequence":3,"timestamp_us":null,"rpm":129.5,"observed_state":"CRANKING","transition":null,"source_row":null,"notes":null},
+    {"sequence":4,"timestamp_us":null,"rpm":182.5,"observed_state":"CRANKING","transition":null,"source_row":null,"notes":null},
+    {"sequence":5,"timestamp_us":null,"rpm":193,"observed_state":"CRANKING","transition":null,"source_row":null,"notes":null},
+    {"sequence":6,"timestamp_us":null,"rpm":272,"observed_state":"CRANKING","transition":null,"source_row":null,"notes":null},
+    {"sequence":7,"timestamp_us":null,"rpm":383.5,"observed_state":"CRANKING","transition":null,"source_row":null,"notes":null},
+    {"sequence":8,"timestamp_us":null,"rpm":638.5,"observed_state":"CRANKING","transition":null,"source_row":null,"notes":null},
+    {"sequence":9,"timestamp_us":null,"rpm":890,"observed_state":"CRANKING","transition":null,"source_row":null,"notes":"Transient above 700 rpm; deliberately not classified RUNNING."},
+    {"sequence":10,"timestamp_us":null,"rpm":1022.5,"observed_state":"CRANKING","transition":null,"source_row":null,"notes":"Transient above 700 rpm; deliberately not classified RUNNING."},
+    {"sequence":11,"timestamp_us":null,"rpm":780,"observed_state":"RUNNING","transition":"CRANKING_TO_RUNNING","source_row":null,"notes":"Observed stabilization near idle, not a finalized threshold."}
+  ]
+}
