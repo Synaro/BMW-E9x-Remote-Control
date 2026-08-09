@@ -18,6 +18,8 @@ from vehicle_data_validation import (
     validate_evidence_index,
     validate_prerequisites,
     validate_qualified_observations,
+    validate_signal_source_qualifications,
+    validate_synchronized_start_observation,
     validate_vehicle_profile,
 )
 
@@ -29,6 +31,8 @@ CHECKLIST_PATH = DATA / "profiles" / "current-test-vehicle.remote-start-prerequi
 IDENTIFICATION_PATH = DATA / "observations" / "current-test-vehicle-phase3d-identification-2026-08-09.json"
 STATUS_PATH = DATA / "observations" / "current-test-vehicle-phase3d-status-observations-2026-08-09.json"
 REAL_TIMELINE_PATH = DATA / "observations" / "current-test-vehicle-testo-oem-start-sequence-2026-08-09.json"
+SIGNAL_SOURCES_PATH = DATA / "observations" / "current-test-vehicle-phase3d-signal-source-qualification-2026-08-09.json"
+SYNCHRONIZED_START_PATH = DATA / "observations" / "current-test-vehicle-phase3d-synchronized-rpm-msa-start-2026-08-09.json"
 EXAMPLE_EVIDENCE_PATH = DATA / "evidence" / "EXAMPLE_ONLY.evidence-index.json"
 EXAMPLE_ENGINE_INPUT = DATA / "imports" / "EXAMPLE_ONLY.engine-speed.csv"
 EXAMPLE_ENGINE_MAPPING = DATA / "imports" / "EXAMPLE_ONLY.engine-speed.mapping.json"
@@ -45,6 +49,8 @@ class Phase3DVehicleDataTests(unittest.TestCase):
         self.identification = load_json_object(IDENTIFICATION_PATH)
         self.status = load_json_object(STATUS_PATH)
         self.timeline = load_json_object(REAL_TIMELINE_PATH)
+        self.signal_sources = load_json_object(SIGNAL_SOURCES_PATH)
+        self.synchronized_start = load_json_object(SYNCHRONIZED_START_PATH)
         self.status_by_id = {
             observation["observation_id"]: observation
             for observation in self.status["observations"]
@@ -60,6 +66,8 @@ class Phase3DVehicleDataTests(unittest.TestCase):
         validate_qualified_observations(self.identification, self.evidence_ids)
         validate_qualified_observations(self.status, self.evidence_ids)
         validate_engine_run_timeline(self.timeline, self.evidence_ids)
+        validate_signal_source_qualifications(self.signal_sources, self.evidence_ids)
+        validate_synchronized_start_observation(self.synchronized_start, self.evidence_ids)
 
     def test_identification_values_are_preserved_as_reported(self):
         expected = {
@@ -117,6 +125,11 @@ class Phase3DVehicleDataTests(unittest.TestCase):
                     observation["qualification"], observation["precondition_eligibility"]
                 )
             )
+
+        p_numeric = self.status_by_id["egs.tool32.position.p.numeric"]
+        self.assertEqual(8, p_numeric["raw_value"])
+        self.assertEqual("P", p_numeric["interpreted_value"])
+        self.assertEqual("OKAY", self.status_by_id["egs.tool32.position.job_status"]["raw_value"])
 
     def test_ista_transmission_position_is_untrusted_and_prohibited(self):
         expected = {"p": "R", "r": "N", "n": "D", "d": "D"}
@@ -188,14 +201,110 @@ class Phase3DVehicleDataTests(unittest.TestCase):
             "brake": "OBSERVED",
             "kl15": "CONFIRMED",
             "engine_speed": "CONFIRMED",
+            "stopped_cranking_running_observations": "CONFIRMED",
             "engine_running_detection_algorithm": "NOT_YET_VALIDATED",
+            "msa_start_correlated_bits": "OBSERVED",
+            "msa_bit_functional_meaning": "UNKNOWN",
             "terminal_50_start_request": "UNKNOWN",
+            "cas_start_button_request": "UNKNOWN",
             "oem_start_authorization": "UNKNOWN",
             "stop_strategy": "UNKNOWN",
             "can_identifiers": "UNKNOWN",
         }
         for item, status in expected.items():
             self.assertEqual(status, self.checklist["items"][item]["status"])
+
+    def test_signal_source_suitability_is_usage_specific(self):
+        entries = {
+            entry["qualification_id"]: entry for entry in self.signal_sources["entries"]
+        }
+        self.assertEqual("CANDIDATE", entries["egs.tool32.selector_position"]["suitability"])
+        self.assertEqual("UNTRUSTED", entries["egs.ista.transmission_position"]["suitability"])
+        self.assertEqual("NOT_SUITABLE_FOR_PN", entries["egs.ista.actual_gear_for_pn"]["suitability"])
+        self.assertEqual("CANDIDATE", entries["cas.tool32.klemmenstatus_kl15"]["suitability"])
+        self.assertEqual("NOT_SUITABLE", entries["cas.tool32.klemmenstatus_engine_running"]["suitability"])
+        self.assertEqual("NOT_FUNCTIONALLY_IDENTIFIED", entries["dde.status_msa.correlated_bitfields"]["suitability"])
+
+    def test_kl15_abschaltung_fields_are_not_live_signal_sources(self):
+        for observation_id in (
+            "cas.kl15_abschaltung.brake_active",
+            "cas.kl15_abschaltung.selector_not_p_active",
+        ):
+            observation = self.status_by_id[observation_id]
+            self.assertEqual(0, observation["raw_value"])
+            self.assertEqual("NOT_SUITABLE_AS_LIVE_SIGNAL", observation["interpreted_value"])
+            self.assertEqual("PROHIBITED", observation["precondition_eligibility"])
+
+    def test_synchronized_bitfields_preserve_decimal_hex_binary_and_changed_bits(self):
+        bit_events = {
+            (event["signal"], event["timestamp_us"]): event
+            for event in self.synchronized_start["events"]
+            if event["event_type"] == "BITFIELD_CHANGE"
+        }
+        msaav = bit_events[("STAT_STAT_MSAAV", 9365000)]
+        self.assertEqual(
+            {"decimal": 1537, "hexadecimal": "0x601", "binary": "0b11000000001"},
+            msaav["previous_value"],
+        )
+        self.assertEqual(
+            {"decimal": 1569, "hexadecimal": "0x621", "binary": "0b11000100001"},
+            msaav["value"],
+        )
+        self.assertEqual(32, msaav["delta_decimal"])
+        self.assertEqual([5], msaav["changed_bits"])
+        self.assertEqual([2], bit_events[("STAT_STAT_MSAAA", 9365000)]["changed_bits"])
+        self.assertEqual([2], bit_events[("STAT_STAT_MSAEV", 9507000)]["changed_bits"])
+
+    def test_first_msa_change_precedes_first_nonzero_rpm_by_62_ms(self):
+        first_bit = min(
+            event["timestamp_us"] for event in self.synchronized_start["events"]
+            if event["event_type"] == "BITFIELD_CHANGE"
+        )
+        first_rpm = min(
+            event["timestamp_us"] for event in self.synchronized_start["events"]
+            if event["event_type"] == "RPM_SAMPLE" and event["rpm"] > 0
+        )
+        self.assertEqual(62000, first_rpm - first_bit)
+
+    def test_temporal_correlation_cannot_assign_functional_meaning(self):
+        self.assertEqual("UNKNOWN", self.synchronized_start["functional_identification"])
+        bit_events = [
+            event for event in self.synchronized_start["events"]
+            if event["event_type"] == "BITFIELD_CHANGE"
+        ]
+        self.assertTrue(all(event["functional_meaning"] is None for event in bit_events))
+        modified = copy.deepcopy(self.synchronized_start)
+        modified["events"][0]["functional_meaning"] = "STARTER_REQUEST"
+        with self.assertRaisesRegex(ValidationError, "temporal correlation cannot assign meaning"):
+            validate_synchronized_start_observation(modified, self.evidence_ids)
+
+    def test_invalid_bitfield_representation_or_changed_bit_is_rejected(self):
+        modified_hex = copy.deepcopy(self.synchronized_start)
+        modified_hex["events"][0]["value"]["hexadecimal"] = "0x000"
+        with self.assertRaisesRegex(ValidationError, "inconsistent representation"):
+            validate_synchronized_start_observation(modified_hex, self.evidence_ids)
+        modified_bit = copy.deepcopy(self.synchronized_start)
+        modified_bit["events"][0]["changed_bits"] = [4]
+        with self.assertRaisesRegex(ValidationError, "inconsistent XOR bit list"):
+            validate_synchronized_start_observation(modified_bit, self.evidence_ids)
+
+    def test_msaea_constant_does_not_confirm_start_request(self):
+        msaea = self.synchronized_start["constant_bitfields"][0]
+        self.assertEqual("STAT_STAT_MSAEA", msaea["signal"])
+        self.assertEqual(11, msaea["value"]["decimal"])
+        self.assertEqual("OBSERVED_NO_TRANSITION", msaea["suitability"])
+        self.assertIsNone(msaea["functional_meaning"])
+
+    def test_unidentified_msa_source_forbids_start_semantics(self):
+        entry = next(
+            item for item in self.signal_sources["entries"]
+            if item["qualification_id"] == "dde.status_msa.correlated_bitfields"
+        )
+        self.assertEqual([], entry["allowed_interpretations"])
+        self.assertEqual(
+            {"KL50", "STARTER_REQUEST", "START_AUTHORIZATION", "CAS_START_REQUEST"},
+            set(entry["forbidden_inferences"]),
+        )
 
     def test_generic_engine_csv_import_uses_consecutive_samples_and_hysteresis(self):
         evidence = load_json_object(EXAMPLE_EVIDENCE_PATH)

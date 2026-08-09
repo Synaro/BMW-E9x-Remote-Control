@@ -8,9 +8,9 @@ fichier firmware, identifiant CAN BMW, décodeur BMW, chemin de transmission,
 Terminal 50 ou mécanisme de démarrage n'est ajouté.
 
 Les preuves disponibles sont des transcriptions manuelles anonymisées. Elles
-ne sont pas présentées comme les exports bruts des outils. Le CSV TestO réel
-n'étant pas encore dans le dépôt, aucun timestamp de cette capture n'est
-inventé.
+ne sont pas présentées comme les exports bruts des outils. La première séquence
+RPM reste ordonnée sans timestamps inventés. La seconde observation fournit des
+timestamps synchronisés RPM/MSA consignés tels qu'ils ont été relevés.
 
 ## Qualification
 
@@ -25,6 +25,12 @@ Chaque observation réelle utilise l'un des niveaux suivants :
 Une observation contient directement l'outil, le SGBD/PRG, le job, le champ, le
 contexte physique, la date de consignation, la session, la preuve, les valeurs
 brute et interprétée, l'unité et les notes.
+
+La qualification d'une source est propre au signal et à l'usage. Une même
+lecture peut ainsi être confirmée pour KL15 tout en étant interdite pour
+déterminer si le moteur tourne. Les états `NOT_SUITABLE_FOR_PN`,
+`NOT_FUNCTIONALLY_IDENTIFIED` et `OBSERVED_NO_TRANSITION` empêchent toute
+promotion implicite vers une précondition.
 
 `precondition_eligibility` ne possède que deux valeurs : `PROHIBITED` et
 `CANDIDATE`. Il n'existe aucun état actif. Le validateur impose
@@ -54,7 +60,8 @@ explicitement exclue comme preuve autonome de moteur tournant.
 ### Transmission et frein
 
 `GS19D.PRG/status_getriebeposition` suit correctement les positions physiques
-P/R/N/D et est `CONFIRMED`.
+P/R/N/D et est `CONFIRMED`. Le job retourne `JOB_STATUS = OKAY`; une lecture en
+P a notamment donné la valeur brute décimale 8 et le texte P.
 
 Le champ ISTA `Transmission position` est `UNTRUSTED` sur cette configuration :
 les positions physiques P/R/N/D ont produit R/N/D/D. Il est obligatoirement
@@ -63,8 +70,17 @@ les positions physiques P/R/N/D ont produit R/N/D/D. Il est obligatoirement
 ISTA `Actual gear` est `OBSERVED`, mais renvoie notamment `1st gear` en P, N et
 D. Il ne peut pas distinguer P/N et reste `PROHIBITED` pour cet usage.
 
-ISTA `Brake actuated` suit correctement pédale relâchée/appuyée. La source reste
-`OBSERVED` jusqu'à répétition suffisante et n'est donc pas encore candidate.
+ISTA `Brake actuated` suit correctement pédale relâchée/appuyée sur plusieurs
+actions physiques. La source reste `OBSERVED / COHERENT` jusqu'à archivage
+d'une seconde source ou d'une capture structurée et n'est donc pas candidate.
+
+### Sources CAS non temps réel
+
+Les champs `BREMSE_AKTIV` et `WAHLHEBEL_NICHT_IN_P_AKTIV` de
+`CAS.PRG/status_kl15_abschaltung` sont restés à 0 pendant les changements
+physiques essayés. Ils sont `NOT_SUITABLE_AS_LIVE_SIGNAL` : ils décrivent une
+logique/configuration de coupure KL15 observée, pas un état instantané prouvé du
+frein ou du sélecteur.
 
 ### Régime et état moteur
 
@@ -79,6 +95,20 @@ configuration externe marquée `candidate_only`, une bande d'entrée, une
 hystérésis de sortie et plusieurs échantillons consécutifs. Aucun seuil n'est
 compilé dans le firmware.
 
+### Corrélation RPM / STATUS_MSA
+
+Une seconde observation OEM synchronisée conserve les changements de
+`MSAAV`, `MSAAA` et `MSAEV` avec leur valeur décimale, hexadécimale, binaire et
+les bits modifiés. Le premier changement MSA relevé à 9,365 s précède le
+premier régime non nul à 9,427 s de 62 ms. Les bits candidats observés sont le
+bit 5 pour `MSAAV` et le bit 2 pour `MSAAA`/`MSAEV`.
+
+Il s'agit exclusivement de « bits MSA corrélés temporellement à un démarrage
+OEM », avec le statut `OBSERVED / NOT FUNCTIONALLY IDENTIFIED`. Le schéma et le
+validateur interdisent de transformer cette corrélation en KL50, demande de
+démarreur, autorisation de démarrage ou demande CAS. `MSAEA` est resté constant
+à 11 et porte le statut `OBSERVED_NO_TRANSITION`.
+
 ## CSV TestO
 
 `tools/import_engine_speed_log.py` accepte un CSV délimité via un mapping
@@ -86,15 +116,18 @@ générique. Il normalise le timestamp en microsecondes relatives, conserve la
 ligne source et produit les transitions observées.
 
 Le mapping du véhicule réel est un gabarit : les noms de colonnes, le séparateur
-et l'unité temporelle doivent être remplacés après inspection du vrai CSV. La
-timeline actuellement versionnée conserve seulement l'ordre et les RPM fournis,
-avec `timestamp_basis: UNAVAILABLE`.
+et l'unité temporelle doivent être remplacés après inspection d'un export CSV.
+La première timeline versionnée conserve seulement l'ordre et les RPM fournis,
+avec `timestamp_basis: UNAVAILABLE`; la timeline RPM/MSA distincte conserve les
+timestamps synchronisés explicitement fournis.
 
 ## Inconnues et blocages actuels
 
-- CSV TestO brut et timestamps réels : `BLOCKED` par absence du fichier ;
+- exports TestO bruts : `BLOCKED` par absence des fichiers source dans le dépôt ;
 - algorithme de détection moteur tournant : `NOT_YET_VALIDATED` ;
-- Terminal 50 / demande de démarrage : `UNKNOWN` ;
+- signification fonctionnelle des bits MSA observés : `UNKNOWN` ;
+- Terminal 50 : `UNKNOWN` ;
+- bouton START / demande de démarrage CAS : `UNKNOWN` ;
 - autorisation OEM de démarrage : `UNKNOWN` ;
 - stratégie d'arrêt : `UNKNOWN` ;
 - stratégie de timeout définitive : `UNKNOWN` ;

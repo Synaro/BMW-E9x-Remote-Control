@@ -68,11 +68,15 @@ REQUIRED_CHECKLIST_ITEMS = {
     "kl50",
     "engine_speed",
     "engine_running_state",
+    "stopped_cranking_running_observations",
     "transmission_pn",
     "transmission_prnd_tool32",
     "brake",
     "engine_running_detection_algorithm",
     "terminal_50_start_request",
+    "cas_start_button_request",
+    "msa_start_correlated_bits",
+    "msa_bit_functional_meaning",
     "oem_start_authorization",
     "battery_voltage",
     "timeout_strategy",
@@ -519,6 +523,197 @@ def validate_engine_run_timeline(document: Mapping[str, Any], evidence_ids: set[
         previous_state = state
 
 
+def validate_signal_source_qualifications(document: Mapping[str, Any], evidence_ids: set[str]) -> None:
+    _required(
+        document,
+        {"schema_version", "qualification_set_id", "profile_ref", "evidence_index", "updated_at", "entries"},
+        "signal_sources",
+    )
+    _require_schema_v1(document, "signal_sources")
+    for field in ("qualification_set_id", "profile_ref", "evidence_index"):
+        _require_nonempty_string(document[field], f"signal_sources.{field}")
+    _require_timestamp(document["updated_at"], "signal_sources.updated_at")
+    identifiers: set[str] = set()
+    suitability_values = {
+        "CANDIDATE",
+        "UNTRUSTED",
+        "NOT_SUITABLE",
+        "NOT_SUITABLE_FOR_PN",
+        "NOT_FUNCTIONALLY_IDENTIFIED",
+        "OBSERVED_NO_TRANSITION",
+    }
+    dangerous_msa_inferences = {"KL50", "STARTER_REQUEST", "START_AUTHORIZATION", "CAS_START_REQUEST"}
+    for index, raw_entry in enumerate(_require_array(document["entries"], "signal_sources.entries")):
+        location = f"signal_sources.entries[{index}]"
+        entry = _require_object(raw_entry, location)
+        _required(
+            entry,
+            {
+                "qualification_id",
+                "signal",
+                "source",
+                "qualification",
+                "suitability",
+                "precondition_eligibility",
+                "allowed_interpretations",
+                "forbidden_inferences",
+                "evidence_refs",
+                "notes",
+            },
+            location,
+        )
+        identifier = _require_nonempty_string(entry["qualification_id"], f"{location}.qualification_id")
+        if identifier in identifiers:
+            raise ValidationError(f"{location}.qualification_id: duplicate {identifier!r}")
+        identifiers.add(identifier)
+        _require_nonempty_string(entry["signal"], f"{location}.signal")
+        if entry["qualification"] not in {"OBSERVED", "CONFIRMED", "UNTRUSTED", "BLOCKED"}:
+            raise ValidationError(f"{location}.qualification: unsupported level")
+        if entry["suitability"] not in suitability_values:
+            raise ValidationError(f"{location}.suitability: unsupported value")
+        eligibility = entry["precondition_eligibility"]
+        if eligibility not in {"PROHIBITED", "CANDIDATE"}:
+            raise ValidationError(f"{location}.precondition_eligibility: unsupported value")
+        if eligibility == "CANDIDATE" and not (
+            entry["qualification"] == "CONFIRMED" and entry["suitability"] == "CANDIDATE"
+        ):
+            raise ValidationError(f"{location}: only CONFIRMED/CANDIDATE sources may remain candidates")
+        if entry["suitability"] != "CANDIDATE" and eligibility != "PROHIBITED":
+            raise ValidationError(f"{location}: unsuitable sources must be PROHIBITED")
+        if entry["qualification"] == "UNTRUSTED" and entry["suitability"] != "UNTRUSTED":
+            raise ValidationError(f"{location}: UNTRUSTED qualification requires UNTRUSTED suitability")
+
+        source = _require_object(entry["source"], f"{location}.source")
+        _required(source, {"tool", "sgbd_prg", "job", "field"}, f"{location}.source")
+        for field in ("tool", "sgbd_prg", "job", "field"):
+            _require_nonempty_string(source[field], f"{location}.source.{field}")
+        for list_name in ("allowed_interpretations", "forbidden_inferences", "evidence_refs"):
+            values = _require_array(entry[list_name], f"{location}.{list_name}")
+            if len(values) != len(set(values)):
+                raise ValidationError(f"{location}.{list_name}: duplicate value")
+            for value_index, value in enumerate(values):
+                _require_nonempty_string(value, f"{location}.{list_name}[{value_index}]")
+        for reference_index, reference in enumerate(entry["evidence_refs"]):
+            _validate_evidence_ref(reference, evidence_ids, f"{location}.evidence_refs[{reference_index}]")
+        if not entry["evidence_refs"]:
+            raise ValidationError(f"{location}.evidence_refs: provenance is required")
+        _require_nonempty_string(entry["notes"], f"{location}.notes")
+        if entry["suitability"] == "NOT_FUNCTIONALLY_IDENTIFIED":
+            if entry["allowed_interpretations"]:
+                raise ValidationError(f"{location}: unidentified signals cannot have allowed functional interpretations")
+            if not dangerous_msa_inferences.issubset(set(entry["forbidden_inferences"])):
+                raise ValidationError(f"{location}: MSA correlation must forbid functional start inferences")
+
+
+def _validate_bitfield_value(value: Any, location: str) -> int:
+    bitfield = _require_object(value, location)
+    _required(bitfield, {"decimal", "hexadecimal", "binary"}, location)
+    decimal = bitfield["decimal"]
+    if isinstance(decimal, bool) or not isinstance(decimal, int) or decimal < 0:
+        raise ValidationError(f"{location}.decimal: expected non-negative integer")
+    if bitfield["hexadecimal"] != f"0x{decimal:X}":
+        raise ValidationError(f"{location}.hexadecimal: inconsistent representation")
+    if bitfield["binary"] != f"0b{decimal:b}":
+        raise ValidationError(f"{location}.binary: inconsistent representation")
+    return decimal
+
+
+def validate_synchronized_start_observation(document: Mapping[str, Any], evidence_ids: set[str]) -> None:
+    _required(
+        document,
+        {
+            "schema_version",
+            "timeline_id",
+            "profile_ref",
+            "evidence_index",
+            "evidence_ref",
+            "source",
+            "timestamp_basis",
+            "events",
+            "constant_bitfields",
+            "subsequent_rpm_summary",
+            "functional_identification",
+        },
+        "synchronized_start",
+    )
+    _require_schema_v1(document, "synchronized_start")
+    for field in ("timeline_id", "profile_ref", "evidence_index"):
+        _require_nonempty_string(document[field], f"synchronized_start.{field}")
+    _validate_evidence_ref(document["evidence_ref"], evidence_ids, "synchronized_start.evidence_ref")
+    if document["timestamp_basis"] != "SESSION_RELATIVE":
+        raise ValidationError("synchronized_start.timestamp_basis: expected SESSION_RELATIVE")
+    if document["functional_identification"] != "UNKNOWN":
+        raise ValidationError("synchronized_start.functional_identification: correlation cannot assign meaning")
+    source = _require_object(document["source"], "synchronized_start.source")
+    _required(source, {"tool", "sgbd_prg", "job", "session", "observed_at", "physical_context"}, "synchronized_start.source")
+    for field in ("tool", "sgbd_prg", "job", "session", "physical_context"):
+        _require_nonempty_string(source[field], f"synchronized_start.source.{field}")
+    _require_timestamp(source["observed_at"], "synchronized_start.source.observed_at")
+
+    previous_timestamp = -1
+    for index, raw_event in enumerate(_require_array(document["events"], "synchronized_start.events")):
+        location = f"synchronized_start.events[{index}]"
+        event = _require_object(raw_event, location)
+        _required(
+            event,
+            {"sequence", "timestamp_us", "event_type", "signal", "qualification", "functional_meaning", "correlation_label", "notes"},
+            location,
+        )
+        if event["sequence"] != index:
+            raise ValidationError(f"{location}.sequence: expected {index}")
+        timestamp = event["timestamp_us"]
+        if isinstance(timestamp, bool) or not isinstance(timestamp, int) or timestamp < previous_timestamp:
+            raise ValidationError(f"{location}.timestamp_us: expected monotonic non-negative integer")
+        previous_timestamp = timestamp
+        _require_nonempty_string(event["signal"], f"{location}.signal")
+        if event["qualification"] not in {"OBSERVED", "CONFIRMED"}:
+            raise ValidationError(f"{location}.qualification: unsupported level")
+        if event["functional_meaning"] is not None:
+            raise ValidationError(f"{location}.functional_meaning: temporal correlation cannot assign meaning")
+        if event["correlation_label"] != "TEMPORALLY_CORRELATED_WITH_OEM_START":
+            raise ValidationError(f"{location}.correlation_label: unsupported label")
+        _require_nonempty_string(event["notes"], f"{location}.notes")
+        if event["event_type"] == "BITFIELD_CHANGE":
+            _required(event, {"previous_value", "value", "delta_decimal", "changed_bits"}, location)
+            previous = _validate_bitfield_value(event["previous_value"], f"{location}.previous_value")
+            current = _validate_bitfield_value(event["value"], f"{location}.value")
+            if event["delta_decimal"] != current - previous:
+                raise ValidationError(f"{location}.delta_decimal: inconsistent delta")
+            expected_bits = [bit for bit in range(max(previous, current).bit_length() + 1) if ((previous ^ current) >> bit) & 1]
+            if event["changed_bits"] != expected_bits:
+                raise ValidationError(f"{location}.changed_bits: inconsistent XOR bit list")
+        elif event["event_type"] == "RPM_SAMPLE":
+            _required(event, {"rpm", "observed_state"}, location)
+            rpm = event["rpm"]
+            if isinstance(rpm, bool) or not isinstance(rpm, (int, float)) or rpm < 0:
+                raise ValidationError(f"{location}.rpm: expected non-negative number")
+            if event["observed_state"] not in {"STOPPED", "CRANKING", "RUNNING", "UNKNOWN"}:
+                raise ValidationError(f"{location}.observed_state: unsupported state")
+        else:
+            raise ValidationError(f"{location}.event_type: unsupported event type")
+
+    for index, raw_constant in enumerate(_require_array(document["constant_bitfields"], "synchronized_start.constant_bitfields")):
+        location = f"synchronized_start.constant_bitfields[{index}]"
+        constant = _require_object(raw_constant, location)
+        _required(constant, {"signal", "value", "qualification", "suitability", "functional_meaning", "notes"}, location)
+        _require_nonempty_string(constant["signal"], f"{location}.signal")
+        _validate_bitfield_value(constant["value"], f"{location}.value")
+        if constant["qualification"] != "OBSERVED" or constant["suitability"] != "OBSERVED_NO_TRANSITION":
+            raise ValidationError(f"{location}: constant signals must remain OBSERVED_NO_TRANSITION")
+        if constant["functional_meaning"] is not None:
+            raise ValidationError(f"{location}.functional_meaning: constant observation cannot assign meaning")
+        _require_nonempty_string(constant["notes"], f"{location}.notes")
+
+    summary = _require_object(document["subsequent_rpm_summary"], "synchronized_start.subsequent_rpm_summary")
+    _required(summary, {"peak_rpm_approx", "stabilized_rpm_approx", "timestamps_available", "notes"}, "synchronized_start.subsequent_rpm_summary")
+    if summary["timestamps_available"] is not False:
+        raise ValidationError("synchronized_start.subsequent_rpm_summary: unavailable timestamps must remain false")
+    for field in ("peak_rpm_approx", "stabilized_rpm_approx"):
+        if isinstance(summary[field], bool) or not isinstance(summary[field], (int, float)) or summary[field] < 0:
+            raise ValidationError(f"synchronized_start.subsequent_rpm_summary.{field}: expected non-negative number")
+    _require_nonempty_string(summary["notes"], "synchronized_start.subsequent_rpm_summary.notes")
+
+
 def _validate_record_semantics(record: Mapping[str, Any], location: str) -> None:
     signal = record["signal"]
     interpreted = record["interpreted_value"]
@@ -729,6 +924,8 @@ def _parse_arguments() -> argparse.Namespace:
     parser.add_argument("--mapping", type=Path)
     parser.add_argument("--qualified-observations", action="append", default=[], type=Path)
     parser.add_argument("--engine-timeline", action="append", default=[], type=Path)
+    parser.add_argument("--signal-sources", action="append", default=[], type=Path)
+    parser.add_argument("--synchronized-start", action="append", default=[], type=Path)
     return parser.parse_args()
 
 
@@ -749,6 +946,10 @@ def main() -> int:
         validate_qualified_observations(load_json_object(path), evidence_ids)
     for path in arguments.engine_timeline:
         validate_engine_run_timeline(load_json_object(path), evidence_ids)
+    for path in arguments.signal_sources:
+        validate_signal_source_qualifications(load_json_object(path), evidence_ids)
+    for path in arguments.synchronized_start:
+        validate_synchronized_start_observation(load_json_object(path), evidence_ids)
     print("Phase 3C/3D vehicle data: VALID")
     return 0
 

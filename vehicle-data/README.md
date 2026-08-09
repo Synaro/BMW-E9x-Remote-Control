@@ -23,9 +23,16 @@ aussi explicitement que la valeur 69 existe moteur arrêté comme moteur tournan
 et ne constitue donc pas un signal d'état moteur.
 
 Les fichiers Phase 3D ajoutent les identifications CAS/DDE/EGS, les observations
-Tool32/ISTA et la séquence RPM TestO. Les valeurs sont qualifiées `OBSERVED`,
-`CONFIRMED`, `UNTRUSTED` ou `BLOCKED`. Une donnée `UNTRUSTED` ou `BLOCKED` ne
-peut jamais être marquée candidate par le validateur.
+Tool32/ISTA, les séquences RPM TestO et une timeline RPM/MSA synchronisée. Les
+valeurs sont qualifiées `OBSERVED`, `CONFIRMED`, `UNTRUSTED` ou `BLOCKED`. Une
+donnée `UNTRUSTED` ou `BLOCKED` ne peut jamais être marquée candidate par le
+validateur.
+
+La qualification de source précise également l'usage permis ou interdit. Une
+source confirmée pour KL15 peut donc rester impropre à l'état moteur. Les
+bitfields synchronisés conservent les formes décimale, hexadécimale et binaire,
+ainsi que les bits modifiés. Une corrélation temporelle reste une corrélation :
+elle ne peut pas devenir automatiquement une signification fonctionnelle.
 
 ## Règles pour les données réelles
 
@@ -46,6 +53,10 @@ python tools/vehicle_data_validation.py `
   --observation vehicle-data/observations/EXAMPLE_ONLY.oem-start-observation.json `
   --checklist vehicle-data/profiles/EXAMPLE_ONLY.remote-start-prerequisites.json
 ```
+
+Les validateurs Phase 3D acceptent en plus `--signal-sources` et
+`--synchronized-start` pour contrôler la qualification par usage et les
+bitfields des timelines synchronisées.
 
 Les preuves acceptées sont : capture ISTA, export TestO, sortie INPA, sortie
 Tool32, future capture CAN et note manuelle. La catégorie « future capture CAN »

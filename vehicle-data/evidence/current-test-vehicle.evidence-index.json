@@ -35,6 +35,17 @@
       "sha256": null,
       "contains_personal_data": false,
       "description": "Manual transcription of the ordered RPM sequence; raw TestO CSV and source timestamps are not yet available."
+    },
+    {
+      "evidence_id": "CURRENT_TEST_VEHICLE_PHASE3D_SYNCHRONIZED_MSA_FOLLOWUP_2026_08_09",
+      "kind": "MANUAL_NOTE",
+      "relative_path": "current-test-vehicle-phase3d-synchronized-msa-followup-2026-08-09.manual-note.txt",
+      "captured_at": "2026-08-09T19:03:01+02:00",
+      "tool_name": null,
+      "tool_version": null,
+      "sha256": null,
+      "contains_personal_data": false,
+      "description": "Manual transcription of repeated EGS/CAS/DDE observations and the synchronized RPM plus STATUS_MSA OEM-start timeline."
     }
   ]
 }

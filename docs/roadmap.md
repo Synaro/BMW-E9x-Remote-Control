@@ -65,6 +65,13 @@ est détaillé dans
 
 ## Phase 3D — Qualification des preuves réelles
 
+- [x] Qualifier les sources signal par signal et par usage
+- [x] Archiver une timeline synchronisée RPM/MSA sans inférer la fonction des bits
+- [x] Conserver les bitfields en décimal, hexadécimal, binaire et bits modifiés
+- [x] Interdire la promotion automatique d'une corrélation vers une sémantique fonctionnelle
+- [ ] Valider l'algorithme de détection moteur tournant sur plusieurs captures structurées
+- [ ] Identifier Terminal 50, la demande START et l'autorisation OEM par preuves séparées
+
 - [x] Intégrer les identifications réelles CAS, DDE et EGS avec provenance
 - [x] Qualifier KL15, P/R/N/D, frein et régime moteur par source
 - [x] Marquer le mapping ISTA Transmission position comme `UNTRUSTED`

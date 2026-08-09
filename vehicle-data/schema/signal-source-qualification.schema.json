@@ -1,0 +1,55 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://bmw-e9x-remote-control.invalid/vehicle-data/schema/signal-source-qualification.schema.json",
+  "title": "Phase 3D signal source suitability",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "qualification_set_id", "profile_ref", "evidence_index", "updated_at", "entries"],
+  "properties": {
+    "schema_version": {"const": 1},
+    "qualification_set_id": {"type": "string", "minLength": 1, "maxLength": 96},
+    "profile_ref": {"type": "string", "minLength": 1},
+    "evidence_index": {"type": "string", "minLength": 1},
+    "updated_at": {"type": "string", "format": "date-time"},
+    "entries": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "qualification_id", "signal", "source", "qualification", "suitability",
+          "precondition_eligibility", "allowed_interpretations", "forbidden_inferences",
+          "evidence_refs", "notes"
+        ],
+        "properties": {
+          "qualification_id": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$"},
+          "signal": {"type": "string", "minLength": 1, "maxLength": 120},
+          "source": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["tool", "sgbd_prg", "job", "field"],
+            "properties": {
+              "tool": {"type": "string", "minLength": 1},
+              "sgbd_prg": {"type": "string", "minLength": 1},
+              "job": {"type": "string", "minLength": 1},
+              "field": {"type": "string", "minLength": 1}
+            }
+          },
+          "qualification": {"enum": ["OBSERVED", "CONFIRMED", "UNTRUSTED", "BLOCKED"]},
+          "suitability": {
+            "enum": [
+              "CANDIDATE", "UNTRUSTED", "NOT_SUITABLE", "NOT_SUITABLE_FOR_PN",
+              "NOT_FUNCTIONALLY_IDENTIFIED", "OBSERVED_NO_TRANSITION"
+            ]
+          },
+          "precondition_eligibility": {"enum": ["PROHIBITED", "CANDIDATE"]},
+          "allowed_interpretations": {"type": "array", "uniqueItems": true, "items": {"type": "string", "minLength": 1}},
+          "forbidden_inferences": {"type": "array", "uniqueItems": true, "items": {"type": "string", "minLength": 1}},
+          "evidence_refs": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"type": "string", "minLength": 1}},
+          "notes": {"type": "string", "minLength": 1, "maxLength": 2000}
+        }
+      }
+    }
+  }
+}

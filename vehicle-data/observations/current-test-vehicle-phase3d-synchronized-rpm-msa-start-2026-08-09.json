@@ -1,0 +1,165 @@
+{
+  "schema_version": 1,
+  "timeline_id": "CURRENT_TEST_VEHICLE_PHASE3D_SYNCHRONIZED_RPM_MSA_START_2026_08_09",
+  "profile_ref": "../profiles/current-test-vehicle.vehicle-profile.json",
+  "evidence_index": "../evidence/current-test-vehicle.evidence-index.json",
+  "evidence_ref": "CURRENT_TEST_VEHICLE_PHASE3D_SYNCHRONIZED_MSA_FOLLOWUP_2026_08_09",
+  "source": {
+    "tool": "TestO plus Tool32 synchronized observation",
+    "sgbd_prg": "47C0 / DDE 7.1 N47 and D71N47C0.PRG",
+    "job": "STATUS_MOTORDREHZAHL plus STATUS_MSA",
+    "session": "PHASE3D_SYNCHRONIZED_OEM_START_2026_08_09",
+    "observed_at": "2026-08-09T19:03:01+02:00",
+    "physical_context": "Single real OEM engine start with synchronized RPM and MSA status logging"
+  },
+  "timestamp_basis": "SESSION_RELATIVE",
+  "functional_identification": "UNKNOWN",
+  "events": [
+    {
+      "sequence": 0,
+      "timestamp_us": 9365000,
+      "event_type": "BITFIELD_CHANGE",
+      "signal": "STAT_STAT_MSAAV",
+      "qualification": "OBSERVED",
+      "functional_meaning": null,
+      "correlation_label": "TEMPORALLY_CORRELATED_WITH_OEM_START",
+      "previous_value": {"decimal":1537,"hexadecimal":"0x601","binary":"0b11000000001"},
+      "value": {"decimal":1569,"hexadecimal":"0x621","binary":"0b11000100001"},
+      "delta_decimal": 32,
+      "changed_bits": [5],
+      "notes": "Bit 5 changed 62 ms before the first observed non-zero RPM; no functional meaning assigned."
+    },
+    {
+      "sequence": 1,
+      "timestamp_us": 9365000,
+      "event_type": "BITFIELD_CHANGE",
+      "signal": "STAT_STAT_MSAAA",
+      "qualification": "OBSERVED",
+      "functional_meaning": null,
+      "correlation_label": "TEMPORALLY_CORRELATED_WITH_OEM_START",
+      "previous_value": {"decimal":146,"hexadecimal":"0x92","binary":"0b10010010"},
+      "value": {"decimal":150,"hexadecimal":"0x96","binary":"0b10010110"},
+      "delta_decimal": 4,
+      "changed_bits": [2],
+      "notes": "Bit 2 changed before the first observed non-zero RPM; no functional meaning assigned."
+    },
+    {
+      "sequence": 2,
+      "timestamp_us": 9427000,
+      "event_type": "RPM_SAMPLE",
+      "signal": "ENGINE_SPEED",
+      "qualification": "CONFIRMED",
+      "functional_meaning": null,
+      "correlation_label": "TEMPORALLY_CORRELATED_WITH_OEM_START",
+      "rpm": 114,
+      "observed_state": "CRANKING",
+      "notes": "First observed non-zero RPM and physical beginning of engine rotation."
+    },
+    {
+      "sequence": 3,
+      "timestamp_us": 9507000,
+      "event_type": "BITFIELD_CHANGE",
+      "signal": "STAT_STAT_MSAEV",
+      "qualification": "OBSERVED",
+      "functional_meaning": null,
+      "correlation_label": "TEMPORALLY_CORRELATED_WITH_OEM_START",
+      "previous_value": {"decimal":3,"hexadecimal":"0x3","binary":"0b11"},
+      "value": {"decimal":7,"hexadecimal":"0x7","binary":"0b111"},
+      "delta_decimal": 4,
+      "changed_bits": [2],
+      "notes": "Bit 2 changed after cranking RPM began; no functional meaning assigned."
+    },
+    {
+      "sequence": 4,
+      "timestamp_us": 9507000,
+      "event_type": "BITFIELD_CHANGE",
+      "signal": "STAT_STAT_MSAAA",
+      "qualification": "OBSERVED",
+      "functional_meaning": null,
+      "correlation_label": "TEMPORALLY_CORRELATED_WITH_OEM_START",
+      "previous_value": {"decimal":150,"hexadecimal":"0x96","binary":"0b10010110"},
+      "value": {"decimal":146,"hexadecimal":"0x92","binary":"0b10010010"},
+      "delta_decimal": -4,
+      "changed_bits": [2],
+      "notes": "Bit 2 returned to its previous state; no functional meaning assigned."
+    },
+    {
+      "sequence": 5,
+      "timestamp_us": 9567000,
+      "event_type": "RPM_SAMPLE",
+      "signal": "ENGINE_SPEED",
+      "qualification": "CONFIRMED",
+      "functional_meaning": null,
+      "correlation_label": "TEMPORALLY_CORRELATED_WITH_OEM_START",
+      "rpm": 153,
+      "observed_state": "CRANKING",
+      "notes": "Intermediate cranking speed."
+    },
+    {
+      "sequence": 6,
+      "timestamp_us": 9706000,
+      "event_type": "RPM_SAMPLE",
+      "signal": "ENGINE_SPEED",
+      "qualification": "CONFIRMED",
+      "functional_meaning": null,
+      "correlation_label": "TEMPORALLY_CORRELATED_WITH_OEM_START",
+      "rpm": 183,
+      "observed_state": "CRANKING",
+      "notes": "Intermediate cranking speed."
+    },
+    {
+      "sequence": 7,
+      "timestamp_us": 9789000,
+      "event_type": "BITFIELD_CHANGE",
+      "signal": "STAT_STAT_MSAAV",
+      "qualification": "OBSERVED",
+      "functional_meaning": null,
+      "correlation_label": "TEMPORALLY_CORRELATED_WITH_OEM_START",
+      "previous_value": {"decimal":1569,"hexadecimal":"0x621","binary":"0b11000100001"},
+      "value": {"decimal":1537,"hexadecimal":"0x601","binary":"0b11000000001"},
+      "delta_decimal": -32,
+      "changed_bits": [5],
+      "notes": "Bit 5 returned to its previous state during cranking; no functional meaning assigned."
+    },
+    {
+      "sequence": 8,
+      "timestamp_us": 9847000,
+      "event_type": "RPM_SAMPLE",
+      "signal": "ENGINE_SPEED",
+      "qualification": "CONFIRMED",
+      "functional_meaning": null,
+      "correlation_label": "TEMPORALLY_CORRELATED_WITH_OEM_START",
+      "rpm": 380,
+      "observed_state": "CRANKING",
+      "notes": "Intermediate cranking speed."
+    },
+    {
+      "sequence": 9,
+      "timestamp_us": 9987000,
+      "event_type": "RPM_SAMPLE",
+      "signal": "ENGINE_SPEED",
+      "qualification": "CONFIRMED",
+      "functional_meaning": null,
+      "correlation_label": "TEMPORALLY_CORRELATED_WITH_OEM_START",
+      "rpm": 833,
+      "observed_state": "CRANKING",
+      "notes": "Transient above 700 rpm; deliberately not sufficient to declare RUNNING."
+    }
+  ],
+  "constant_bitfields": [
+    {
+      "signal": "STAT_STAT_MSAEA",
+      "value": {"decimal":11,"hexadecimal":"0xB","binary":"0b1011"},
+      "qualification": "OBSERVED",
+      "suitability": "OBSERVED_NO_TRANSITION",
+      "functional_meaning": null,
+      "notes": "Remained constant during the observed start; direct start-request hypothesis is not confirmed."
+    }
+  ],
+  "subsequent_rpm_summary": {
+    "peak_rpm_approx": 983,
+    "stabilized_rpm_approx": 780,
+    "timestamps_available": false,
+    "notes": "Observed after 9.987 s, but exact timestamps were not supplied and are not reconstructed."
+  }
+}

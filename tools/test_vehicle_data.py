@@ -54,7 +54,7 @@ class VehicleDataTests(unittest.TestCase):
 
     def test_all_versioned_schemas_are_valid_json_schema_documents(self):
         schema_paths = sorted((DATA / "schema").glob("*.schema.json"))
-        self.assertEqual(9, len(schema_paths))
+        self.assertEqual(11, len(schema_paths))
         for path in schema_paths:
             schema = json.loads(path.read_text(encoding="utf-8"))
             self.assertEqual("https://json-schema.org/draft/2020-12/schema", schema["$schema"])
@@ -208,7 +208,7 @@ class VehicleDataTests(unittest.TestCase):
         self.assertEqual("UNAVAILABLE", observation["timestamp_basis"])
         self.assertTrue(all(record["timestamp_us"] is None for record in observation["records"]))
         self.assertEqual("CONFIRMED", checklist["items"]["kl15"]["status"])
-        self.assertEqual("OBSERVED", checklist["items"]["engine_running_state"]["status"])
+        self.assertEqual("CONFIRMED", checklist["items"]["engine_running_state"]["status"])
         self.assertIn(
             "disqualified",
             checklist["items"]["engine_running_state"]["notes"],
