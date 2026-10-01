@@ -124,6 +124,8 @@ Elle ne commence ni la Phase 4, ni une fonction de commande véhicule.
 - [x] Quantifier la charge des résistances RTH/RTL de 5,62 kΩ
 - [x] Comparer les moyens de générer un réseau LS/FT de banc à 100 kbit/s
 - [x] Ajouter des contrôles documentaires sur la BOM et le netlist
+- [x] Auditer l'approvisionnement ligne par ligne, corriger les références
+  retirées/incompatibles et figer une liste d'achat versionnée
 - [ ] Assembler le prototype
 - [ ] Qualifier électriquement alimentation, reset, brownout, ACK et absence de
   dominant avec oscilloscope et générateur LS/FT

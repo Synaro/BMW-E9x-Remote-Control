@@ -4,8 +4,9 @@
 > variante `KCAN_RX_ONLY_P3F`. `R_LINK_TX` doit être physiquement absent. Le
 > cavalier `JP_RX_MODE` doit être retiré à chaque mise sous tension.
 
-La nomenclature normative est [BOM.csv](BOM.csv) et le netlist lisible par les
-tests est [netlist.csv](netlist.csv). Les numéros U1 ci-dessous correspondent
+La nomenclature normative est [BOM.csv](BOM.csv), la liste d'achat vérifiée est
+[procurement.csv](procurement.csv) et le netlist lisible par les tests est
+[netlist.csv](netlist.csv). Les numéros U1 ci-dessous correspondent
 au boîtier SO-14 NXP SOT108-1. Vérifier l'encoche et la broche 1 avant soudure.
 
 ## Connecteurs
@@ -24,7 +25,7 @@ Il n'existe aucun connecteur véhicule, OBD ou BMW dans ce gel. Un futur
 faisceau devra être réversible, détrompé et étudié à partir du schéma exact du
 véhicule ; il ne peut pas être déduit de ce connecteur de banc.
 
-## Interface ESP32-S3-DevKitC-1-N8
+## Interface ESP32-S3-DevKitC-1-N8R8
 
 | Broche DevKit | Connexion | Motif |
 |---|---|---|
@@ -106,6 +107,15 @@ anti-inversion, `R_BAT`, le PTC 5 V et les découplages.
 - placer les points `TP_CANH`, `TP_CANL` et `TP_GND` côte à côte pour les
   sondes ; utiliser des ressorts de masse courts, pas une longue pince de masse ;
 - torsader le câble H/L ; transporter GND séparément dans le même faisceau.
+- monter U1 sur `PA0003C` et U2 sur `PA0086C` ; Adafruit `1210` n'accepte pas
+  le boîtier SOT-23-5 de U2 et ne doit pas être utilisé ;
+- effectuer un montage à blanc des points de test `5001` dans les trous de
+  0,94 mm du `PR2H1-D` ; si la retenue isolante exige le trou constructeur de
+  1,02 mm, agrandir uniquement les emplacements concernés avec un foret adapté,
+  sans arracher les pastilles PTH ;
+- couper les fils `ASXHSXH22K152` en deux, étiqueter chaque pigtail puis insérer
+  les contacts présertis dans `XHP-2` et `XHP-3` ; ne pas sertir les contacts
+  nus avec une pince non qualifiée.
 
 ## Points de test
 

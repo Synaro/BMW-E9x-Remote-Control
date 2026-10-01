@@ -16,6 +16,7 @@ TWAI existant reste exclusivement `TWAI_MODE_LISTEN_ONLY`; les symboles
 Les fichiers normatifs du montage sont :
 
 - `hardware/kcan-rxonly/BOM.csv` pour les références et états DNP ;
+- `hardware/kcan-rxonly/procurement.csv` pour l'instantané d'achat contrôlé ;
 - `hardware/kcan-rxonly/netlist.csv` pour les connexions contrôlables ;
 - `hardware/kcan-rxonly/wiring.md` pour le câblage et la première mise sous
   tension.
@@ -72,7 +73,7 @@ barrière supplémentaire, pas la preuve finale de silence.
 ## Schéma électrique figé
 
 ```text
-                                ESP32-S3-DEVKITC-1-N8
+                               ESP32-S3-DEVKITC-1-N8R8
                        USB ---- alimentation / programmation
                                   5V o----F_5V 100 mA----+5V_TJA
                                  3V3 o-------------------+3V3
@@ -307,21 +308,25 @@ niveaux analogiques, pas seulement par un compteur logiciel.
 
 ## Budget et achat échelonné
 
-La valeur indicative des composants effectivement utilisés est d'environ
-**59 €**. La commande conseillée de `BOM.csv`, qui inclut petites quantités de
-vente et rechanges, atteint environ **94 € hors port**. Les prix unitaires sont
-des estimations de préparation, pas un devis distributeur. Une alimentation
-limitée et un multimètre déjà possédés réduisent fortement le coût initial ;
-sinon prévoir environ **105 € supplémentaires** selon les deux estimations de
-la BOM pour des instruments d'entrée de gamme sérieux.
+L'audit d'approvisionnement du 1er octobre 2026 est documenté dans
+[`phase3f-procurement-audit.md`](phase3f-procurement-audit.md). Il a
+corrigé les adaptateurs CMS, les composants obsolètes, la révision du DevKit,
+la carte prototype et les points de test sans modifier la topologie électrique.
+
+Le minimum absolu des composants effectivement utilisés est d'environ
+**39,17 € HT**. La commande conseillée de `procurement.csv`, avec rechanges et
+marge de soudure, atteint **64,49 € HT hors port**. Une alimentation limitée et
+un multimètre déjà possédés réduisent fortement le coût initial ; sinon prévoir
+environ **105 € supplémentaires** selon les estimations de la BOM.
 
 ### Commander maintenant
 
-- ESP32-S3-DevKitC-1-N8 officiel ;
+- ESP32-S3-DevKitC-1-N8R8 officiel ;
 - deux `TJA1055T/3/2Z` (un utilisé, un rechange) ;
-- trois `CLVC1G125QDBVRQ1` (petit boîtier et rechanges) ;
+- trois `CLVC1G125QDBVRQ1G4` disponibles, suffixe d'achat explicitement revu
+  du MPN de base `CLVC1G125QDBVRQ1` ;
 - passifs, PTC, diode, connecteurs, adaptateurs SO14/SOT23, perfboard et points
-  de test de `BOM.csv` ;
+  de test de `procurement.csv` ;
 - alimentation 12 V limitée en courant et DMM uniquement si absents.
 
 ### Attendre
@@ -342,7 +347,8 @@ la BOM pour des instruments d'entrée de gamme sérieux.
 - DMM avec continuité, résistance et tensions DC ;
 - alimentation 12 V régulée avec affichage et limitation de courant ;
 - câble USB de données et PC pour le DevKit ;
-- pince à sertir adaptée ou fils JST présertis fiables.
+- fils JST XH `ASXHSXH22K152` présertis ; les contacts nus ne sont pas achetés
+  pour ce prototype afin de ne pas dépendre d'une pince non qualifiée.
 
 ### Nécessaires pour obtenir le PASS électrique
 
