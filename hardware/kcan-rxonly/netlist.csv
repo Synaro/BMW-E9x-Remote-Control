@@ -1,0 +1,51 @@
+net,from_ref,from_pin,through_ref,through_value,to_ref,to_pin,assembly,notes
+GND,DEV1,GND,DIRECT,0,U1,13,MOUNT,Common bench ground
+GND,DEV1,GND,DIRECT,0,U2,3,MOUNT,Common bench ground
+GND,J_BAT,2,DIRECT,0,DEV1,GND,MOUNT,Connect ground before BAT and bus
+GND,J_KCAN,3,DIRECT,0,DEV1,GND,MOUNT,Bus reference ground
+3V3,DEV1,3V3,DIRECT,0,U2,5,MOUNT,U2 supply
+3V3,DEV1,3V3,C_U2_100N,100nF,GND,GND,MOUNT,Place at U2
+5V_USB,DEV1,5V,F_5V,0.10A_hold,5V_TJA,rail,MOUNT,No external 5V source simultaneously with USB
+5V_TJA,5V_TJA,rail,C_VCC_100N,100nF,GND,GND,MOUNT,Place at U1 pin 10
+5V_TJA,5V_TJA,rail,C_VCC_22U,22uF,GND,GND,MOUNT,Place at U1 pin 10
+5V_TJA,5V_TJA,rail,DIRECT,0,U1,10,MOUNT,VCC
+BAT_INPUT,J_BAT,1,F_BAT,0.10A_hold,BAT_FUSED,rail,MOUNT,12V current-limited bench source only
+BAT_FUSED,BAT_FUSED,rail,D_BAT,SS16,BAT_PROTECTED,rail,MOUNT,Anode at BAT_FUSED cathode at BAT_PROTECTED
+BAT_PROTECTED,BAT_PROTECTED,rail,R_BAT,1k,BAT_LOCAL,rail,MOUNT,NXP BAT series protection
+BAT_LOCAL,BAT_LOCAL,rail,C_BAT_10N,10nF,GND,GND,MOUNT,Place at U1 pin 14
+BAT_LOCAL,BAT_LOCAL,rail,DIRECT,0,U1,14,MOUNT,BAT pin
+BAT_LOCAL,U1,14,DIRECT,0,U1,7,MOUNT,WAKE tied directly to local BAT per NXP
+INH,U1,1,OPEN,NC,NC,NC,DNP,Leave open; optional isolated test pad only
+TXD_SAFE,5V_TJA,rail,R_TXD,10k,U1,2,MOUNT,Only populated electrical source on TXD pin
+TXD_SAFE,U1,2,DIRECT,0,TP_TXD,1,MOUNT,Measure HIGH before RX mode
+TX_GPIO,DEV1,GPIO5,R_TX_SER,1k,U2,2,MOUNT,TWAI_TX reaches only buffer input A
+TX_GPIO,3V3,rail,R_A,100k,U2,2,MOUNT,Defines A when GPIO floats
+TX_GPIO,DEV1,GPIO5,DIRECT,0,TP_TWAI_TX,1,MOUNT,Observe controller output independently of isolated TXD
+OE_SAFE,3V3,rail,R_OE,10k,U2,1,MOUNT,No GPIO connection; output disabled
+OE_SAFE,U2,1,DIRECT,0,TP_OE,1,MOUNT,Must measure HIGH
+TX_GATE_OUT,U2,4,DIRECT,0,TP_GATE_Y,1,MOUNT,Dead-end test net
+TX_GATE_OUT,U2,4,R_LINK_TX,DNP,U1,2,DNP,Physical TX break; no header no jumper no solder
+RXD_OD,3V3,rail,R_RX_PULL,3.3k,U1,3,MOUNT,Open-drain pull-up
+RXD_OD,U1,3,R_RX_SER,1k,DEV1,GPIO4,MOUNT,TWAI_RX BENCH_ONLY
+RXD_OD,U1,3,DIRECT,0,TP_RXD,1,MOUNT,Logic measurement point
+ERR_OD,3V3,rail,R_ERR_PULL,3.3k,U1,4,MOUNT,Open-drain pull-up
+ERR_OD,U1,4,R_ERR_SER,1k,DEV1,GPIO7,MOUNT,Fault indication BENCH_ONLY
+ERR_OD,U1,4,DIRECT,0,TP_ERR,1,MOUNT,Logic measurement point
+RX_MODE_5V,5V_TJA,rail,JP_RX_MODE,REMOVABLE_SHUNT,RX_MODE_FEED,rail,REMOVE_AT_BOOT,Shunt absent for power-up and fault tests
+STB_SAFE,RX_MODE_FEED,rail,R_STB_SER,1k,U1,5,MOUNT,High only with physical shunt
+STB_SAFE,U1,5,R_STB_PD,10k,GND,GND,MOUNT,Default LOW
+STB_SAFE,U1,5,DIRECT,0,TP_STB,1,MOUNT,Measure before acquisition
+EN_SAFE,RX_MODE_FEED,rail,R_EN_SER,1k,U1,6,MOUNT,High only with physical shunt
+EN_SAFE,U1,6,R_EN_PD,10k,GND,GND,MOUNT,Default LOW
+EN_SAFE,U1,6,DIRECT,0,TP_EN,1,MOUNT,Measure before acquisition
+KCAN_H,J_KCAN,1,DIRECT,0,U1,11,MOUNT,No cross-bus 120 Ohm resistor
+KCAN_H,J_KCAN,1,R_RTH,5.62k,U1,8,MOUNT,Weak matched local termination
+KCAN_H,J_KCAN,1,DIRECT,0,TP_CANH,1,MOUNT,Scope point
+KCAN_L,J_KCAN,2,DIRECT,0,U1,12,MOUNT,No cross-bus 120 Ohm resistor
+KCAN_L,J_KCAN,2,R_RTL,5.62k,U1,9,MOUNT,Weak matched local termination
+KCAN_L,J_KCAN,2,DIRECT,0,TP_CANL,1,MOUNT,Scope point
+5V_TJA,5V_TJA,rail,DIRECT,0,TP_5V,1,MOUNT,Supply test point
+3V3,3V3,rail,DIRECT,0,TP_3V3,1,MOUNT,Logic supply test point
+BAT_LOCAL,BAT_LOCAL,rail,DIRECT,0,TP_BAT,1,MOUNT,Post-protection BAT test point
+RESET,DEV1,EN,DIRECT,0,TP_RESET,1,MOUNT,Correlate reset with bus and TXD scope traces
+GND,GND,rail,DIRECT,0,TP_GND,1,MOUNT,Probe ground point

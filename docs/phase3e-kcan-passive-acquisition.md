@@ -93,9 +93,9 @@ TJA1055T/3 ERR ----------+----------------> ESP32 GPIO / défaut RX
 
 ESP32 GPIO / TWAI_TX ---> U2 SN74LVC1G125-Q1 ---> R_LINK_TX DNP --X--> TXD
                               /OE pull-up 10 kΩ                 |
-                                                               +-- 4,7 kΩ -> +3V3
+                                                               +-- 10 kΩ -> +5V_TJA
 
-ESP32 KCAN_RX_ENABLE --1 kΩ--> STB --10 kΩ--> GND
+RX_MODE jumper +5 V --1 kΩ--> STB --10 kΩ--> GND
                     `--1 kΩ--> EN  --10 kΩ--> GND
 
 alimentation banc 5 V ----------------------> VCC (+ 100 nF local)
@@ -110,14 +110,21 @@ bus LS/FT CAN-L ---- protection/mesure ---- RRTL 5,62 kΩ 1 % ---- RTL
 strap logiciel : une inspection visuelle et une mesure de continuité doivent
 confirmer l'ouverture. La sortie de U2 constitue une première barrière,
 maintenue en haute impédance par `/OE=HIGH`. L'absence du lien vers TXD est une
-seconde barrière indépendante. Enfin, 4,7 kΩ maintient TXD au niveau récessif
-même avec ESP32 absent, firmware planté ou U2 défectueux côté commande.
+seconde barrière indépendante. Enfin, 10 kΩ vers le VCC 5 V local maintient
+TXD au niveau récessif même avec ESP32 absent, 3,3 V perdu, firmware planté ou
+U2 défectueux côté commande. Le pull-up 3,3 V initialement envisagé a été
+rejeté lors du gel Phase 3F car il ne garantissait pas TXD HIGH si le seul
+domaine 3,3 V disparaissait.
 
-STB et EN sont tirés vers le bas séparément. Un ESP32 en reset ou en brownout
-laisse donc le transceiver en veille. Pour recevoir le flux complet, le signal
-`KCAN_RX_ENABLE` doit mettre les deux entrées à HIGH après validation du banc.
-Cette activation rend le récepteur opérationnel, mais ne rétablit aucun trajet
-TX. Le mode listen-only TWAI et sa file TX nulle restent obligatoires.
+STB et EN sont tirés vers le bas séparément. En Phase 3F, aucun GPIO ne les
+pilote : un cavalier physique commun les relie au 5 V via deux résistances de
+1 kΩ. Cavalier absent, le transceiver reste en veille au boot, reset, brownout
+ou ESP32 absent. Cavalier présent, il reçoit le flux complet sans rétablir de
+trajet TX. Le mode listen-only TWAI et sa file TX nulle restent obligatoires.
+
+Le schéma ci-dessus reste une synthèse. Le câblage normatif et la nomenclature
+sont désormais ceux de [phase3f-kcan-rxonly-design-freeze.md](phase3f-kcan-rxonly-design-freeze.md)
+et de `hardware/kcan-rxonly/` ; en cas de divergence, la Phase 3F prévaut.
 
 Les 5,62 kΩ correspondent à la terminaison faible d'un nœud optionnel recommandée
 par NXP et utilisée par des outils LS-CAN. Deux empreintes appariées à 1 % sont

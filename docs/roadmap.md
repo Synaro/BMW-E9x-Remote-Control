@@ -113,6 +113,27 @@ Cette phase est détaillée dans
 [phase3e-kcan-passive-acquisition.md](phase3e-kcan-passive-acquisition.md).
 Elle ne commence ni la Phase 4, ni une fonction de commande véhicule.
 
+## Phase 3F — Gel du design K-CAN RX-only
+
+- [x] Auditer les 14 broches du `TJA1055T/3/2Z`
+- [x] Corriger le maintien récessif de TXD pour qu'il dépende du VCC 5 V du
+  transceiver et non du domaine 3,3 V
+- [x] Figer une coupure TX physiquement absente (`R_LINK_TX` DNP)
+- [x] Rendre l'activation STB/EN manuelle et indépendante du firmware
+- [x] Figer le câblage, la nomenclature et les points de test du prototype
+- [x] Quantifier la charge des résistances RTH/RTL de 5,62 kΩ
+- [x] Comparer les moyens de générer un réseau LS/FT de banc à 100 kbit/s
+- [x] Ajouter des contrôles documentaires sur la BOM et le netlist
+- [ ] Assembler le prototype
+- [ ] Qualifier électriquement alimentation, reset, brownout, ACK et absence de
+  dominant avec oscilloscope et générateur LS/FT
+- [ ] Obtenir un PASS signé avant toute étude de raccordement véhicule
+
+Le gel est détaillé dans
+[phase3f-kcan-rxonly-design-freeze.md](phase3f-kcan-rxonly-design-freeze.md) et
+dans `hardware/kcan-rxonly/`. Il ne constitue pas une autorisation de connexion
+à la BMW et ne commence pas la Phase 4.
+
 ## Phase 4 — Capture et analyse hors ligne
 
 - [ ] Implémenter le transport et l'écriture PC du format Capture V2
