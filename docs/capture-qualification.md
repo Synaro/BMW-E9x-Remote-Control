@@ -21,6 +21,13 @@ son isolation, de sa terminaison et de son comportement réel sur banc.
 Toute autre valeur est refusée. Ajouter un pilote exige une documentation
 primaire démontrant son mode silencieux ainsi que des tests dédiés.
 
+Un convertisseur low-speed/fault-tolerant placé derrière une interface `pcan`
+ne devient pas automatiquement qualifié par l'état `PASSIVE` du contrôleur.
+Il faut aussi démontrer côté LS/FT l'absence d'ACK et de dominant, la terminaison
+utilisée et le comportement boot/reset/brownout. Le banc K-CAN RX-only proposé
+et ses essais séparés sont décrits dans
+[phase3e-kcan-passive-acquisition.md](phase3e-kcan-passive-acquisition.md).
+
 Le câble BMW K+DCAN n'est pas l'une de ces interfaces de capture brute. Il reste
 réservé à l'inventaire diagnostic tant qu'une capacité différente n'a pas été
 démontrée et revue.
@@ -73,6 +80,11 @@ Avant de cocher la qualification de l'interface dans la feuille de route :
 5. réaliser plusieurs captures de durée identique sans erreur ni perte visible ;
 6. rejouer les fichiers avec le simulateur et contrôler leur format ;
 7. consigner le résultat sans VIN ni donnée personnelle.
+
+Pour K-CAN, ajouter au dossier de qualification les mesures RXD/TXD/CANH/CANL,
+la preuve d'ouverture du lien TX, l'essai du slot ACK et l'effet de la
+terminaison sur le mode de veille. Une interface PT-CAN à 100 kbit/s ne satisfait
+pas ces critères.
 
 La présence de trames dans un fichier ne suffit pas, à elle seule, à qualifier
 l'interface ni à confirmer la signification d'un identifiant.

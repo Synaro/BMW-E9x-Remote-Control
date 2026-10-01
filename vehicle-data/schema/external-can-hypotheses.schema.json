@@ -1,0 +1,73 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Synaro/BMW-E9x-Remote-Control/vehicle-data/schema/external-can-hypotheses.schema.json",
+  "title": "External unvalidated CAN hypotheses",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version", "catalog_id", "scope", "read_only",
+    "action_capability", "current_vehicle_validated", "capture_policy",
+    "source", "hypotheses", "forbidden_inferences", "notes"
+  ],
+  "properties": {
+    "schema_version": {"const": 1},
+    "catalog_id": {"type": "string", "minLength": 1},
+    "scope": {"const": "EXTERNAL_UNVALIDATED_KCAN_HYPOTHESES"},
+    "read_only": {"const": true},
+    "action_capability": {"const": false},
+    "current_vehicle_validated": {"const": false},
+    "capture_policy": {"const": "CAPTURE_ALL_FRAMES_THEN_RANK_OFFLINE"},
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["repository_url", "commit_sha", "file", "retrieved_at", "locator"],
+      "properties": {
+        "repository_url": {"const": "https://github.com/llilakoblock/bmw-e87-e90-can-bt"},
+        "commit_sha": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+        "file": {"type": "string", "minLength": 1},
+        "retrieved_at": {"type": "string", "format": "date-time"},
+        "locator": {"type": "string", "minLength": 1}
+      }
+    },
+    "hypotheses": {
+      "type": "array",
+      "minItems": 2,
+      "maxItems": 2,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "can_id_hex", "can_id_decimal", "frame_format", "external_claim",
+          "external_example_dlc", "external_example_data", "qualification",
+          "observed_on_current_vehicle", "functional_meaning",
+          "precondition_eligibility", "runtime_use", "forbidden_inferences", "notes"
+        ],
+        "properties": {
+          "can_id_hex": {"enum": ["0x23A", "0x2B4"]},
+          "can_id_decimal": {"type": "integer", "minimum": 0, "maximum": 2047},
+          "frame_format": {"const": "STANDARD_11_BIT"},
+          "external_claim": {"type": "string", "minLength": 1},
+          "external_example_dlc": {"type": "integer", "minimum": 0, "maximum": 8},
+          "external_example_data": {"type": "string", "pattern": "^(?:[0-9A-F]{2})(?: [0-9A-F]{2})*$"},
+          "qualification": {"const": "EXTERNAL_UNVALIDATED"},
+          "observed_on_current_vehicle": {"const": false},
+          "functional_meaning": {"type": "null"},
+          "precondition_eligibility": {"const": "PROHIBITED"},
+          "runtime_use": {"const": "POST_CAPTURE_ANALYSIS_HINT_ONLY"},
+          "forbidden_inferences": {
+            "type": "array",
+            "items": {"type": "string", "minLength": 1},
+            "uniqueItems": true
+          },
+          "notes": {"type": "string", "minLength": 1}
+        }
+      }
+    },
+    "forbidden_inferences": {
+      "type": "array",
+      "items": {"type": "string", "minLength": 1},
+      "uniqueItems": true
+    },
+    "notes": {"type": "string", "minLength": 1}
+  }
+}

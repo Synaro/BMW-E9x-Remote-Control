@@ -93,6 +93,26 @@ est détaillé dans
 Les résultats et limites de cette phase sont détaillés dans
 [phase3d-real-evidence-qualification.md](phase3d-real-evidence-qualification.md).
 
+## Phase 3E — Préparation K-CAN passive
+
+- [x] Distinguer débit logique, contrôleur TWAI et couche physique K-CAN
+- [x] Comparer les transceivers LS/FT à partir des documents constructeur
+- [x] Retenir `TJA1055T/3/2Z` comme candidat principal de prototype
+- [x] Définir deux barrières TX matérielles en série, dont un lien DNP
+  indépendant du firmware
+- [x] Conserver `0x23A` et `0x2B4` comme hypothèses externes non validées
+- [x] Définir la matrice d'essais télécommande et les contrôles négatifs
+- [ ] Assembler le récepteur K-CAN RX-only
+- [ ] Qualifier alimentation, reset, brownout, absence d'ACK et absence de dominant
+- [ ] Mesurer l'influence de la terminaison et du mode normal sur la veille K-CAN
+- [ ] Obtenir un PASS électrique complet avant toute connexion au véhicule
+- [ ] Ajouter le profil firmware `BENCH_ONLY` K-CAN après qualification du matériel
+- [ ] Réaliser les captures réelles, sans filtre d'identifiants
+
+Cette phase est détaillée dans
+[phase3e-kcan-passive-acquisition.md](phase3e-kcan-passive-acquisition.md).
+Elle ne commence ni la Phase 4, ni une fonction de commande véhicule.
+
 ## Phase 4 — Capture et analyse hors ligne
 
 - [ ] Implémenter le transport et l'écriture PC du format Capture V2

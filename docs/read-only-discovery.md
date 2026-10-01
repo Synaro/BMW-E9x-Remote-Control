@@ -79,6 +79,20 @@ Pour chaque événement :
 4. réaliser également le changement inverse ;
 5. conserver les fichiers dans `captures/private/<session>/`.
 
+### Campagne télécommande K-CAN
+
+Après qualification électrique complète du banc K-CAN uniquement, utiliser la
+matrice `REST_NO_ACTION`, `LOCK_1`, `LOCK_2`, `LOCK_3` et `UNLOCK_1` définie
+dans [phase3e-kcan-passive-acquisition.md](phase3e-kcan-passive-acquisition.md).
+Effectuer au moins dix répétitions valides par scénario, restaurer le même état
+initial et randomiser l'ordre. Les intervalles entre appuis sont notés par
+l'opérateur, jamais injectés comme trame marqueur.
+
+La capture conserve tous les IDs. `0x23A` et `0x2B4` sont uniquement des
+hypothèses communautaires versionnées ; elles peuvent être examinées après la
+comparaison globale mais ne doivent ni filtrer l'acquisition, ni recevoir un
+statut BMW confirmé sans preuve propre au véhicule.
+
 Lorsque l'interface fait partie des pilotes acceptés, la trace canonique peut
 être créée directement avec `scripts/capture-can-trace.ps1`. Dans les autres cas,
 produire un journal avec l'outil du fabricant puis utiliser l'importeur, sans

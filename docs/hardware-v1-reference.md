@@ -73,8 +73,13 @@ Le banc haute vitesse de Phase 3B retient précisément :
 
 Ce choix qualifie uniquement une couche physique ISO 11898-2 haute vitesse.
 Il ne convient pas à la couche physique K-CAN basse vitesse tolérante aux
-défauts. `TJA1055T/3` reste donc une hypothèse séparée pour une future étude
-K-CAN, sans sélection ni autorisation actuelle. `LM5164-Q1` reste une base
+défauts. La Phase 3E retient désormais `TJA1055T/3/2Z` comme **candidat de
+prototype K-CAN RX-only**, après comparaison avec MAX3055 et AMIS-41683. Ce
+choix n'est pas une qualification véhicule : le trajet TX doit rester
+physiquement ouvert et le banc doit réussir les essais d'absence d'ACK et de
+dominant décrits dans
+[phase3e-kcan-passive-acquisition.md](phase3e-kcan-passive-acquisition.md).
+`LM5164-Q1` reste une base
 d'étude de l'alimentation automobile finale, absente du banc 5 V.
 
 Le watchdog ne remplace pas la sûreté électrique. Les protections, filtres,
@@ -159,5 +164,5 @@ avec alimentation, interfaces, protections et interverrouillages qualifiés.
 - [BMW Body Electronics II — Bus Systems](https://bmwtechinfo.bmwgroup.com/tech_training_manual/ST401%20Body%20Electronics%20II.pdf)
 - [TI TCAN1057AV-Q1](https://www.ti.com/product/TCAN1057A-Q1)
 - [TI SN74LVC1G125-Q1](https://www.ti.com/product/SN74LVC1G125-Q1)
-- [NXP TJA1055, hypothèse K-CAN non retenue](https://www.nxp.com/products/TJA1055T)
+- [NXP TJA1055, candidat K-CAN RX-only](https://www.nxp.com/docs/en/data-sheet/TJA1055.pdf)
 - [TI LM5164-Q1](https://www.ti.com/product/LM5164-Q1)
