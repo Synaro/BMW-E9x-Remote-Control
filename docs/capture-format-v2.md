@@ -50,6 +50,12 @@ Il exige notamment :
 `vehicle_information` est facultatif. Aucun VIN, nom, position ou autre donnée
 personnelle n'est requis.
 
+Pour une future capture K-CAN, `interface` et `configuration_id` doivent
+identifier sans ambiguïté la couche physique, par exemple
+`KCAN_LSFT_ISO11898_3_RX_ONLY`, ainsi que la révision du banc. Le débit
+`100000` ne suffit pas à distinguer K-CAN d'un banc ISO 11898-2 ralenti. Le
+fichier de trames reste générique et ne contient aucun nom de signal BMW.
+
 ## Drapeaux de statut
 
 | Bit | Signification |

@@ -53,6 +53,14 @@ CAS/JBE restent strictement dans la configuration d'infrastructure et devront
 [can-lock-command-adapter.md](can-lock-command-adapter.md) et
 [lock-command-security.md](lock-command-security.md).
 
+La recherche de cette provenance commence par un récepteur K-CAN physique
+low-speed/fault-tolerant distinct du banc PT-CAN. Son architecture RX-only, sa
+terminaison distribuée et son protocole de qualification sont définis dans
+[phase3e-kcan-passive-acquisition.md](phase3e-kcan-passive-acquisition.md).
+Les hypothèses externes `0x23A` et `0x2B4` ne constituent pas une liaison
+qualifiée : elles sont interdites comme entrée de `CanLockCommandAdapter` tant
+qu'une campagne répétée sur le véhicule de test ne les a pas confirmées.
+
 De même, l'adaptateur ne produit `DriverTakeoverConfirmed` qu'après satisfaction
 des preuves de reprise retenues. Une portière ouverte, seule, n'est jamais une
 preuve suffisante.

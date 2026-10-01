@@ -1,9 +1,10 @@
-"""Strict Phase 3C/3D validation for vehicle profiles and OEM observations.
+"""Strict Phase 3C/3D/3E validation for vehicle and discovery artifacts.
 
 The module deliberately uses only the Python standard library. It validates
 cross-file provenance and semantic invariants that JSON Schema cannot express
-without application-specific code. It contains no vehicle commands, CAN IDs,
-or runtime BMW decoder.
+without application-specific code. It contains no vehicle commands or runtime
+BMW decoder. Phase 3E only validates a separate catalog of explicitly external,
+non-actionable CAN-ID hypotheses; it never promotes them to vehicle evidence.
 """
 
 from __future__ import annotations
@@ -1874,8 +1875,140 @@ def validate_start_observation_signal_catalog(
         raise ValidationError(f"{location}.excluded_runtime_categories: mandatory safety exclusion missing")
 
 
+def validate_external_can_hypotheses(document: Mapping[str, Any]) -> None:
+    """Validate community CAN claims without promoting them to vehicle facts.
+
+    This catalog is deliberately independent from the real-vehicle evidence index:
+    it records third-party claims that have not been observed on the current test
+    vehicle. It may only prioritize offline analysis after a complete capture.
+    """
+
+    location = "external_can_hypotheses"
+    _required(
+        document,
+        {
+            "schema_version",
+            "catalog_id",
+            "scope",
+            "read_only",
+            "action_capability",
+            "current_vehicle_validated",
+            "capture_policy",
+            "source",
+            "hypotheses",
+            "forbidden_inferences",
+            "notes",
+        },
+        location,
+    )
+    _require_schema_v1(document, location)
+    _require_nonempty_string(document["catalog_id"], f"{location}.catalog_id")
+    if document["scope"] != "EXTERNAL_UNVALIDATED_KCAN_HYPOTHESES":
+        raise ValidationError(f"{location}.scope: unexpected scope")
+    if document["read_only"] is not True or document["action_capability"] is not False:
+        raise ValidationError(f"{location}: catalog must remain strictly read-only")
+    if document["current_vehicle_validated"] is not False:
+        raise ValidationError(f"{location}: external claims cannot be vehicle-validated")
+    if document["capture_policy"] != "CAPTURE_ALL_FRAMES_THEN_RANK_OFFLINE":
+        raise ValidationError(f"{location}.capture_policy: hypotheses must not filter acquisition")
+
+    source = _require_object(document["source"], f"{location}.source")
+    _required(
+        source,
+        {"repository_url", "commit_sha", "file", "retrieved_at", "locator"},
+        f"{location}.source",
+    )
+    if source["repository_url"] != "https://github.com/llilakoblock/bmw-e87-e90-can-bt":
+        raise ValidationError(f"{location}.source.repository_url: unexpected provenance")
+    commit_sha = _require_nonempty_string(source["commit_sha"], f"{location}.source.commit_sha")
+    if re.fullmatch(r"[0-9a-f]{40}", commit_sha) is None:
+        raise ValidationError(f"{location}.source.commit_sha: expected immutable Git SHA")
+    _require_nonempty_string(source["file"], f"{location}.source.file")
+    _require_timestamp(source["retrieved_at"], f"{location}.source.retrieved_at")
+    _require_nonempty_string(source["locator"], f"{location}.source.locator")
+
+    required_forbidden = {
+        "CONFIRMED_BMW_SIGNAL",
+        "SECURITY_PRECONDITION",
+        "REMOTE_START_TRIGGER",
+        "VEHICLE_COMMAND",
+        "CAN_TRANSMISSION_OR_REPLAY",
+    }
+    root_forbidden = set(
+        _require_array(document["forbidden_inferences"], f"{location}.forbidden_inferences")
+    )
+    if not required_forbidden.issubset(root_forbidden):
+        raise ValidationError(f"{location}.forbidden_inferences: mandatory prohibition missing")
+
+    expected_ids = {"0x23A": 0x23A, "0x2B4": 0x2B4}
+    seen_ids: dict[str, int] = {}
+    for index, raw_hypothesis in enumerate(
+        _require_array(document["hypotheses"], f"{location}.hypotheses")
+    ):
+        item_location = f"{location}.hypotheses[{index}]"
+        item = _require_object(raw_hypothesis, item_location)
+        _required(
+            item,
+            {
+                "can_id_hex",
+                "can_id_decimal",
+                "frame_format",
+                "external_claim",
+                "external_example_dlc",
+                "external_example_data",
+                "qualification",
+                "observed_on_current_vehicle",
+                "functional_meaning",
+                "precondition_eligibility",
+                "runtime_use",
+                "forbidden_inferences",
+                "notes",
+            },
+            item_location,
+        )
+        can_id_hex = _require_nonempty_string(item["can_id_hex"], f"{item_location}.can_id_hex")
+        if can_id_hex not in expected_ids:
+            raise ValidationError(f"{item_location}.can_id_hex: unexpected external hypothesis")
+        can_id_decimal = item["can_id_decimal"]
+        if isinstance(can_id_decimal, bool) or not isinstance(can_id_decimal, int):
+            raise ValidationError(f"{item_location}.can_id_decimal: expected integer")
+        if can_id_decimal != expected_ids[can_id_hex]:
+            raise ValidationError(f"{item_location}: hexadecimal and decimal identifiers disagree")
+        if can_id_hex in seen_ids:
+            raise ValidationError(f"{item_location}.can_id_hex: duplicate {can_id_hex}")
+        seen_ids[can_id_hex] = can_id_decimal
+        if item["frame_format"] != "STANDARD_11_BIT":
+            raise ValidationError(f"{item_location}.frame_format: only the cited 11-bit claim is recorded")
+        _require_nonempty_string(item["external_claim"], f"{item_location}.external_claim")
+        dlc = item["external_example_dlc"]
+        if isinstance(dlc, bool) or not isinstance(dlc, int) or dlc < 0 or dlc > 8:
+            raise ValidationError(f"{item_location}.external_example_dlc: expected integer from 0 to 8")
+        data = _require_nonempty_string(item["external_example_data"], f"{item_location}.external_example_data")
+        if re.fullmatch(r"(?:[0-9A-F]{2})(?: [0-9A-F]{2})*", data) is None:
+            raise ValidationError(f"{item_location}.external_example_data: expected uppercase byte string")
+        if len(data.split()) != dlc:
+            raise ValidationError(f"{item_location}: external example DLC/data mismatch")
+        if item["qualification"] != "EXTERNAL_UNVALIDATED":
+            raise ValidationError(f"{item_location}.qualification: community claim cannot be promoted")
+        if item["observed_on_current_vehicle"] is not False or item["functional_meaning"] is not None:
+            raise ValidationError(f"{item_location}: no current-vehicle meaning has been established")
+        if item["precondition_eligibility"] != "PROHIBITED":
+            raise ValidationError(f"{item_location}: external claim cannot be a safety precondition")
+        if item["runtime_use"] != "POST_CAPTURE_ANALYSIS_HINT_ONLY":
+            raise ValidationError(f"{item_location}.runtime_use: runtime or acquisition use is forbidden")
+        item_forbidden = set(
+            _require_array(item["forbidden_inferences"], f"{item_location}.forbidden_inferences")
+        )
+        if not required_forbidden.issubset(item_forbidden):
+            raise ValidationError(f"{item_location}.forbidden_inferences: mandatory prohibition missing")
+        _require_nonempty_string(item["notes"], f"{item_location}.notes")
+
+    if seen_ids != expected_ids:
+        raise ValidationError(f"{location}.hypotheses: exact external ID set required")
+
+
 def _parse_arguments() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Validate Phase 3C/3D vehicle-data artifacts")
+    parser = argparse.ArgumentParser(description="Validate Phase 3C/3D/3E vehicle-data artifacts")
     parser.add_argument("--evidence", required=True, type=Path)
     parser.add_argument("--profile", type=Path)
     parser.add_argument("--observation", type=Path)
@@ -1891,6 +2024,7 @@ def _parse_arguments() -> argparse.Namespace:
     parser.add_argument("--cas-dde-full-cycle", action="append", default=[], type=Path)
     parser.add_argument("--cas-dde-start-comparison", action="append", default=[], type=Path)
     parser.add_argument("--start-signal-catalog", action="append", default=[], type=Path)
+    parser.add_argument("--external-can-hypotheses", action="append", default=[], type=Path)
     return parser.parse_args()
 
 
@@ -1927,7 +2061,9 @@ def main() -> int:
         validate_cas_dde_start_comparison(load_json_object(path))
     for path in arguments.start_signal_catalog:
         validate_start_observation_signal_catalog(load_json_object(path), evidence_ids)
-    print("Phase 3C/3D vehicle data: VALID")
+    for path in arguments.external_can_hypotheses:
+        validate_external_can_hypotheses(load_json_object(path))
+    print("Phase 3C/3D/3E vehicle data: VALID")
     return 0
 
 

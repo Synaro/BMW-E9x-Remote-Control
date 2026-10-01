@@ -74,6 +74,14 @@ manquantes/dupliquées et les débits autres que 100/500 kbit/s au démarrage.
 Ces broches sont **BENCH_ONLY**. Elles ne décrivent aucun faisceau BMW validé.
 Voir [phase3b-can-bench-hardware.md](phase3b-can-bench-hardware.md).
 
+Cette configuration ne doit pas être recyclée pour le K-CAN. Le TCAN1057AV
+utilise ISO 11898-2 et dispose d'un mode silent matériel ; le TJA1055T/3
+low-speed/fault-tolerant doit être en mode normal pour fournir les données RX.
+Le futur profil K-CAN devra donc confirmer un trajet TX physiquement ouvert au
+lieu de prétendre que standby est un mode silent de capture. La décision et les
+essais requis sont décrits dans
+[phase3e-kcan-passive-acquisition.md](phase3e-kcan-passive-acquisition.md).
+
 ## Bornes et statistiques
 
 - aucune allocation après le démarrage dans le chemin de réception ;

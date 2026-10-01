@@ -93,6 +93,49 @@ est détaillé dans
 Les résultats et limites de cette phase sont détaillés dans
 [phase3d-real-evidence-qualification.md](phase3d-real-evidence-qualification.md).
 
+## Phase 3E — Préparation K-CAN passive
+
+- [x] Distinguer débit logique, contrôleur TWAI et couche physique K-CAN
+- [x] Comparer les transceivers LS/FT à partir des documents constructeur
+- [x] Retenir `TJA1055T/3/2Z` comme candidat principal de prototype
+- [x] Définir deux barrières TX matérielles en série, dont un lien DNP
+  indépendant du firmware
+- [x] Conserver `0x23A` et `0x2B4` comme hypothèses externes non validées
+- [x] Définir la matrice d'essais télécommande et les contrôles négatifs
+- [ ] Assembler le récepteur K-CAN RX-only
+- [ ] Qualifier alimentation, reset, brownout, absence d'ACK et absence de dominant
+- [ ] Mesurer l'influence de la terminaison et du mode normal sur la veille K-CAN
+- [ ] Obtenir un PASS électrique complet avant toute connexion au véhicule
+- [ ] Ajouter le profil firmware `BENCH_ONLY` K-CAN après qualification du matériel
+- [ ] Réaliser les captures réelles, sans filtre d'identifiants
+
+Cette phase est détaillée dans
+[phase3e-kcan-passive-acquisition.md](phase3e-kcan-passive-acquisition.md).
+Elle ne commence ni la Phase 4, ni une fonction de commande véhicule.
+
+## Phase 3F — Gel du design K-CAN RX-only
+
+- [x] Auditer les 14 broches du `TJA1055T/3/2Z`
+- [x] Corriger le maintien récessif de TXD pour qu'il dépende du VCC 5 V du
+  transceiver et non du domaine 3,3 V
+- [x] Figer une coupure TX physiquement absente (`R_LINK_TX` DNP)
+- [x] Rendre l'activation STB/EN manuelle et indépendante du firmware
+- [x] Figer le câblage, la nomenclature et les points de test du prototype
+- [x] Quantifier la charge des résistances RTH/RTL de 5,62 kΩ
+- [x] Comparer les moyens de générer un réseau LS/FT de banc à 100 kbit/s
+- [x] Ajouter des contrôles documentaires sur la BOM et le netlist
+- [x] Auditer l'approvisionnement ligne par ligne, corriger les références
+  retirées/incompatibles et figer une liste d'achat versionnée
+- [ ] Assembler le prototype
+- [ ] Qualifier électriquement alimentation, reset, brownout, ACK et absence de
+  dominant avec oscilloscope et générateur LS/FT
+- [ ] Obtenir un PASS signé avant toute étude de raccordement véhicule
+
+Le gel est détaillé dans
+[phase3f-kcan-rxonly-design-freeze.md](phase3f-kcan-rxonly-design-freeze.md) et
+dans `hardware/kcan-rxonly/`. Il ne constitue pas une autorisation de connexion
+à la BMW et ne commence pas la Phase 4.
+
 ## Phase 4 — Capture et analyse hors ligne
 
 - [ ] Implémenter le transport et l'écriture PC du format Capture V2

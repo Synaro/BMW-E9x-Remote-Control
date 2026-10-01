@@ -1,0 +1,68 @@
+{
+  "schema_version": 1,
+  "catalog_id": "external-kcan-hypotheses-2026-10-01",
+  "scope": "EXTERNAL_UNVALIDATED_KCAN_HYPOTHESES",
+  "read_only": true,
+  "action_capability": false,
+  "current_vehicle_validated": false,
+  "capture_policy": "CAPTURE_ALL_FRAMES_THEN_RANK_OFFLINE",
+  "source": {
+    "repository_url": "https://github.com/llilakoblock/bmw-e87-e90-can-bt",
+    "commit_sha": "8da7364a86b2f3e487a61c45a958f1afbe5de4d8",
+    "file": "README.md",
+    "retrieved_at": "2026-10-01T11:24:31+02:00",
+    "locator": "CAN Bus Message Breakdown table rows 0x23A and 0x2B4"
+  },
+  "hypotheses": [
+    {
+      "can_id_hex": "0x23A",
+      "can_id_decimal": 570,
+      "frame_format": "STANDARD_11_BIT",
+      "external_claim": "Remote Control Keyfob Actions",
+      "external_example_dlc": 4,
+      "external_example_data": "00 30 00 60",
+      "qualification": "EXTERNAL_UNVALIDATED",
+      "observed_on_current_vehicle": false,
+      "functional_meaning": null,
+      "precondition_eligibility": "PROHIBITED",
+      "runtime_use": "POST_CAPTURE_ANALYSIS_HINT_ONLY",
+      "forbidden_inferences": [
+        "CONFIRMED_BMW_SIGNAL",
+        "SECURITY_PRECONDITION",
+        "REMOTE_START_TRIGGER",
+        "VEHICLE_COMMAND",
+        "CAN_TRANSMISSION_OR_REPLAY"
+      ],
+      "notes": "Third-party README claim only. Capture every frame first; this identifier may only be ranked after acquisition and must be tested against repeated controls on the current vehicle."
+    },
+    {
+      "can_id_hex": "0x2B4",
+      "can_id_decimal": 692,
+      "frame_format": "STANDARD_11_BIT",
+      "external_claim": "Door locking (Via Remote Control)",
+      "external_example_dlc": 2,
+      "external_example_data": "00 F2",
+      "qualification": "EXTERNAL_UNVALIDATED",
+      "observed_on_current_vehicle": false,
+      "functional_meaning": null,
+      "precondition_eligibility": "PROHIBITED",
+      "runtime_use": "POST_CAPTURE_ANALYSIS_HINT_ONLY",
+      "forbidden_inferences": [
+        "CONFIRMED_BMW_SIGNAL",
+        "SECURITY_PRECONDITION",
+        "REMOTE_START_TRIGGER",
+        "VEHICLE_COMMAND",
+        "CAN_TRANSMISSION_OR_REPLAY"
+      ],
+      "notes": "Third-party README claim only. It is not a decoder, a command, or evidence for this BMW."
+    }
+  ],
+  "forbidden_inferences": [
+    "CONFIRMED_BMW_SIGNAL",
+    "SECURITY_PRECONDITION",
+    "REMOTE_START_TRIGGER",
+    "VEHICLE_COMMAND",
+    "CAN_TRANSMISSION_OR_REPLAY"
+  ],
+  "notes": "This catalog preserves provenance without promoting community labels. It must never restrict raw capture to these identifiers."
+}

@@ -14,6 +14,13 @@ décodeur BMW, ni commande CAS/DDE, ni chemin d'émission CAN.
 - `catalog/` : sélection machine-readable des signaux SGBD de lecture retenus,
   avec provenance, valeurs documentées et qualification indépendante.
 
+Le catalogue `external-kcan-hypotheses.json` est d'une nature différente : il
+fige deux affirmations provenant d'un dépôt communautaire à un commit précis.
+Elles restent `EXTERNAL_UNVALIDATED`, ne sont pas des preuves du véhicule de
+test et ne peuvent servir ni à filtrer l'acquisition, ni à une précondition, ni
+à une commande. Le validateur n'autorise que leur classement **après** capture
+complète, pour orienter une analyse hors ligne.
+
 Tous les fichiers suivis dont le nom commence par `EXAMPLE_ONLY` sont fictifs.
 Ils démontrent uniquement le format. Ils ne décrivent aucun véhicule et ne
 doivent jamais servir à déduire une valeur BMW.
@@ -93,6 +100,8 @@ leur qualité de récupération et l'absence de conclusion physique excessive.
 décroissance RPM à l'arrêt et la séparation stricte entre signaux mesurés et
 actions déclarées. `--cas-dde-start-comparison` vérifie les calculs comparant
 les deux démarrages sans permettre d'en déduire un algorithme.
+`--external-can-hypotheses` protège les hypothèses K-CAN externes contre toute
+promotion automatique en signal BMW confirmé ou en entrée d'exécution.
 
 Les preuves acceptées sont : capture ISTA, export TestO, sortie INPA, sortie
 Tool32, future capture CAN et note manuelle. La catégorie « future capture CAN »
