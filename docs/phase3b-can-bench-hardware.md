@@ -13,6 +13,12 @@ ISO 11898-2 haute vitesse. Un essai haute vitesse à 100 kbit/s ne reproduit pas
 la couche physique K-CAN basse vitesse tolérante aux défauts. Le matériel retenu
 ici ne doit donc jamais être présenté comme un adaptateur K-CAN.
 
+> **Contexte historique.** Cette phase a été rédigée avec la DevKitC-1-N8
+> initialement sélectionnée. Le procurement K-CAN Phase 3F actuel retient la
+> DevKitC-1-N8R8, dont les GPIO revus restent compatibles. Le présent document
+> continue de décrire le banc haute vitesse Phase 3B ; il n'est ni la liste
+> d'achat actuelle, ni le design K-CAN RX-only gelé.
+
 ## Décision du transceiver
 
 La référence retenue est **Texas Instruments TCAN1057AVDRQ1** : variante
@@ -136,7 +142,7 @@ Ne pas remplacer les pulls de 10 kΩ par les pulls internes de l'ESP32 ou du
 transceiver. Les GPIO ESP32 sont haute impédance pendant reset ; l'état sûr est
 produit par le matériel externe.
 
-## GPIO BENCH_ONLY de la DevKitC-1-N8
+## GPIO BENCH_ONLY de la DevKitC-1 initiale
 
 | Fonction | GPIO | Connecteur | Justification |
 |---|---:|---|---|
@@ -155,8 +161,10 @@ Ce choix évite :
 
 Les quatre broches sont contiguës sur J1 et reviennent en entrée haute impédance
 au reset. Les pulls externes, et non leur état interne, définissent la sûreté.
-Ce brochage est **uniquement BENCH_ONLY** pour l'ESP32-S3-DevKitC-1-N8 ; il ne
-préjuge ni du PCB final ni d'un faisceau BMW.
+Ce brochage est **uniquement BENCH_ONLY**. Il a été défini sur
+l'ESP32-S3-DevKitC-1-N8 initiale et les mêmes broches ont été revues comme
+exposées sur la N8R8 actuelle ; il ne préjuge ni du PCB final ni d'un faisceau
+BMW.
 
 Sources Espressif :
 
@@ -295,7 +303,8 @@ La checklist à renseigner se trouve dans
 
 ### Nœud passif
 
-- 1 × ESP32-S3-DevKitC-1-N8 officielle ;
+- 1 × ESP32-S3-DevKitC-1 officielle (N8 dans le banc historique ; N8R8 pour
+  l'achat actuel compatible) ;
 - 2 à 5 × `TCAN1057AVDRQ1` pour assemblage et rechange ;
 - 2 à 5 × `CLVC1G125QDBVRQ1` (`SN74LVC1G125-Q1`) ;
 - PCB/adaptateur soudé, connecteurs, points de test et jumper de terminaison ;

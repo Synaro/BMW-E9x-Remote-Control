@@ -315,9 +315,25 @@ la carte prototype et les points de test sans modifier la topologie électrique.
 
 Le minimum absolu des composants effectivement utilisés est d'environ
 **39,17 € HT**. La commande conseillée de `procurement.csv`, avec rechanges et
-marge de soudure, atteint **64,49 € HT hors port**. Une alimentation limitée et
-un multimètre déjà possédés réduisent fortement le coût initial ; sinon prévoir
-environ **105 € supplémentaires** selon les estimations de la BOM.
+marge de soudure, atteignait **64,49 € HT hors port lors du freeze initial du
+1er octobre 2026**. Une alimentation limitée et un multimètre déjà possédés
+réduisent fortement le coût initial ; sinon prévoir environ **105 €
+supplémentaires** selon les estimations de la BOM.
+
+### Corrections procurement post-freeze
+
+La PR #34 a corrigé les métadonnées d'achat sans modifier la BOM, le netlist ou
+la topologie électrique. La source normative actuelle reste
+`hardware/kcan-rxonly/procurement.csv` :
+
+- `RC1206FR-071KL` : `qty_used=1`, `qty_to_order=10` pour le stock de rechange ;
+- `MINISMDC010F-2` : `qty_used=2`, `qty_to_order=5` pour le palier tarifaire ;
+- `XHP-2` : DigiKey `455-2266-ND` ;
+- `XHP-3` : DigiKey `455-2219-ND` ;
+- total `BUY_NOW` actuel : **64,58 EUR**.
+
+La valeur 64,49 € ci-dessus est conservée uniquement comme trace du freeze
+initial ; elle ne doit pas être utilisée pour préparer la commande actuelle.
 
 ### Commander maintenant
 

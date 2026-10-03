@@ -1,5 +1,6 @@
 import csv
 import unittest
+from datetime import date
 from pathlib import Path
 
 
@@ -198,7 +199,11 @@ class Phase3FKcanHardwareTests(unittest.TestCase):
             "stock_snapshot",
         }
         self.assertEqual(required, set(self.procurement[0]))
-        self.assertTrue(all(row["verified_date"] == "2026-10-01" for row in self.procurement))
+        for row in self.procurement:
+            self.assertEqual(
+                row["verified_date"],
+                date.fromisoformat(row["verified_date"]).isoformat(),
+            )
         self.assertTrue(all(row["currency"] == "EUR" for row in self.procurement))
 
         covered = {
@@ -237,6 +242,8 @@ class Phase3FKcanHardwareTests(unittest.TestCase):
             ),
             "F_BAT": ("MINISMDC010F-2", "MINISMDC010F-2CT-ND", "5"),
             "D_BAT": ("SS16-E3/61T", "SS16-E3/61TGICT-ND", "3"),
+            "H_BAT": ("XHP-2", "455-2266-ND", "2"),
+            "H_KCAN": ("XHP-3", "455-2219-ND", "2"),
             "ADP_U1": ("PA0003C", "315-PA0003C-ND", "2"),
             "ADP_U2": ("PA0086C", "315-PA0086C-ND", "2"),
         }
@@ -249,6 +256,19 @@ class Phase3FKcanHardwareTests(unittest.TestCase):
             ), reference)
             self.assertEqual("BUY_NOW", row["buy_stage"])
             self.assertTrue(row["source_url"].startswith("https://"))
+
+    def test_procurement_supplier_urls_use_french_https_locales(self):
+        for row in self.procurement:
+            if row["distributor"] == "DigiKey":
+                self.assertTrue(
+                    row["source_url"].startswith("https://www.digikey.fr/fr/"),
+                    row["source_url"],
+                )
+            elif row["distributor"] == "Mouser France":
+                self.assertTrue(
+                    row["source_url"].startswith("https://www.mouser.fr/fr/"),
+                    row["source_url"],
+                )
 
     def test_procurement_totals_and_stages_are_stable(self):
         totals = {}
