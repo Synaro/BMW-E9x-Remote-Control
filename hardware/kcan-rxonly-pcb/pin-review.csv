@@ -1,0 +1,96 @@
+reference,pin,function,net,footprint_pad,status,notes
+U1,1,INH,NC,1,PASS,Open by design
+U1,2,TXD,TXD_SAFE,2,PASS,Only R2 and TP6; no copper to U2.Y
+U1,3,RXD,RXD_OD,3,PASS,TJA1055T/3 open-drain output pulled to 3V3
+U1,4,ERR,ERR_OD,4,PASS,TJA1055T/3 open-drain output pulled to 3V3
+U1,5,STB,STB_SAFE,5,PASS,10k pulldown and manual feed
+U1,6,EN,EN_SAFE,6,PASS,10k pulldown and manual feed
+U1,7,WAKE,BAT_LOCAL,7,PASS,Tied to protected BAT branch
+U1,8,RTH,RTH,8,PASS,5.62k to KCAN_H
+U1,9,RTL,RTL,9,PASS,5.62k to KCAN_L
+U1,10,VCC,5V_TJA,10,PASS,4.90 to 5.10V guaranteed
+U1,11,CANH,KCAN_H,11,PASS,To J2 pin1
+U1,12,CANL,KCAN_L,12,PASS,To J2 pin2
+U1,13,GND,GND,13,PASS,Common reference
+U1,14,BAT,BAT_LOCAL,14,PASS,R1 and C5 protected branch
+U2,1,/OE,OE_SAFE,1,PASS,10k to 3V3; no GPIO control
+U2,2,A,TX_GATE_IN,2,PASS,GPIO5 through R5 plus R4 pullup
+U2,3,GND,GND,3,PASS,
+U2,4,Y,TX_GATE_OUT,4,PASS,Ends only at TP5
+U2,5,VCC,3V3,5,PASS,C6 local bypass
+U3,1,I,BAT_PROTECTED,1,PASS,TLS715B0EJV50 pin assignment
+U3,2,EN,BAT_PROTECTED,2,PASS,No firmware control
+U3,3,GND,GND,3,PASS,
+U3,4,NC,NC,4,PASS,No copper
+U3,5,NC,NC,5,PASS,No copper
+U3,6,NC,NC,6,PASS,No copper
+U3,7,NC,NC,7,PASS,No copper
+U3,8,Q,5V_TJA,8,PASS,
+U3,EP,EXPOSED_PAD,GND,9,PASS,PG-DSO-8-52 local footprint; 2.65x3.00mm EP; nine 0.20mm drills; 600mm2 nominal top copper plus bottom plane
+H1,1,3V3,3V3,1,PASS,Espressif DevKitC-1 J1 pin1
+H1,2,3V3,NC,2,PASS,Not used by carrier PCB
+H1,3,RST,RESET,3,PASS,TP8 measurement only
+H1,4,GPIO4,RXD_GPIO,4,PASS,TWAI_RX BENCH_ONLY
+H1,5,GPIO5,TX_GPIO,5,PASS,Stops at U2.A and physical TX barrier
+H1,6,GPIO6,NC,6,PASS,Not used
+H1,7,GPIO7,ERR_GPIO,7,PASS,Input only
+H1,8,GPIO15,NC,8,PASS,Not used
+H1,9,GPIO16,NC,9,PASS,Not used
+H1,10,GPIO17,NC,10,PASS,Not used
+H1,11,GPIO18,NC,11,PASS,Not used
+H1,12,GPIO8,NC,12,PASS,Not used
+H1,13,GPIO3,NC,13,PASS,Not used
+H1,14,GPIO46,NC,14,PASS,Not used
+H1,15,GPIO9,NC,15,PASS,Not used
+H1,16,GPIO10,NC,16,PASS,Not used
+H1,17,GPIO11,NC,17,PASS,Not used
+H1,18,GPIO12,NC,18,PASS,Not used
+H1,19,GPIO13,NC,19,PASS,Not used
+H1,20,GPIO14,NC,20,PASS,Not used
+H1,21,5V,NC,21,PASS,Critical: no copper and no path to 5V_TJA or USB VBUS
+H1,22,GND,NC,22,PASS,Not used; common ground enters on H2 pin1
+H2,1,GND,GND,1,PASS,Only deliberate common rail between USB and 12V domains
+H2,2,GPIO43_U0TXD,NC,2,PASS,Not used
+H2,3,GPIO44_U0RXD,NC,3,PASS,Not used
+H2,4,GPIO1,NC,4,PASS,Not used
+H2,5,GPIO2,NC,5,PASS,Not used
+H2,6,GPIO42,NC,6,PASS,Not used
+H2,7,GPIO41,NC,7,PASS,Not used
+H2,8,GPIO40,NC,8,PASS,Not used
+H2,9,GPIO39,NC,9,PASS,Not used
+H2,10,GPIO38,NC,10,PASS,Not used
+H2,11,GPIO37,NC,11,PASS,Not used
+H2,12,GPIO36,NC,12,PASS,Not used
+H2,13,GPIO35,NC,13,PASS,Not used
+H2,14,GPIO0,NC,14,PASS,Not used
+H2,15,GPIO45,NC,15,PASS,Not used
+H2,16,GPIO48,NC,16,PASS,Not used
+H2,17,GPIO47,NC,17,PASS,Not used
+H2,18,GPIO21,NC,18,PASS,Not used
+H2,19,GPIO20_USB_D+,NC,19,PASS,Not used
+H2,20,GPIO19_USB_D-,NC,20,PASS,Not used
+H2,21,GND,NC,21,PASS,Not used
+H2,22,GND,NC,22,PASS,Not used
+J1,1,BENCH_POSITIVE,BAT_INPUT,1,PASS,J_BAT 10..18V current-limited input
+J1,2,GND,GND,2,PASS,JST B2B-XH-A pin order verified
+J2,1,KCAN_H,KCAN_H,1,PASS,J_KCAN bench bus only
+J2,2,KCAN_L,KCAN_L,2,PASS,J_KCAN bench bus only
+J2,3,GND,GND,3,PASS,JST B3B-XH-A pin order verified
+JP1,1,5V_TJA,5V_TJA,1,PASS,Manual receive-mode shunt
+JP1,2,RX_MODE_FEED,RX_MODE_FEED,2,PASS,Shunt must be absent at power-up
+F1,1,PPTC_INPUT,BAT_INPUT,1,PASS,MINISMDC010F-2 non-polarized
+F1,2,PPTC_OUTPUT,BAT_FUSED,2,PASS,
+D1,1,CATHODE,BAT_PROTECTED,1,PASS,KiCad D_SMA pad1 is cathode
+D1,2,ANODE,BAT_FUSED,2,PASS,Reverse-polarity series diode orientation
+C1,1,C_REG_IN,BAT_PROTECTED,1,PASS,100nF X7R non-polarized
+C1,2,C_REG_IN_RETURN,GND,2,PASS,
+C2,1,C_REG_OUT,5V_TJA,1,PASS,2.2uF X7R non-polarized; >=1uF worst-case required
+C2,2,C_REG_OUT_RETURN,GND,2,PASS,
+C3,1,C_VCC_BYPASS,5V_TJA,1,PASS,100nF X7R non-polarized
+C3,2,C_VCC_BYPASS_RETURN,GND,2,PASS,
+C4,1,C_VCC_RESERVOIR,5V_TJA,1,PASS,22uF X7R non-polarized
+C4,2,C_VCC_RESERVOIR_RETURN,GND,2,PASS,
+C5,1,C_BAT,BAT_LOCAL,1,PASS,10nF X7R non-polarized
+C5,2,C_BAT_RETURN,GND,2,PASS,
+C6,1,C_U2,3V3,1,PASS,100nF X7R non-polarized
+C6,2,C_U2_RETURN,GND,2,PASS,

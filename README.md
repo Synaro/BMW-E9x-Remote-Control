@@ -59,6 +59,16 @@ Les sources normatives sont volontairement séparées :
   contrôles. En cas de divergence, aucun résumé du README ne remplace ces
   fichiers.
 
+### Phase 3G — audit PCB manufacturable
+
+La conception PCB est actuellement **bloquée avant schéma et routage** : le
+rail 5 V provenant du VBUS USB du DevKit, après sa diode Schottky et `F_5V`, ne
+peut pas garantir les 4,75 V minimum requis par le TJA1055. Aucun fichier KiCad
+ou de fabrication n'a été produit et aucune correction électrique n'a été
+choisie sans revue humaine. Le calcul, les sources constructeurs et les options
+à arbitrer sont consignés dans
+[`docs/phase3g-pcb-feasibility-audit.md`](docs/phase3g-pcb-feasibility-audit.md).
+
 ### Non implémenté ou interdit à ce stade
 
 L'adaptateur BMW réel de verrouillage, les actionneurs, les commandes
@@ -132,6 +142,8 @@ La préparation K-CAN passive et le design RX-only gelé sont documentés dans
 [docs/phase3e-kcan-passive-acquisition.md](docs/phase3e-kcan-passive-acquisition.md)
 et
 [docs/phase3f-kcan-rxonly-design-freeze.md](docs/phase3f-kcan-rxonly-design-freeze.md).
+L'arrêt de conception PCB Phase 3G est motivé dans
+[docs/phase3g-pcb-feasibility-audit.md](docs/phase3g-pcb-feasibility-audit.md).
 Le configurateur PC est décrit dans
 [docs/configurator.md](docs/configurator.md).
 Le protocole entre configurateur et boîtier est spécifié dans

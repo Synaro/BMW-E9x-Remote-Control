@@ -138,6 +138,27 @@ Le gel est détaillé dans
 dans `hardware/kcan-rxonly/`. Il ne constitue pas une autorisation de connexion
 à la BMW et ne commence pas la Phase 4.
 
+## Phase 3G — Prototype PCB manufacturable K-CAN RX-only
+
+- [x] Ré-auditer les composants, brochages, modes du TJA1055, GPIO et sources
+  constructeurs avant tout dessin
+- [x] Vérifier la faisabilité PCB/PCBA et les options de sourcing fabricant
+- [x] Identifier le blocker du rail `5V_TJA` historique et arrêter avant layout
+- [x] Faire approuver une correction Phase 3G par `TLS715B0EJV50` dédié
+- [x] Refaire budget de tension, thermique, séquencement et backfeed
+- [x] Créer le schéma et le PCB KiCad natifs deux couches
+- [x] Exécuter ERC, DRC et revue pin-à-pin : zéro erreur/violation
+- [x] Préserver une coupure TX sans composant, cuivre, via ou zone commune
+- [x] Qualifier le sourcing exact sans substitution électrique
+- [x] Générer puis reparcourir le package de fabrication et les Gerbers
+- [ ] Obtenir une validation humaine avant toute commande
+
+L'audit historique et sa résolution sont détaillés dans
+[phase3g-pcb-feasibility-audit.md](phase3g-pcb-feasibility-audit.md) et
+[phase3g-pcb-manufacturing.md](phase3g-pcb-manufacturing.md). Les exports sont
+des livrables de revue seulement : aucune commande n'a été passée et cette
+phase ne commence pas la Phase 4.
+
 ## Phase 4 — Capture et analyse hors ligne
 
 - [ ] Implémenter le transport et l'écriture PC du format Capture V2
