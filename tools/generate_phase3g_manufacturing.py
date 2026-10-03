@@ -38,7 +38,17 @@ def mounted_references(bom_rows: list[dict[str, str]]) -> set[str]:
     return refs
 
 
-def write_csv(path: Path, fieldnames: list[str], rows: list[dict[str, str]]) -> None:
+def write_csv(
+    path: Path,
+    fieldnames: list[str],
+    rows: list[dict[str, str]],
+    *,
+    preserve_equivalent: bool = False,
+) -> None:
+    if preserve_equivalent and path.is_file():
+        existing_fields, existing_rows = read_csv(path)
+        if existing_fields == fieldnames and existing_rows == rows:
+            return
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("w", newline="", encoding="utf-8") as handle:
         writer = csv.DictWriter(handle, fieldnames=fieldnames, lineterminator="\n")
@@ -49,10 +59,27 @@ def write_csv(path: Path, fieldnames: list[str], rows: list[dict[str, str]]) -> 
 def build_pcba_files() -> None:
     bom_fields, bom_rows = read_csv(HW / "BOM_PHASE3G.csv")
     mounted_rows = [row for row in bom_rows if row["assembly"] == "MOUNT"]
+    canonical_bom = MANUFACTURING / "bom" / "BMW-E9x-KCAN-RXOnly-PCBA-BOM.csv"
     write_csv(
-        MANUFACTURING / "bom" / "BMW-E9x-KCAN-RXOnly-PCBA-BOM.csv",
+        canonical_bom,
         bom_fields,
         mounted_rows,
+        preserve_equivalent=True,
+    )
+
+    jlcpcb_bom_rows = [
+        {
+            "Comment": row["mpn"],
+            "Designator": ", ".join(row["reference"].split()),
+            "Footprint": row["package"],
+            "LCSC Part #": "",
+        }
+        for row in mounted_rows
+    ]
+    write_csv(
+        MANUFACTURING / "bom" / "BMW-E9x-KCAN-RXOnly-PCBA-BOM-JLCPCB.csv",
+        ["Comment", "Designator", "Footprint", "LCSC Part #"],
+        jlcpcb_bom_rows,
     )
 
     position_path = MANUFACTURING / "assembly" / "BMW-E9x-KCAN-RXOnly-all-pos.csv"
@@ -64,10 +91,32 @@ def build_pcba_files() -> None:
     missing = expected_refs - actual_refs
     if missing:
         raise ValueError(f"Mounted BOM references missing from placement data: {sorted(missing)}")
+    canonical_cpl = MANUFACTURING / "cpl" / "BMW-E9x-KCAN-RXOnly-PCBA-CPL.csv"
     write_csv(
-        MANUFACTURING / "cpl" / "BMW-E9x-KCAN-RXOnly-PCBA-CPL.csv",
+        canonical_cpl,
         position_fields,
         filtered,
+        preserve_equivalent=True,
+    )
+
+    jlcpcb_cpl_rows: list[dict[str, str]] = []
+    for row in filtered:
+        side = row["Side"]
+        if side not in {"top", "bottom"}:
+            raise ValueError(f"Unsupported placement side for {row[ref_column]}: {side}")
+        jlcpcb_cpl_rows.append(
+            {
+                "Designator": row[ref_column],
+                "Mid X": row["PosX"],
+                "Mid Y": row["PosY"],
+                "Layer": "Top" if side == "top" else "Bottom",
+                "Rotation": row["Rot"],
+            }
+        )
+    write_csv(
+        MANUFACTURING / "cpl" / "BMW-E9x-KCAN-RXOnly-PCBA-CPL-JLCPCB.csv",
+        ["Designator", "Mid X", "Mid Y", "Layer", "Rotation"],
+        jlcpcb_cpl_rows,
     )
 
 
