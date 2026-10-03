@@ -15,68 +15,57 @@ matériel.
 
 ## État du projet
 
-Le premier jalon logiciel est opérationnel :
+### Implémenté et vérifié hors véhicule
 
-- modèle d'état du véhicule avec qualité explicite des signaux ;
-- politique de sécurité indépendante du matériel ;
-- machine d'état événementielle complète ;
-- détection applicative configurable de trois impulsions de verrouillage ;
-- garde fermée par défaut sur leur provenance, fraîcheur et ordre ;
-- adaptateur générique de trames CAN testé sur données synthétiques, sans
-  identifiant BMW réel ;
-- profil utilisateur validé avant application, sans recompilation du noyau ;
-- catalogue exécutable limité aux 3 fonctions de télémétrie réellement
-  implémentées, toutes désactivées par défaut ;
-- résolution fermée par défaut entre préférence, implémentation, capacités et
-  qualification véhicule ;
-- configurateur Windows interactif avec enregistrement vérifié et remplacement sûr ;
-- protocole binaire de configuration versionné, borné et protégé par CRC ;
-- réception progressive des trames avec resynchronisation et délai inter-octets ;
-- persistance versionnée sur deux emplacements avec CRC et récupération ;
-- décisions et listes d'actions de taille fixe, sans allocation dynamique ;
-- arrêt fail-safe en cas de défaut d'un adaptateur ;
-- ports abstraits pour véhicule, actionneurs, minuterie et notifications ;
-- socle ESP32-S3 sous ESP-IDF 5.5.0 avec acquisition TWAI listen-only générique,
-  désactivée par défaut et protégée par deux barrières matérielles ;
-- modèle CAN indépendant de BMW, file RX fixe, statistiques et contrat de
-  capture V2 avec timestamps microsecondes et séquences monotones ;
-- contrats Phase 3C pour profils observés, preuves, sessions OEM et checklist
-  de prérequis, sans donnée BMW inventée ;
-- import tabulaire générique et validateur de provenance sans dépendance
-  propriétaire ;
-- qualification Phase 3D des observations réelles ISTA, Tool32 et TestO avec
-  exclusion structurelle des sources non fiables ;
-- timeline RPM observationnelle à seuils candidats, sans usage de commande ;
-- rejeu temporel de traces CAN et assemblage des signaux avec gestion de fraîcheur ;
-- protocole CAN synthétique réservé aux simulations hors véhicule ;
-- simulateur interactif avec parcours nominal et injection d'un défaut de sécurité ;
-- interface graphique Windows locale avec scénarios et bac à sable interactif ;
-- moteur de télémétrie V1 strictement en lecture seule avec protection moteur
-  froid, indicateur FAP et alerte de température de boîte ;
-- injection graphique des températures et alertes de transition avec hystérésis ;
-- session distante limitée à 15 minutes et reprise conducteur bornée à 60 secondes ;
-- profils véhicule extensibles avec qualification fermée par défaut ;
-- profil de découverte pour l'E90 2009 N47D20C boîte automatique ;
-- absence de capteur de capot déclarée pour ce véhicule de référence, contrôle activable au choix de l'utilisateur ;
-- import PC de journaux `python-can` vers un format canonique strict ;
-- capture PC bornée avec refus des interfaces sans mode silencieux documenté ;
-- sélection explicite d'un profil obligatoire dans le contrôleur ;
-- analyse différentielle hors ligne des octets et bits candidats ;
-- ESP32-S3-DevKitC-1-N8 sélectionné pour le prototype de banc avec USB filaire ;
-- endpoint USB ESP32-S3 raccordé au journal de configuration en flash ;
-- configurateur Windows relié au port COM avec écriture et relecture vérifiée ;
-- identification du produit, de la cible, de la version et des capacités avant écriture ;
-- journal de diagnostic circulaire, borné et dépourvu de données véhicule brutes ;
-- campagnes déterministes de perte, retard et corruption des données véhicule ;
-- superviseur logiciel des actionneurs avec heartbeat, séquencement, retours
-  d'état et défauts mémorisés ;
-- 135 tests C++, 15 scénarios du simulateur, 3 contrôles du configurateur et
-  70 tests Python automatisés en intégration continue.
+- cœur déterministe : modèle d'état, politique de sécurité, machine d'état,
+  décisions bornées et ports d'infrastructure ;
+- configuration utilisateur versionnée, validée, protégée par CRC et persistée
+  dans NVS sur ESP32-S3 ;
+- configurateur et simulateur Windows, scénarios synthétiques, rejeu de traces
+  et injections de défauts ;
+- détection abstraite de trois impulsions de verrouillage avec gardes de
+  provenance, fraîcheur et ordre, mais sans liaison BMW qualifiée ;
+- couche CAN générique, file RX fixe, statistiques et acquisition ESP-IDF/TWAI
+  exclusivement `TWAI_MODE_LISTEN_ONLY`, désactivée par défaut ;
+- contrats Capture V2, imports tabulaires et base de preuves Phase 3C/3D en
+  lecture seule ;
+- télémétrie V1 limitée aux trois fonctions réellement implémentées, toutes
+  désactivées par défaut ;
+- suites C++, Python, PlatformIO native/ESP32-S3 et simulateur Windows exécutées
+  en intégration continue.
 
-L'adaptateur BMW qui observera réellement le verrouillage, qualifiera la reprise
-conducteur et pilotera les sorties physiques reste à implémenter lorsque le
-matériel, les signaux et les critères d'acceptation auront été précisément
-définis.
+Ces validations sont logicielles et hors véhicule. Elles ne qualifient ni le
+montage électrique K-CAN, ni une fonction de démarrage réel.
+
+### Phase 3F — matériel K-CAN RX-only
+
+- design `KCAN_RX_ONLY_P3F` gelé et approvisionnement audité ;
+- carte d'achat actuelle : **ESP32-S3-DevKitC-1-N8R8** ; les 8 MiB de PSRAM
+  supplémentaires ne sont pas utilisés par le firmware ;
+- composants prêts à être commandés, mais montage pas encore assemblé ni
+  qualifié électriquement ;
+- `R_LINK_TX` physiquement DNP : aucune pièce, aucun cavalier et aucune
+  continuité TX autorisés ;
+- aucune connexion à la BMW avant un PASS électrique complet et documenté ;
+- aucune Phase 4 active.
+
+Les sources normatives sont volontairement séparées :
+
+- [`BOM.csv`](hardware/kcan-rxonly/BOM.csv) décrit ce qui est utilisé ;
+- [`procurement.csv`](hardware/kcan-rxonly/procurement.csv) décrit ce qui doit
+  être acheté, avec les SKU, quantités économiques et snapshots datés ;
+- [`netlist.csv`](hardware/kcan-rxonly/netlist.csv) décrit les connexions ;
+- [`wiring.md`](hardware/kcan-rxonly/wiring.md) décrit l'assemblage et les
+  contrôles. En cas de divergence, aucun résumé du README ne remplace ces
+  fichiers.
+
+### Non implémenté ou interdit à ce stade
+
+L'adaptateur BMW réel de verrouillage, les actionneurs, les commandes
+CAS/DDE/KL50, le remote-start actif et tout chemin TX véhicule restent absents.
+Les observations communautaires ou diagnostiques ne deviennent jamais une
+commande. Aucun essai BMW, rejeu ou contournement CAS/EWS/antidémarrage n'est
+autorisé par l'état actuel du dépôt.
 
 Le moteur de rejeu accepte des tableaux bornés et des fichiers de trace
 canoniques. Aucun identifiant BMW n'est supposé : le profil de référence reste
@@ -139,6 +128,10 @@ checklist de Phase 3C sont décrits dans
 La qualification des premières preuves réelles et les inconnues restantes sont
 décrites dans
 [docs/phase3d-real-evidence-qualification.md](docs/phase3d-real-evidence-qualification.md).
+La préparation K-CAN passive et le design RX-only gelé sont documentés dans
+[docs/phase3e-kcan-passive-acquisition.md](docs/phase3e-kcan-passive-acquisition.md)
+et
+[docs/phase3f-kcan-rxonly-design-freeze.md](docs/phase3f-kcan-rxonly-design-freeze.md).
 Le configurateur PC est décrit dans
 [docs/configurator.md](docs/configurator.md).
 Le protocole entre configurateur et boîtier est spécifié dans

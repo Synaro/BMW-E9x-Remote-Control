@@ -219,17 +219,34 @@ si l'utilisateur possède déjà des instruments conformes.
 | Périmètre | Montant indicatif HT, hors port |
 |---|---:|
 | minimum absolu, une pièce de chaque article réellement utilisé | 39,17 € |
-| commande recommandée avec rechanges et marge de soudure | 64,49 € |
+| commande recommandée lors du freeze initial du 1er octobre 2026 | 64,49 € |
 | alimentation + DMM seulement s'ils ne sont pas déjà possédés | +105,00 € |
 | qualification dynamique future : scope estimatif + PEAK | +611,00 € |
 
-À titre indicatif, 64,49 € HT correspondent à environ 77,39 € TTC à 20 %.
+À titre historique, 64,49 € HT correspondaient à environ 77,39 € TTC à 20 %.
 DigiKey annonce 25 € de port sous 75 € HT et le port gratuit à partir de 75 € ;
-le sous-panier DigiKey actuel reste sous ce seuil. Mouser annonce généralement
-la gratuité au-dessus de 75 €, mais le coût sous le seuil dépend du panier et
-de l'adresse : il n'est pas inventé ici. Regrouper les articles chez un seul
-distributeur peut être moins cher, mais uniquement si tous les MPN et suffixes
-restent strictement ceux de cette revue.
+le sous-panier DigiKey observé lors de l'audit restait sous ce seuil. Mouser
+annonçait généralement la gratuité au-dessus de 75 €, mais le coût sous le
+seuil dépend du panier et de l'adresse : il n'est pas inventé ici. Regrouper les
+articles chez un seul distributeur peut être moins cher, mais uniquement si
+tous les MPN et suffixes restent strictement ceux de cette revue.
+
+### Corrections procurement post-freeze
+
+La PR #34 a mis à jour l'état normatif d'achat sans changer le design
+électrique :
+
+- `RC1206FR-071KL` : `qty_used=1`, `qty_to_order=10`, quantité économique et
+  stock de rechange ;
+- `MINISMDC010F-2` : `qty_used=2`, `qty_to_order=5`, quantité de palier
+  tarifaire ;
+- `XHP-2` : DigiKey `455-2266-ND` ;
+- `XHP-3` : DigiKey `455-2219-ND` ;
+- total `BUY_NOW` actuel : **64,58 EUR**.
+
+`hardware/kcan-rxonly/procurement.csv` prévaut pour la commande actuelle. Les
+stocks, prix unitaires et dates ci-dessus restent le snapshot historique du
+1er octobre 2026 ; ils n'ont pas été présentés comme des données temps réel.
 
 ## Sources principales
 

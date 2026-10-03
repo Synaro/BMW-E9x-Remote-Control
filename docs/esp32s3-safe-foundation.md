@@ -2,8 +2,10 @@
 
 ## Périmètre livré
 
-La cible embarquée de référence est l'ESP32-S3-DevKitC-1-N8 sous **ESP-IDF
-5.5.0**. PlatformIO 6.12.0 fournit exactement cette version afin de conserver
+La cible embarquée de référence est l'ESP32-S3-DevKitC-1-N8R8 sous **ESP-IDF
+5.5.0**. Les 8 Mio de PSRAM de cette variante ne sont pas utilisés par le
+firmware actuel et ne constituent pas une dépendance. PlatformIO 6.12.0
+fournit exactement cette version afin de conserver
 une commande de build unique pour les développeurs et la CI. Le code vérifie
 aussi la version à la compilation ; un changement d'ESP-IDF doit donc être une
 décision explicite.
@@ -100,9 +102,11 @@ La future carte doit satisfaire simultanément les règles suivantes :
 6. le watchdog accélère le retour au reset, mais ne remplace jamais ces états
    matériels par défaut.
 
-La Phase 3B fige `S=HIGH`, `/OE=HIGH` et GPIO4/5/6/7 uniquement pour le banc
-TCAN1057AV-Q1 + SN74LVC1G125-Q1 sur DevKitC-1-N8. Ce choix ne s'applique ni au
-PCB final, ni à un bus BMW. Aucun câblage improvisé de DevKit vers un véhicule
+La Phase 3B fige historiquement `S=HIGH`, `/OE=HIGH` et GPIO4/5/6/7 uniquement
+pour le banc haute vitesse TCAN1057AV-Q1 + SN74LVC1G125-Q1. Les mêmes broches
+restent exposées sur la DevKitC-1-N8R8 actuelle, sans changement de cible
+PlatformIO. Ce choix ne s'applique ni au design K-CAN Phase 3F, ni au PCB
+final, ni à un bus BMW. Aucun câblage improvisé de DevKit vers un véhicule
 n'est autorisé.
 
 ## Porte de validation sur banc

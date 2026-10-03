@@ -56,7 +56,7 @@ sans ajouter de comportement.
 - [x] Ajouter un import tabulaire générique sans dépendance propriétaire
 - [x] Créer la checklist versionnée des prérequis remote-start
 - [x] Valider schémas, champs obligatoires, confiance, provenance et cohérence
-- [ ] Intégrer les relevés réels après réception et revue des données utilisateur
+- [x] Intégrer les relevés réels après réception et revue des données utilisateur
 
 La Phase 3C reste strictement documentaire et hors véhicule. Elle ne décode
 aucun signal BMW et n'ajoute ni émission CAN, ni commande CAS/DDE. Son contrat
@@ -126,6 +126,8 @@ Elle ne commence ni la Phase 4, ni une fonction de commande véhicule.
 - [x] Ajouter des contrôles documentaires sur la BOM et le netlist
 - [x] Auditer l'approvisionnement ligne par ligne, corriger les références
   retirées/incompatibles et figer une liste d'achat versionnée
+- [x] Intégrer les corrections procurement post-freeze de la PR #34 sans
+  modifier la BOM ni le design électrique
 - [ ] Assembler le prototype
 - [ ] Qualifier électriquement alimentation, reset, brownout, ACK et absence de
   dominant avec oscilloscope et générateur LS/FT

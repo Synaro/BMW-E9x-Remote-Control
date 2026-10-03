@@ -56,8 +56,10 @@ libère les barrières matérielles. Le correctif
 
 ## Configuration BENCH_ONLY
 
-La Phase 3B propose GPIO4/5/6/7 uniquement pour la DevKitC-1-N8 et son schéma
-TCAN1057AV-Q1 + SN74LVC1G125-Q1. L'acquisition reste désactivée par défaut. Pour
+La Phase 3B a proposé GPIO4/5/6/7 pour la DevKitC-1-N8 initiale et son schéma
+haute vitesse TCAN1057AV-Q1 + SN74LVC1G125-Q1. Ces GPIO restent exposés sur la
+DevKitC-1-N8R8 actuelle, mais cette configuration demeure exclusivement celle
+du banc haute vitesse Phase 3B. L'acquisition reste désactivée par défaut. Pour
 préparer ce banc après revue électrique :
 
 ```powershell
@@ -79,8 +81,8 @@ utilise ISO 11898-2 et dispose d'un mode silent matériel ; le TJA1055T/3
 low-speed/fault-tolerant doit être en mode normal pour fournir les données RX.
 Le futur profil K-CAN devra donc confirmer un trajet TX physiquement ouvert au
 lieu de prétendre que standby est un mode silent de capture. La décision et les
-essais requis sont décrits dans
-[phase3e-kcan-passive-acquisition.md](phase3e-kcan-passive-acquisition.md).
+essais requis, désormais gelés en Phase 3F, sont décrits dans
+[phase3f-kcan-rxonly-design-freeze.md](phase3f-kcan-rxonly-design-freeze.md).
 
 ## Bornes et statistiques
 

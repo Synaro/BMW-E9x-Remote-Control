@@ -1,8 +1,10 @@
 #pragma once
 
-// BENCH_ONLY: proposed only for the ESP32-S3-DevKitC-1-N8 and the reviewed
-// Phase 3B TCAN1057AV + SN74LVC1G125-Q1 bench circuit. This is never a BMW
-// wiring recommendation. Keep disabled until the electrical checklist starts.
+// BENCH_ONLY: proposed for the reviewed Phase 3B high-speed
+// TCAN1057AV + SN74LVC1G125-Q1 bench circuit. GPIO4/5/6/7 were reviewed on the
+// initial DevKitC-1-N8 and remain exposed on the current DevKitC-1-N8R8. This
+// is not the Phase 3F K-CAN design and is never a BMW wiring recommendation.
+// Keep disabled until the electrical checklist starts.
 // The copied local file is ignored by Git.
 #define BMW_REMOTE_BENCH_ONLY_TWAI_ENABLED 0
 #define BMW_REMOTE_BENCH_ONLY_TWAI_RX_GPIO 4

@@ -9,15 +9,19 @@ dédiée, conçue après la qualification des bus et des actionneurs.
 
 La carte de développement de référence est :
 
-- **Espressif ESP32-S3-DevKitC-1-N8** ;
-- module avec antenne PCB, 8 Mo de flash et sans PSRAM ;
+- **Espressif ESP32-S3-DevKitC-1-N8R8** ;
+- module avec antenne PCB, 8 Mio de flash et 8 Mio de PSRAM ;
 - identifiant PlatformIO `esp32-s3-devkitc-1` ;
 - environnement du dépôt `esp32s3dev`.
 
-Le modèle `N8R8` reste compatible pour les essais si le `N8` est indisponible,
-mais sa PSRAM n'est pas requise. Les cartes génériques simplement vendues sous
-le nom « ESP32-S3 » ne sont pas la cible de référence : brochage, régulateur,
-USB et qualité d'assemblage peuvent varier.
+Le modèle `N8` était la sélection initiale. Sa référence distributeur n'est plus
+retenue et `N8R8` est désormais la carte d'achat normative de
+`hardware/kcan-rxonly/procurement.csv`. Les 8 Mio de PSRAM supplémentaires ne
+sont pas requis ni utilisés par le firmware actuel. Ce changement commercial ne
+modifie ni l'environnement PlatformIO, ni les GPIO4/GPIO5/GPIO7 déjà revus.
+Les cartes génériques simplement vendues sous le nom « ESP32-S3 » ne sont pas la
+cible de référence : brochage, régulateur, USB et qualité d'assemblage peuvent
+varier.
 
 Cette sélection apporte un environnement largement disponible, un port USB
 natif, suffisamment de mémoire, le Wi-Fi et le Bluetooth LE pour des évolutions
@@ -30,16 +34,16 @@ La première étape n'utilise aucun signal du véhicule. La liste minimale est :
 
 | Quantité | Élément | Exigence |
 | ---: | --- | --- |
-| 1 | ESP32-S3-DevKitC-1-N8 | Carte Espressif officielle de préférence |
+| 1 | ESP32-S3-DevKitC-1-N8R8 | Carte Espressif officielle retenue par le procurement Phase 3F |
 | 1 | Câble USB de données | Connecteur adapté à la révision reçue, pas un câble de charge seule |
 | 1 | Plaque d'essai | Format compatible avec la largeur de la carte |
 | 1 jeu | Fils Dupont | Pour les futures charges logiques de banc uniquement |
 
 Un ordinateur suffit à alimenter et programmer cette première maquette par
-USB. La Phase 3B autorise désormais l'achat des composants du **banc 5 V**
-décrits dans [phase3b-can-bench-hardware.md](phase3b-can-bench-hardware.md).
-**Aucun câble du véhicule et aucune alimentation automobile 12 V ne doivent
-être raccordés.**
+USB. Pour le prototype K-CAN RX-only actuel, les achats normatifs sont ceux de
+[`../hardware/kcan-rxonly/procurement.csv`](../hardware/kcan-rxonly/procurement.csv),
+et non une liste recopiée dans ce document. **Aucun câble du véhicule et aucune
+alimentation automobile 12 V ne doivent être raccordés.**
 
 ## Architecture de communication prévue
 
@@ -64,21 +68,21 @@ Un seul bus sera étudié à la fois en écoute seule. Si l'observation simultan
 plusieurs bus devient un besoin validé, elle fera l'objet d'une nouvelle décision
 d'architecture ; aucun second contrôleur CAN n'est retenu aujourd'hui.
 
-Le banc haute vitesse de Phase 3B retient précisément :
+Le banc haute vitesse historique de Phase 3B retient précisément :
 
 - `TCAN1057AVDRQ1`, alimenté en 5 V avec `VIO=3,3 V`, en Silent permanent ;
 - `CLVC1G125QDBVRQ1` (`SN74LVC1G125-Q1`) comme inhibition physique TXD ;
-- GPIO4/5/6/7 uniquement sur la DevKitC-1-N8 et uniquement en `BENCH_ONLY` ;
+- GPIO4/5/6/7 uniquement sur la DevKitC-1 revue et uniquement en `BENCH_ONLY` ;
 - pulls externes 10 kΩ sur `S`, `/OE` et `TXD`.
 
-Ce choix qualifie uniquement une couche physique ISO 11898-2 haute vitesse.
+Ce choix documente uniquement une couche physique ISO 11898-2 haute vitesse.
 Il ne convient pas à la couche physique K-CAN basse vitesse tolérante aux
-défauts. La Phase 3E retient désormais `TJA1055T/3/2Z` comme **candidat de
-prototype K-CAN RX-only**, après comparaison avec MAX3055 et AMIS-41683. Ce
-choix n'est pas une qualification véhicule : le trajet TX doit rester
-physiquement ouvert et le banc doit réussir les essais d'absence d'ACK et de
-dominant décrits dans
-[phase3e-kcan-passive-acquisition.md](phase3e-kcan-passive-acquisition.md).
+défauts. La Phase 3F a depuis gelé un prototype K-CAN RX-only distinct autour
+du `TJA1055T/3/2Z`, après la comparaison Phase 3E avec MAX3055 et AMIS-41683.
+Ce design gelé n'est pas encore qualifié électriquement et ne vaut pas
+qualification véhicule : le trajet TX reste physiquement ouvert et le banc doit
+réussir les essais d'absence d'ACK et de dominant décrits dans
+[phase3f-kcan-rxonly-design-freeze.md](phase3f-kcan-rxonly-design-freeze.md).
 `LM5164-Q1` reste une base
 d'étude de l'alimentation automobile finale, absente du banc 5 V.
 
@@ -118,29 +122,39 @@ Sur une DevKitC-1 qui possède deux connecteurs, utiliser celui identifié
 cas, le premier test tente d'adopter automatiquement l'unique nouveau port. En
 utilisation manuelle, relancer `-ListDevices` et reprendre avec ce numéro.
 
-### Phase B — un CAN simulé sur table
+### Phase B — qualification sur bus de banc isolé
 
-1. Assembler le schéma TCAN1057AV-Q1 + SN74LVC1G125-Q1 de Phase 3B.
-2. Inspecter et mesurer les deux barrières avant d'alimenter.
-3. Utiliser une alimentation de laboratoire limitée en courant.
-4. Exécuter entièrement la checklist alimentation, reset, brownout, firmware
-   absent, watchdog, débits, saturation et erreurs.
-5. Archiver les formes d'onde et obtenir deux revues indépendantes.
+1. Pour le matériel actuellement acheté, assembler uniquement la variante
+   `KCAN_RX_ONLY_P3F` décrite par `BOM.csv`, `netlist.csv` et `wiring.md`.
+2. Inspecter hors tension `R_LINK_TX` DNP, les valeurs et les deux domaines
+   d'alimentation avant toute mise sous tension.
+3. Utiliser une alimentation de laboratoire limitée en courant, sans véhicule.
+4. Exécuter entièrement la procédure Phase 3F : alimentation, reset, brownout,
+   firmware absent, absence d'ACK, absence de dominant et réception LS/FT.
+5. Archiver les formes d'onde et obtenir les revues prévues.
 6. Conserver le statut global `FAIL` tant qu'une seule ligne manque.
+
+Le montage haute vitesse TCAN1057AV-Q1 de Phase 3B reste documenté comme banc
+distinct ; il n'est ni le procurement K-CAN actuel, ni un équivalent de la
+couche physique ISO 11898-3.
 
 ### Phase C — observation passive du véhicule, non autorisée
 
 Cette phase n'est pas ouverte. Même après un PASS de banc complet, une nouvelle
 autorisation et une décision de couche physique adaptée au bus visé seront
-requises. La Phase 3B ne valide notamment aucun câblage K-CAN ou PT-CAN BMW.
+requises. Ni la Phase 3B ni le gel Phase 3F ne valident un câblage K-CAN ou
+PT-CAN BMW.
 
 Les actionneurs et le démarrage restent hors périmètre tant que cette phase n'a
 pas produit de résultats reproductibles.
 
 Les critères détaillés et la décision ESP-IDF sont dans
 [esp32s3-safe-foundation.md](esp32s3-safe-foundation.md). Un échec de validation
-sur banc interdit toute connexion au véhicule. Le schéma, les résistances et la
-checklist de Phase 3B se trouvent dans
+sur banc interdit toute connexion au véhicule. Le schéma actuel, les
+résistances et la checklist K-CAN se trouvent dans
+[phase3f-kcan-rxonly-design-freeze.md](phase3f-kcan-rxonly-design-freeze.md) et
+[`../hardware/kcan-rxonly/wiring.md`](../hardware/kcan-rxonly/wiring.md). Le
+banc haute vitesse historique reste dans
 [phase3b-can-bench-hardware.md](phase3b-can-bench-hardware.md).
 
 ## Pourquoi la carte de développement ne restera pas dans le véhicule
