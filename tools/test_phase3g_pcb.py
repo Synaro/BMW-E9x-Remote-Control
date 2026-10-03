@@ -19,6 +19,18 @@ def read_csv(path: Path) -> list[dict[str, str]]:
         return list(csv.DictReader(handle))
 
 
+def read_csv_with_fields(path: Path) -> tuple[list[str], list[dict[str, str]]]:
+    with path.open(newline="", encoding="utf-8-sig") as handle:
+        reader = csv.DictReader(handle)
+        if reader.fieldnames is None:
+            raise AssertionError(f"CSV without a header: {path}")
+        return list(reader.fieldnames), list(reader)
+
+
+def split_designators(value: str) -> list[str]:
+    return [designator for designator in re.split(r"[,\s]+", value.strip()) if designator]
+
+
 def sexpr_blocks(text: str, prefix: str) -> list[str]:
     """Extract balanced KiCad s-expression blocks beginning with prefix."""
     blocks: list[str] = []
@@ -85,7 +97,9 @@ class Phase3GPcbTests(unittest.TestCase):
             KICAD / "phase3g-drc-final.rpt",
             MFG / "BMW-E9x-KCAN-RXOnly-fabrication.zip",
             MFG / "bom" / "BMW-E9x-KCAN-RXOnly-PCBA-BOM.csv",
+            MFG / "bom" / "BMW-E9x-KCAN-RXOnly-PCBA-BOM-JLCPCB.csv",
             MFG / "cpl" / "BMW-E9x-KCAN-RXOnly-PCBA-CPL.csv",
+            MFG / "cpl" / "BMW-E9x-KCAN-RXOnly-PCBA-CPL-JLCPCB.csv",
             MFG / "drawings" / "BMW-E9x-KCAN-RXOnly-schematic.pdf",
             MFG / "drawings" / "BMW-E9x-KCAN-RXOnly-assembly.pdf",
             MFG / "drawings" / "BMW-E9x-KCAN-RXOnly-fabrication.pdf",
@@ -178,6 +192,58 @@ class Phase3GPcbTests(unittest.TestCase):
         self.assertNotIn("DEV1", pcba_refs)
         self.assertNotIn("R_LINK_TX", pcba_refs)
         self.assertFalse(any(ref.startswith("TP") for ref in pcba_refs))
+
+    def test_jlcpcb_bom_and_cpl_match_canonical_assembly_data(self):
+        canonical_bom = read_csv(MFG / "bom" / "BMW-E9x-KCAN-RXOnly-PCBA-BOM.csv")
+        canonical_cpl = read_csv(MFG / "cpl" / "BMW-E9x-KCAN-RXOnly-PCBA-CPL.csv")
+        jlcpcb_bom_fields, jlcpcb_bom = read_csv_with_fields(
+            MFG / "bom" / "BMW-E9x-KCAN-RXOnly-PCBA-BOM-JLCPCB.csv"
+        )
+        jlcpcb_cpl_fields, jlcpcb_cpl = read_csv_with_fields(
+            MFG / "cpl" / "BMW-E9x-KCAN-RXOnly-PCBA-CPL-JLCPCB.csv"
+        )
+
+        self.assertEqual(
+            ["Comment", "Designator", "Footprint", "LCSC Part #"],
+            jlcpcb_bom_fields,
+        )
+        self.assertEqual(
+            ["Designator", "Mid X", "Mid Y", "Layer", "Rotation"],
+            jlcpcb_cpl_fields,
+        )
+
+        expected_refs = {ref for row in canonical_bom for ref in row["reference"].split()}
+        bom_refs = {ref for row in jlcpcb_bom for ref in split_designators(row["Designator"])}
+        cpl_refs = [row["Designator"] for row in jlcpcb_cpl]
+        self.assertEqual(expected_refs, bom_refs)
+        self.assertEqual(expected_refs, set(cpl_refs))
+        self.assertEqual(len(expected_refs), len(cpl_refs))
+        self.assertEqual(len(cpl_refs), len(set(cpl_refs)))
+
+        forbidden = {"DEV1", "R_LINK_TX", "SH_RX_MODE"}
+        self.assertFalse(expected_refs & forbidden)
+        self.assertFalse(any(ref.startswith("TP") or ref.startswith("MH") for ref in expected_refs))
+
+        canonical_by_ref = {row["Ref"]: row for row in canonical_cpl}
+        for row in jlcpcb_cpl:
+            canonical = canonical_by_ref[row["Designator"]]
+            self.assertEqual(canonical["PosX"], row["Mid X"])
+            self.assertEqual(canonical["PosY"], row["Mid Y"])
+            self.assertEqual(canonical["Rot"], row["Rotation"])
+            self.assertEqual("Top" if canonical["Side"] == "top" else "Bottom", row["Layer"])
+            self.assertIn(row["Layer"], {"Top", "Bottom"})
+
+        canonical_bom_by_designators = {
+            frozenset(row["reference"].split()): row for row in canonical_bom
+        }
+        for row in jlcpcb_bom:
+            designators = split_designators(row["Designator"])
+            canonical = canonical_bom_by_designators[frozenset(designators)]
+            self.assertEqual(canonical["mpn"], row["Comment"])
+            self.assertEqual(canonical["package"], row["Footprint"])
+            self.assertEqual("", row["LCSC Part #"])
+            if len(designators) > 1:
+                self.assertIn(",", row["Designator"])
 
     def test_phase3g_procurement_excludes_perfboard_adapters(self):
         text = (HW / "procurement_PHASE3G.csv").read_text(encoding="utf-8")
