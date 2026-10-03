@@ -1,0 +1,17 @@
+BMW E9x K-CAN RX-only Phase 3G - REVIEW ONLY / DO NOT ORDER
+
+Board: 120.0 x 80.0 mm, two layers, FR-4, 1.6 mm, 1 oz copper.
+Surface finish for quote: lead-free HASL or ENIG; no electrical substitution.
+Minimum routed track: 0.20 mm. Minimum clearance: 0.20 mm.
+Ordinary via: 0.60 mm pad / 0.30 mm drill.
+U3 exposed-pad thermal vias: nine 0.50 mm pads / 0.20 mm drills.
+Mounting holes: four 3.20 mm NPTH.
+
+Critical safety feature:
+TP_GATE_Y and TP_TXD are separate copper islands. There is no component,
+footprint, pad, via, track, or zone connecting them. Preserve both
+TX_PHYSICAL_GAP_KEEP_OUT rule areas. Never add or populate an R_LINK_TX.
+
+Exact critical MPNs are listed in the PCBA BOM. No silent substitution.
+ESP32-S3-DEVKITC-1-N8R8 and the RX_MODE shunt are user installed.
+This package is for manufacturing review only and is not a purchase release.

@@ -1,0 +1,13 @@
+# Local KiCad UI state, backups, and autorouter intermediates.
+kicad/*.kicad_prl
+kicad/*.kicad_sch-bak
+kicad/*.kicad_pcb-bak
+kicad/*-backups/
+kicad/~*.kicad_*
+kicad/*.dsn
+kicad/*.ses
+kicad/phase3g-drc-initial.rpt
+kicad/phase3g-drc-routed.rpt
+.probe*
+freerouting.log
+en/freerouting.log

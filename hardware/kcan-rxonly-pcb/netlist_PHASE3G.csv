@@ -1,0 +1,41 @@
+net,from_ref,from_pin,through_ref,through_value,to_ref,to_pin,assembly,notes
+GND,J1,2,DIRECT,0,H2,1,MOUNT,Common ground only between USB and 12V domains
+GND,J2,3,DIRECT,0,U1,13,MOUNT,Bus reference
+GND,U3,3,DIRECT,0,U3,9,MOUNT,Exposed pad grounded with thermal copper and nine vias
+3V3,H1,1,DIRECT,0,U2,5,MOUNT,Logic supply only
+3V3,H1,1,C6,100nF,GND,GND,MOUNT,U2 bypass
+BAT_INPUT,J1,1,F1,0.10A_hold,BAT_FUSED,rail,MOUNT,Bench 10 to 18V current limited
+BAT_FUSED,F1,2,D1,SS16,BAT_PROTECTED,rail,MOUNT,D1 pad2 anode BAT_FUSED pad1 cathode BAT_PROTECTED
+BAT_PROTECTED,D1,1,DIRECT,0,U3,1,MOUNT,LDO input
+BAT_PROTECTED,D1,1,DIRECT,0,U3,2,MOUNT,LDO enabled only by protected 12V
+BAT_PROTECTED,BAT_PROTECTED,rail,C1,100nF,GND,GND,MOUNT,C_REG_IN placed at U3
+BAT_PROTECTED,BAT_PROTECTED,rail,R1,1k,BAT_LOCAL,rail,MOUNT,TJA BAT branch
+BAT_LOCAL,R1,2,C5,10nF,GND,GND,MOUNT,C_BAT placed at U1
+BAT_LOCAL,R1,2,DIRECT,0,U1,14,MOUNT,TJA BAT
+BAT_LOCAL,U1,14,DIRECT,0,U1,7,MOUNT,WAKE tied to BAT_LOCAL
+5V_TJA,U3,8,DIRECT,0,U1,10,MOUNT,Dedicated regulator output no series fuse
+5V_TJA,U3,8,C2,2.2uF,GND,GND,MOUNT,C_REG_OUT LDO stability capacitor
+5V_TJA,U3,8,C3,100nF,GND,GND,MOUNT,C_VCC local U1 bypass
+5V_TJA,U3,8,C4,22uF,GND,GND,MOUNT,C_VCC reservoir
+TXD_SAFE,5V_TJA,rail,R2,10k,U1,2,MOUNT,Only populated source on TJA TXD
+TXD_SAFE,U1,2,DIRECT,0,TP6,1,MOUNT,No path to U2.Y or TP5
+TX_GPIO,H1,5,R5,1k,U2,2,MOUNT,TWAI_TX stops at buffer input
+TX_GPIO,3V3,rail,R4,100k,U2,2,MOUNT,Defines A while GPIO floats
+TX_GATE_OUT,U2,4,DIRECT,0,TP5,1,MOUNT,Physical dead-end no link footprint
+OE_SAFE,3V3,rail,R3,10k,U2,1,MOUNT,Output disabled by hardware
+RXD_OD,3V3,rail,R6,3.3k,U1,3,MOUNT,Open-drain pull-up
+RXD_OD,U1,3,R7,1k,H1,4,MOUNT,GPIO4 TWAI_RX BENCH_ONLY
+ERR_OD,3V3,rail,R8,3.3k,U1,4,MOUNT,Open-drain pull-up
+ERR_OD,U1,4,R9,1k,H1,7,MOUNT,GPIO7 BENCH_ONLY
+RX_MODE_FEED,5V_TJA,rail,JP1,REMOVABLE_SHUNT,RX_MODE_FEED,rail,REMOVE_AT_BOOT,Absent at boot
+STB_SAFE,RX_MODE_FEED,rail,R10,1k,U1,5,MOUNT,Manual only
+STB_SAFE,U1,5,R11,10k,GND,GND,MOUNT,Default LOW
+EN_SAFE,RX_MODE_FEED,rail,R12,1k,U1,6,MOUNT,Manual only
+EN_SAFE,U1,6,R13,10k,GND,GND,MOUNT,Default LOW
+KCAN_H,J2,1,DIRECT,0,U1,11,MOUNT,No 120 ohm cross termination
+KCAN_H,J2,1,R14,5.62k,U1,8,MOUNT,Weak matched local termination
+KCAN_L,J2,2,DIRECT,0,U1,12,MOUNT,No 120 ohm cross termination
+KCAN_L,J2,2,R15,5.62k,U1,9,MOUNT,Weak matched local termination
+RESET,H1,3,DIRECT,0,TP8,1,MOUNT,Measurement only
+DEVKIT_5V_NC,H1,21,OPEN,NC,NC,NC,DNP,No copper to 5V_TJA or VBUS
+TX_BARRIER,U2,4,PHYSICAL_GAP,NO_COPPER,U1,2,DNP,TP5 and TP6 are distinct nets with no footprint track via zone or jumper

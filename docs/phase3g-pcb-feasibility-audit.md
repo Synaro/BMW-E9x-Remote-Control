@@ -1,8 +1,21 @@
 # Phase 3G — Audit de faisabilité du prototype PCB K-CAN RX-only
 
-## Verdict
+## Résolution autorisée après audit
 
-**Statut : `BLOCKED / NEEDS REVIEW`.**
+Ce document conserve l'audit initial et explique pourquoi la première
+architecture a été arrêtée. Son blocker a ensuite été levé par une modification
+électrique **strictement limitée à la Phase 3G** et explicitement autorisée :
+
+`BAT_PROTECTED -> TLS715B0EJV50 -> 5V_TJA`, sans liaison au 5 V/VBUS du DevKit.
+
+La résolution, le budget garanti, le PCB, les contrôles et les exports sont
+documentés dans [phase3g-pcb-manufacturing.md](phase3g-pcb-manufacturing.md).
+L'historique Phase 3F n'a pas été modifié. Le verdict ci-dessous est donc le
+verdict historique de l'audit au commit d'arrêt, pas le statut final 3G-A.
+
+## Verdict historique avant autorisation de correction
+
+**Statut historique : `BLOCKED / NEEDS REVIEW` (blocker ensuite résolu en 3G-A).**
 
 L'architecture RX-only reste cohérente dans son principe, mais la source
 `5V_TJA` figée en Phase 3F n'offre pas une marge d'alimentation garantie au

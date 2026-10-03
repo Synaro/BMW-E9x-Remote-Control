@@ -143,21 +143,21 @@ dans `hardware/kcan-rxonly/`. Il ne constitue pas une autorisation de connexion
 - [x] Ré-auditer les composants, brochages, modes du TJA1055, GPIO et sources
   constructeurs avant tout dessin
 - [x] Vérifier la faisabilité PCB/PCBA et les options de sourcing fabricant
-- [!] **BLOCKED** : le rail `5V_TJA` issu du VBUS USB via la diode du DevKit et
-  `F_5V` ne garantit pas les 4,75 V minimum du TJA1055
-- [ ] Faire approuver une architecture d'alimentation corrigée et son budget
-  de tolérances
-- [ ] Relancer l'audit électrique complet après cette décision
-- [ ] Créer le schéma et le PCB KiCad seulement si tous les blockers sont levés
-- [ ] Exécuter ERC, DRC et revue pin-à-pin
-- [ ] Qualifier le sourcing exact sans substitution électrique
-- [ ] Générer et revoir le package de fabrication
+- [x] Identifier le blocker du rail `5V_TJA` historique et arrêter avant layout
+- [x] Faire approuver une correction Phase 3G par `TLS715B0EJV50` dédié
+- [x] Refaire budget de tension, thermique, séquencement et backfeed
+- [x] Créer le schéma et le PCB KiCad natifs deux couches
+- [x] Exécuter ERC, DRC et revue pin-à-pin : zéro erreur/violation
+- [x] Préserver une coupure TX sans composant, cuivre, via ou zone commune
+- [x] Qualifier le sourcing exact sans substitution électrique
+- [x] Générer puis reparcourir le package de fabrication et les Gerbers
 - [ ] Obtenir une validation humaine avant toute commande
 
-L'audit et sa condition d'arrêt sont détaillés dans
-[phase3g-pcb-feasibility-audit.md](phase3g-pcb-feasibility-audit.md). Aucun
-fichier PCB ou fabricant n'a été généré, aucune correction d'alimentation n'a
-été appliquée et cette phase ne commence pas la Phase 4.
+L'audit historique et sa résolution sont détaillés dans
+[phase3g-pcb-feasibility-audit.md](phase3g-pcb-feasibility-audit.md) et
+[phase3g-pcb-manufacturing.md](phase3g-pcb-manufacturing.md). Les exports sont
+des livrables de revue seulement : aucune commande n'a été passée et cette
+phase ne commence pas la Phase 4.
 
 ## Phase 4 — Capture et analyse hors ligne
 
