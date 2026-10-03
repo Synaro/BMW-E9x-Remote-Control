@@ -235,7 +235,7 @@ class Phase3FKcanHardwareTests(unittest.TestCase):
                 "356-EP32S3DVKTC1N8R8",
                 "1",
             ),
-            "F_BAT": ("MINISMDC010F-2", "MINISMDC010F-2CT-ND", "4"),
+            "F_BAT": ("MINISMDC010F-2", "MINISMDC010F-2CT-ND", "5"),
             "D_BAT": ("SS16-E3/61T", "SS16-E3/61TGICT-ND", "3"),
             "ADP_U1": ("PA0003C", "315-PA0003C-ND", "2"),
             "ADP_U2": ("PA0086C", "315-PA0086C-ND", "2"),
@@ -262,7 +262,7 @@ class Phase3FKcanHardwareTests(unittest.TestCase):
                 row["estimated_total"]
             )
 
-        self.assertAlmostEqual(64.49, totals["BUY_NOW"], places=2)
+        self.assertAlmostEqual(64.58, totals["BUY_NOW"], places=2)
         self.assertAlmostEqual(105.00, totals["BUY_NOW_IF_NOT_OWNED"], places=2)
         self.assertAlmostEqual(611.00, totals["BUY_LATER"], places=2)
         self.assertAlmostEqual(0.00, totals["DO_NOT_BUY"], places=2)
