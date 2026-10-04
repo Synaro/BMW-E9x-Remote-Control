@@ -1,6 +1,6 @@
 Statistiques du PCB
 =====================
-- Date: 03/10/2026 21:01:06
+- Date: 04/10/2026 02:30:47
 - Projet: BMW-E9x-KCAN-RXOnly
 - Nom du CI: BMW-E9x-KCAN-RXOnly
 
@@ -9,21 +9,21 @@ Circuit Imprimé
 - Largeur: 120,0000 mm
 - Hauteur: 80,0000 mm
 - Surface: 9600,00 mm²
-- Zone de cuivre dessus: 912,914 mm²
-- Zone cuivre dessous: 8903,395 mm²
+- Zone de cuivre dessus: 912,294 mm²
+- Zone cuivre dessous: 8898,047 mm²
 - Isolation minimum de piste: 0,2016 mm
 - Largeur minimum de piste: 0,2000 mm
-- Diamètre de perçage min: 0,2000 mm
+- Diamètre de perçage min: 0,3000 mm
 - Epaisseur du PCB: 1,6000 mm
 
 - Surface empreintes dessus: 1083,042 mm²
-- Surface empreintes dessous: 217,086 mm²
+- Surface empreintes dessous: 211,506 mm²
 - Densité des composants dessus: 11,28 %
-- Densité des composants dessous: 2,26 %
+- Densité des composants dessous: 2,20 %
 Pads
 ----
-- Pad traversant: 60
-- SMD: 94
+- Pad traversant: 51
+- SMD: 93
 - Connecteur: 0
 - NPTH: 4
 - Castellated: 0
@@ -31,7 +31,7 @@ Pads
 
 Vias
 ----
-- Vias traversantes: 29
+- Vias traversantes: 33
 - Vias aveugles: 0
 - Vias enterrées: 0
 - Micro vias: 0
@@ -52,7 +52,6 @@ Perçages
 | Nombre | Forme |  Taille X |  Taille Y |        Métallisé | Via/Pad | Premiere couche | Dernière couche |
 |--------|-------|-----------|-----------|------------------|---------|-----------------|-----------------|
 |     48 |  Rond | 1,0000 mm | 1,0000 mm | Trous métallisés |     Pad |            F.Cu |            B.Cu |
-|     29 |  Rond | 0,3000 mm | 0,3000 mm | Trous métallisés |     Via |            F.Cu |            B.Cu |
-|      9 |  Rond | 0,2000 mm | 0,2000 mm | Trous métallisés |     Pad |            F.Cu |            B.Cu |
+|     33 |  Rond | 0,3000 mm | 0,3000 mm | Trous métallisés |     Via |            F.Cu |            B.Cu |
 |      4 |  Rond | 3,2000 mm | 3,2000 mm |             NPTH |     Pad |            F.Cu |            B.Cu |
 |      3 |  Rond | 0,9500 mm | 0,9500 mm | Trous métallisés |     Pad |            F.Cu |            B.Cu |

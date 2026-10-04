@@ -16,7 +16,8 @@ réseau ISO 11898-3 de banc qualifié, charges factices, bracelet ESD et loupe.
 - [ ] deux couches, 1,6 mm, 1 oz conformément au devis ;
 - [ ] aucun court-circuit, pont de masque ou cuivre parasite visible ;
 - [ ] U3 correspond au boîtier PG-DSO-8-52 et son pad exposé est soudé ;
-- [ ] neuf vias thermiques présents sous U3 ;
+- [ ] aucun trou dans le pad exposé U3 ; quatre vias GND périphériques
+  0,60/0,30 mm présents et tentés des deux côtés ;
 - [ ] polarité et marquage D1 vérifiés ;
 - [ ] références U1/U2/U3 exactes, sans substitution ;
 - [ ] JST, sockets et JP1 orientés comme le plan d'assemblage ;

@@ -50,11 +50,18 @@ TJA1055/réseaux lors du retrait du 12 V. Ajouter un composant non spécifié
 créerait un chemin inverse inutile vers `BAT_PROTECTED`.
 
 Les broches U3 4–7 restent ouvertes. L'exposed pad emploie l'empreinte locale
-Phase 3G `PG-DSO-8-52`, conforme au dessin Infineon courant : corps
-3,90 x 4,90 mm, pas 1,27 mm et pad 2,65 x 3,00 mm. Elle comporte neuf vias
-thermiques de 0,20 mm dans des pads de 0,50 mm. Le remplissage cuivre supérieur
-mesuré par KiCad après routage vaut 459,43 mm², auquel s'ajoute le plan GND de
-la face inférieure. Il dépasse donc la référence thermique de 300 mm².
+Phase 3G.1 `PG-DSO-8-52`, conforme au dessin Infineon courant : corps
+3,90 x 4,90 mm, pas 1,27 mm et pad NSMD 2,65 x 3,00 mm. Il ne contient plus
+aucun trou. Quatre vias GND périphériques tentés, pads 0,60 mm / forets
+0,30 mm, sont placés à `x=±0,80 mm`, `y=±2,00 mm` par rapport au centre U3.
+Ils restent sous le corps, mais hors du cuivre et des ouvertures de pâte du pad
+exposé. Le remplissage cuivre supérieur mesuré par l'API KiCad après routage
+vaut **459,429 mm²**, auquel s'ajoute le plan GND de la face inférieure.
+
+La pâte du pad exposé est divisée en quatre fenêtres de 1,125 x 1,300 mm,
+soit 5,850 mm² imprimés sur 7,950 mm² de pad (73,58 %). Cette segmentation
+reprend le dessin d'empreinte Infineon et évite à la fois une masse unique de
+pâte et toute aspiration de brasure dans un trou.
 
 KiCad 10 ne fournit pas encore de modèle 3D portant le nom de boîtier `-52`.
 Le STEP utilise uniquement le modèle d'enveloppe mécanique SO-8 exact
@@ -124,11 +131,29 @@ P = (18 - 4,90) x 0,020 + 18 x (0,000080 + 0,000022)
 P = 0,263836 W
 ```
 
-Avec l'enveloppe conservatrice `RthJA=153 K/W` d'une implantation 1s0p sans
-aire étendue : `deltaT=40,4 °C`; à 85 °C ambiant, `Tj=125,4 °C`, soit 24,6 °C
-sous 150 °C. Avec au moins 300 mm² de cuivre (`71 K/W` documentés par
-Infineon), `deltaT=18,7 °C` et `Tj=103,7 °C`. Le PCB impose cette aire; le
-calcul reste PASS même dans l'enveloppe footprint-only.
+La résistance thermique maximale compatible avec cette enveloppe est :
+
+```text
+RthJA_requise <= (150 - 85) / 0,263836 = 246,37 K/W
+```
+
+La donnée constructeur la plus conservatrice publiée est `RthJA=153 K/W`
+pour une carte 1s0p « footprint only ». En ne créditant **aucun** bénéfice aux
+quatre vias périphériques, aux 459,429 mm² de F.Cu ni au plan B.Cu :
+
+```text
+deltaT = 0,263836 x 153 = 40,37 °C
+Tj = 85 + 40,37 = 125,37 °C
+marge à 150 °C = 24,63 °C
+```
+
+Le résultat reste donc **PASS** sans dépendre des neuf anciens vias 0,20 mm.
+Infineon publie aussi 71 K/W avec 300 mm² et 59 K/W avec 600 mm² sur sa carte
+1s0p de référence à cuivre 70 µm. La carte Phase 3G.1 utilise 1 oz (environ
+35 µm) : ces chiffres sont conservés comme contexte, mais ne sont pas utilisés
+pour prétendre une température réelle. Les 459,429 mm² et les quatre vias
+constituent une marge non créditée ; la température devra tout de même être
+mesurée au bring-up.
 
 ## Séquencement et backfeed
 

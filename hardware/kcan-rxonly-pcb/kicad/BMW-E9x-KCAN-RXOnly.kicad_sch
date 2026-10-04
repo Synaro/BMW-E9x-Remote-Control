@@ -3107,7 +3107,7 @@
 				(justify left)
 			)
 		)
-		(property "Footprint" "Phase3G:Infineon_PG-DSO-8-52_3.9x4.9mm_EP2.65x3mm_ThermalVias"
+		(property "Footprint" "Phase3G:Infineon_PG-DSO-8-52_3.9x4.9mm_EP2.65x3mm_NoViaInPad"
 			(at 44.45 85.09 0.0000)
 			(effects
 				(font

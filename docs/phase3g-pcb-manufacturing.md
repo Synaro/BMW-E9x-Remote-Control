@@ -2,9 +2,9 @@
 
 ## Statut et limite d'autorité
 
-La révision `3G-A` lève le blocker d'alimentation identifié par l'audit initial
-et produit un schéma, un PCB deux couches et un package de fabrication
-reproductible. Son statut est :
+La révision électrique `3G-A`, complétée par la révision DFM `3G.1-A`, lève le
+blocker d'alimentation identifié par l'audit initial et produit un schéma, un
+PCB deux couches et un package de fabrication reproductible. Son statut est :
 
 **`READY FOR MANUFACTURING REVIEW` — pas `RELEASED FOR ORDER`.**
 
@@ -66,23 +66,27 @@ fonctionnement hors alimentation et l'interface 3,3 V du TJA1055T/3 :
 Ces propriétés sont des conclusions de conception. Elles doivent encore être
 mesurées sur la carte physique aux huit scénarios du plan de bring-up.
 
-## Empreinte U3 et thermique
+## Empreinte U3 et thermique — révision Phase 3G.1
 
 L'empreinte locale `PG-DSO-8-52` reprend le dessin mécanique actuel Infineon :
 
 - corps 3,90 x 4,90 mm ;
 - pas 1,27 mm ;
 - pad exposé 2,65 x 3,00 mm ;
-- neuf vias thermiques, pad 0,50 mm / foret 0,20 mm ;
-- ouvertures pâte segmentées, masque et courtyard conservés ;
-- pad 9 et vias reliés à GND.
+- aucun trou dans le pad exposé ;
+- quatre vias GND périphériques tentés, pad 0,60 mm / foret 0,30 mm ;
+- vias aux offsets `x=±0,80 mm`, `y=±2,00 mm`, hors cuivre et pâte du pad ;
+- quatre ouvertures pâte 1,125 x 1,300 mm, soit 73,58 % de couverture ;
+- masque et courtyard conservés ; pad 9 et vias reliés à GND.
 
-La zone supérieure nominale 30 x 20 mm produit 459,43 mm² de cuivre rempli
-après routage, complétés par le plan GND inférieur. Elle dépasse les 300 mm²
-associés par Infineon à `RthJA = 71 K/W`. À 18 V, 20 mA de calcul et 85 °C
-ambiant, la dissipation est 0,263836 W ; `Tj` vaut environ 103,7 °C avec cette
-aire. Même l'enveloppe très conservatrice 153 K/W donne 125,4 °C, sous la
-limite de 150 °C.
+La zone supérieure nominale 30 x 20 mm produit 459,429 mm² de cuivre rempli
+après routage, complétés par le plan GND inférieur. À 18 V, 20 mA de calcul et
+85 °C ambiant, la dissipation est 0,263836 W. L'analyse de décision ne crédite
+cependant ni cette aire ni les vias : avec les 153 K/W publiés par Infineon
+pour une implantation 1s0p « footprint only », `deltaT=40,37 °C`,
+`Tj=125,37 °C` et la marge à 150 °C vaut 24,63 °C. Les valeurs constructeur
+71 K/W à 300 mm² et 59 K/W à 600 mm² ont été mesurées sur une carte 70 µm ;
+elles ne sont pas appliquées directement à notre cuivre 1 oz (~35 µm).
 
 Le modèle 3D KiCad est seulement une enveloppe SO-8 3,90 x 4,90 mm. Les données
 de production autoritatives sont l'empreinte cuivre/pâte/masque et le dessin
@@ -99,8 +103,8 @@ Infineon, pas le rendu 3D.
 | piste réellement la plus fine | 0,20 mm | JLC : 0,10 mm à 1 oz |
 | clearance réellement la plus faible | 0,2016 mm | JLC : 0,10 mm à 1 oz |
 | via routage | 0,60 / 0,30 mm | marge prototype confortable |
-| vias thermiques U3 | 0,50 / 0,20 mm | cas spécial documenté |
-| anneau via thermique | 0,15 mm | à confirmer au DFM du devis |
+| vias thermiques U3 | 4 x 0,60 / 0,30 mm | périphériques, tentés, hors pad/pâte |
+| anneau via thermique | 0,15 mm | géométrie via standard |
 | trous NPTH | 4 x 3,20 mm | fixation M3 |
 
 Capacités publiées consultées :
@@ -108,9 +112,10 @@ Capacités publiées consultées :
 - JLCPCB : <https://jlcpcb.com/capabilities/Capabilities>
 - PCBWay : <https://www.pcbway.com/capabilities.html>
 
-La carte n'utilise pas le minimum de piste fabricant. Le foret thermique de
-0,20 mm et son anneau de 0,15 mm sont l'exception ; ils doivent être soumis au
-DFM réel sans élargissement automatique ni substitution d'empreinte.
+La carte n'utilise pas le minimum de piste fabricant. Phase 3G.1 supprime son
+ancienne exception 0,20 mm : le plus petit foret traversant est désormais
+0,30 mm et aucun via U3 n'est placé dans le pad exposé. La nouvelle archive
+doit néanmoins être rechargée dans le DFM réel avant toute décision de commande.
 
 ## Placement, routage et masse
 
@@ -151,12 +156,14 @@ essais oscilloscope d'absence de dominant et d'ACK.
 | pin review | toutes les lignes `PASS` |
 | cuivre TX commun | absent |
 | `R_LINK_TX` | quantité 0, aucune empreinte |
-| U3 vias thermiques | 9 x 0,20 mm |
+| U3 vias thermiques | 4 x 0,30 mm périphériques, tentés |
 | broche DevKit 5 V | `H1.21`, NC |
 | firmware | inchangé |
 
 Les rapports sont conservés sous `hardware/kcan-rxonly-pcb/kicad/` et ces
-propriétés sont vérifiées par `tools/test_phase3g_pcb.py`.
+propriétés sont vérifiées par `tools/test_phase3g_pcb.py`. L'étude DFM, les
+options rejetées et l'estimation non contractuelle sont consignées dans
+[phase3g1-dfm-cost-optimization.md](phase3g1-dfm-cost-optimization.md).
 
 ## BOM, assemblage et sourcing
 
