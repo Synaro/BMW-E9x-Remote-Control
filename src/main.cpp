@@ -49,7 +49,7 @@ EspIdfUsbSerialJtagSettingsTransport settingsTransport;
 EspIdfMonotonicTimeHal monotonicTime;
 EspIdfGpioHal gpio;
 GpioTwaiSafetyHal twaiSafety{gpio, BenchTwaiConfig.safety};
-EspIdfTwaiReceiver twaiReceiver{twaiSafety, BenchTwaiConfig.acquisition};
+EspIdfTwaiReceiver twaiReceiver{twaiSafety, gpio, BenchTwaiConfig.acquisition};
 SettingsProtocolEndpoint settingsEndpoint{
     settingsStore,
     settingsTransport,
@@ -87,8 +87,9 @@ extern "C" void app_main() {
     (void)settingsStorage.begin();
     const bool transportReady = settingsTransport.begin();
     if (BenchTwaiConfig.enabled) {
-        // A local BENCH_ONLY configuration is required. Invalid pins or unsafe
-        // hardware barriers cause start() to fail before installing TWAI.
+        // A local BENCH_ONLY configuration is required. The legacy profile
+        // requires both receive-only barriers; the Phase 3H profile instead
+        // validates and activates the TJA1055 STB/EN pins before TWAI starts.
         static_cast<void>(twaiReceiver.start());
     }
 

@@ -3416,6 +3416,8 @@ int main() {
         {"TWAI unsafe barriers", testTwaiStartupRejectsUnsafeHardwareBarriers},
         {"TWAI 100 kbit bench config", testTwaiListenOnlyConfigurationAccepts100KbitBenchRate},
         {"TWAI 500 kbit bench config", testTwaiListenOnlyConfigurationAccepts500KbitBenchRate},
+        {"TWAI selectable software mode", testTwaiDriverModeDefaultsToListenOnlyAndCanSelectNormal},
+        {"Phase 3H TJA mode GPIO", testPhase3hTransceiverModePinsActivateAndReturnToLowPower},
         {"capture V2 manifest", testCaptureV2SchemaAndManifestRemainReceiveOnly},
         {"KLEMMENSTATUS qualified decoder", testKlemmenstatusDecoderPreservesDocumentedAndUnvalidatedStates},
         {"CAS start inhibitor decoder", testCasInhibitorsUseExactDocumentedValuesAndCannotBeBypassed},

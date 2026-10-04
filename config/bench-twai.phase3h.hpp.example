@@ -1,0 +1,18 @@
+#pragma once
+
+// BENCH_ONLY Phase 3H carrier profile. Copy this file to
+// config/bench-twai.local.hpp only for an electrically inspected bench board.
+// It is disabled by default and is not a BMW connection authorization.
+#define BMW_REMOTE_BENCH_ONLY_TWAI_ENABLED 0
+#define BMW_REMOTE_BENCH_ONLY_TWAI_RX_GPIO 4
+#define BMW_REMOTE_BENCH_ONLY_TWAI_TX_GPIO 5
+#define BMW_REMOTE_BENCH_ONLY_PHASE3H_HARDWARE 1
+#define BMW_REMOTE_BENCH_ONLY_TJA_STB_GPIO 6
+#define BMW_REMOTE_BENCH_ONLY_TJA_EN_GPIO 15
+
+// 0 keeps the ESP-IDF controller in listen-only mode. Setting this to 1 only
+// selects TWAI_MODE_NORMAL; Phase 3H intentionally provides no transmit API.
+#define BMW_REMOTE_BENCH_ONLY_NORMAL_MODE 0
+
+#define BMW_REMOTE_BENCH_ONLY_BITRATE 100000
+#define BMW_REMOTE_BENCH_ONLY_CHANNEL 0

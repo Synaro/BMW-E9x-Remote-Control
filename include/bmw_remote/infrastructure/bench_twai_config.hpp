@@ -29,21 +29,43 @@
 #ifndef BMW_REMOTE_BENCH_ONLY_CHANNEL
 #define BMW_REMOTE_BENCH_ONLY_CHANNEL 0
 #endif
+#ifndef BMW_REMOTE_BENCH_ONLY_NORMAL_MODE
+#define BMW_REMOTE_BENCH_ONLY_NORMAL_MODE 0
+#endif
+#ifndef BMW_REMOTE_BENCH_ONLY_PHASE3H_HARDWARE
+#define BMW_REMOTE_BENCH_ONLY_PHASE3H_HARDWARE 0
+#endif
+#ifndef BMW_REMOTE_BENCH_ONLY_TJA_STB_GPIO
+#define BMW_REMOTE_BENCH_ONLY_TJA_STB_GPIO -1
+#endif
+#ifndef BMW_REMOTE_BENCH_ONLY_TJA_EN_GPIO
+#define BMW_REMOTE_BENCH_ONLY_TJA_EN_GPIO -1
+#endif
 
 namespace bmw::remote::infrastructure {
 
 struct BenchOnlyTwaiConfiguration final {
     bool enabled{false};
     TwaiSafetyPinConfig safety{};
-    TwaiListenOnlyConfig acquisition{};
+    TwaiDriverConfig acquisition{};
 
     [[nodiscard]] constexpr bool isValid() const noexcept {
-        return !enabled ||
-               (safety.isValid() && acquisition.isValid() &&
-                safety.silentPin != acquisition.receivePin &&
-                safety.silentPin != acquisition.transmitPin &&
-                safety.transmitInhibitPin != acquisition.receivePin &&
-                safety.transmitInhibitPin != acquisition.transmitPin);
+        if (!enabled) {
+            return true;
+        }
+        if (!acquisition.isValid()) {
+            return false;
+        }
+        if (acquisition.hardwareTopology ==
+            TwaiHardwareTopology::Phase3hBidirectional) {
+            return true;
+        }
+        return acquisition.operatingMode == TwaiOperatingMode::ListenOnly &&
+               safety.isValid() &&
+               safety.silentPin != acquisition.receivePin &&
+               safety.silentPin != acquisition.transmitPin &&
+               safety.transmitInhibitPin != acquisition.receivePin &&
+               safety.transmitInhibitPin != acquisition.transmitPin;
     }
 };
 
@@ -82,6 +104,16 @@ compiledBenchOnlyTwaiConfiguration() noexcept {
             10U,
             8U,
             0,
+            BMW_REMOTE_BENCH_ONLY_NORMAL_MODE == 1
+                ? TwaiOperatingMode::Normal
+                : TwaiOperatingMode::ListenOnly,
+            BMW_REMOTE_BENCH_ONLY_PHASE3H_HARDWARE == 1
+                ? TwaiHardwareTopology::Phase3hBidirectional
+                : TwaiHardwareTopology::LegacyBarrieredBench,
+            {
+                BMW_REMOTE_BENCH_ONLY_TJA_STB_GPIO,
+                BMW_REMOTE_BENCH_ONLY_TJA_EN_GPIO,
+            },
         },
     };
 }

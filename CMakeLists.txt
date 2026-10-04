@@ -7,9 +7,8 @@ if(DEFINED ENV{IDF_PATH})
     # simulators stay out of the embedded image.
     # PlatformIO's generated __pio_env component carries the generic compiler
     # environment and must remain in the selected component set.
-    # Keep the legacy driver component in the configuration graph solely so
-    # ESP-IDF exposes CONFIG_TWAI_ERRATA_FIX_LISTEN_ONLY_DOM. No TWAI driver is
-    # referenced or initialized by the Phase 2 firmware.
+    # Keep the legacy driver component because the Phase 3/3H adapter uses the
+    # stable ESP-IDF TWAI driver and still requires the listen-only erratum gate.
     set(COMPONENTS __pio_env src driver)
     include($ENV{IDF_PATH}/tools/cmake/project.cmake)
     project(bmw_e9x_remote_control_firmware)

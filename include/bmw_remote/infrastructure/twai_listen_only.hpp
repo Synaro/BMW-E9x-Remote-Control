@@ -38,7 +38,28 @@ private:
     bool transmitInhibited_{false};
 };
 
-struct TwaiListenOnlyConfig final {
+enum class TwaiOperatingMode : std::uint8_t {
+    ListenOnly,
+    Normal,
+};
+
+enum class TwaiHardwareTopology : std::uint8_t {
+    LegacyBarrieredBench,
+    Phase3hBidirectional,
+};
+
+struct TwaiTransceiverModePinConfig final {
+    int standbyPin{-1};
+    int enablePin{-1};
+
+    [[nodiscard]] constexpr bool isValid() const noexcept {
+        return standbyPin >= 0 && standbyPin <= 48 &&
+               enablePin >= 0 && enablePin <= 48 &&
+               standbyPin != enablePin;
+    }
+};
+
+struct TwaiDriverConfig final {
     can_core::CanReceiverConfig receiver{};
     int receivePin{-1};
     int transmitPin{-1};
@@ -46,6 +67,10 @@ struct TwaiListenOnlyConfig final {
     std::uint16_t receiveTimeoutMs{10U};
     std::uint8_t taskPriority{8U};
     std::int8_t taskCore{0};
+    TwaiOperatingMode operatingMode{TwaiOperatingMode::ListenOnly};
+    TwaiHardwareTopology hardwareTopology{
+        TwaiHardwareTopology::LegacyBarrieredBench};
+    TwaiTransceiverModePinConfig transceiverModePins{};
 
     [[nodiscard]] constexpr bool isValid() const noexcept {
         return receiver.isValid() &&
@@ -56,11 +81,30 @@ struct TwaiListenOnlyConfig final {
                driverReceiveQueueDepth <= 256U &&
                receiveTimeoutMs > 0U && receiveTimeoutMs <= 100U &&
                taskPriority > 0U && taskPriority <= 24U &&
-               (taskCore == 0 || taskCore == 1);
+               (taskCore == 0 || taskCore == 1) &&
+               ((hardwareTopology == TwaiHardwareTopology::LegacyBarrieredBench &&
+                 operatingMode == TwaiOperatingMode::ListenOnly) ||
+                (hardwareTopology == TwaiHardwareTopology::Phase3hBidirectional &&
+                 transceiverModePins.isValid() &&
+                 transceiverModePins.standbyPin != receivePin &&
+                 transceiverModePins.standbyPin != transmitPin &&
+                 transceiverModePins.enablePin != receivePin &&
+                 transceiverModePins.enablePin != transmitPin));
     }
 };
 
+// Compatibility alias for Phase 3 callers. New code should use TwaiDriverConfig.
+using TwaiListenOnlyConfig = TwaiDriverConfig;
+
 [[nodiscard]] bool prepareTwaiListenOnlySafety(
     TwaiSafetyHal& safety) noexcept;
+
+[[nodiscard]] bool activatePhase3hTransceiver(
+    GpioHal& gpio,
+    const TwaiTransceiverModePinConfig& pins) noexcept;
+
+void deactivatePhase3hTransceiver(
+    GpioHal& gpio,
+    const TwaiTransceiverModePinConfig& pins) noexcept;
 
 }  // namespace bmw::remote::infrastructure

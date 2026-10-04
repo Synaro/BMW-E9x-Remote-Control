@@ -23,6 +23,49 @@ public:
     }
 };
 
+class TestTwaiModeGpio final : public bmw::remote::infrastructure::GpioHal {
+public:
+    bool configureResult{true};
+    bool writeResult{true};
+    std::array<bmw::remote::infrastructure::GpioLevel, 49U> levels{};
+    std::array<bool, 49U> configured{};
+
+    bool configureOutputInSafeState(
+        const std::uint8_t pin,
+        const bmw::remote::infrastructure::GpioLevel safeLevel) noexcept override {
+        if (!configureResult || pin >= levels.size()) {
+            return false;
+        }
+        configured[pin] = true;
+        levels[pin] = safeLevel;
+        return true;
+    }
+
+    bool write(
+        const std::uint8_t pin,
+        const bmw::remote::infrastructure::GpioLevel level) noexcept override {
+        if (!writeResult || pin >= levels.size() || !configured[pin]) {
+            return false;
+        }
+        levels[pin] = level;
+        return true;
+    }
+
+    bool configureInput(const std::uint8_t) noexcept override {
+        return true;
+    }
+
+    bool read(
+        const std::uint8_t pin,
+        bmw::remote::infrastructure::GpioLevel& level) noexcept override {
+        if (pin >= levels.size() || !configured[pin]) {
+            return false;
+        }
+        level = levels[pin];
+        return true;
+    }
+};
+
 can_core::CanFrame testCaptureFrame(
     const std::uint64_t timestampUs,
     const std::uint64_t sequence) {
@@ -137,6 +180,40 @@ void testTwaiListenOnlyConfigurationAccepts500KbitBenchRate() {
     config.receiver.bitrate = can_core::CanBitrate::Kbit500;
     config.transmitPin = config.receivePin;
     CHECK(!config.isValid());
+}
+
+void testTwaiDriverModeDefaultsToListenOnlyAndCanSelectNormal() {
+    bmw::remote::infrastructure::TwaiDriverConfig config{};
+    config.receivePin = 4;
+    config.transmitPin = 5;
+    CHECK(config.isValid());
+    CHECK(config.operatingMode ==
+          bmw::remote::infrastructure::TwaiOperatingMode::ListenOnly);
+
+    config.operatingMode =
+        bmw::remote::infrastructure::TwaiOperatingMode::Normal;
+    CHECK(!config.isValid());
+    config.hardwareTopology =
+        bmw::remote::infrastructure::TwaiHardwareTopology::Phase3hBidirectional;
+    config.transceiverModePins = {6, 15};
+    CHECK(config.isValid());
+}
+
+void testPhase3hTransceiverModePinsActivateAndReturnToLowPower() {
+    using bmw::remote::infrastructure::GpioLevel;
+    using bmw::remote::infrastructure::TwaiTransceiverModePinConfig;
+
+    TestTwaiModeGpio gpio{};
+    const TwaiTransceiverModePinConfig pins{6, 15};
+    CHECK(bmw::remote::infrastructure::activatePhase3hTransceiver(gpio, pins));
+    CHECK(gpio.configured[6U]);
+    CHECK(gpio.configured[15U]);
+    CHECK(gpio.levels[6U] == GpioLevel::High);
+    CHECK(gpio.levels[15U] == GpioLevel::High);
+
+    bmw::remote::infrastructure::deactivatePhase3hTransceiver(gpio, pins);
+    CHECK(gpio.levels[6U] == GpioLevel::Low);
+    CHECK(gpio.levels[15U] == GpioLevel::Low);
 }
 
 void testCaptureV2SchemaAndManifestRemainReceiveOnly() {

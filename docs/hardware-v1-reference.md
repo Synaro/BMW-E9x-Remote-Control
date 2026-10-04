@@ -40,10 +40,12 @@ La première étape n'utilise aucun signal du véhicule. La liste minimale est :
 | 1 jeu | Fils Dupont | Pour les futures charges logiques de banc uniquement |
 
 Un ordinateur suffit à alimenter et programmer cette première maquette par
-USB. Pour le prototype K-CAN RX-only actuel, les achats normatifs sont ceux de
-[`../hardware/kcan-rxonly/procurement.csv`](../hardware/kcan-rxonly/procurement.csv),
-et non une liste recopiée dans ce document. **Aucun câble du véhicule et aucune
-alimentation automobile 12 V ne doivent être raccordés.**
+USB. Le procurement Phase 3F dans
+[`../hardware/kcan-rxonly/procurement.csv`](../hardware/kcan-rxonly/procurement.csv)
+est désormais historique. La révision destinée à une future fabrication est
+la Phase 3H dans `hardware/kcan-bidirectional-pcb/`; aucun achat ni commande
+fabricant n'est autorisé par cette documentation. **Aucun câble du véhicule et
+aucune alimentation automobile 12 V ne doivent être raccordés.**
 
 ## Architecture de communication prévue
 
@@ -54,14 +56,15 @@ La documentation BMW distingue :
 
 La cible officielle utilise exclusivement le contrôleur **TWAI interne de
 l'ESP32-S3** avec un transceiver CAN externe adapté à la couche physique du bus
-observé. Depuis la Phase 3, le firmware contient un récepteur TWAI listen-only,
-mais il reste désactivé sans configuration locale `BENCH_ONLY` et refuse de
-démarrer tant que ses deux barrières de silence ne sont pas confirmées.
+observé. Le profil Phase 3B historique conserve ses barrières matérielles. Le
+profil Phase 3H configure le TJA1055 via STB/EN et permet au contrôleur de
+sélectionner `TWAI_MODE_LISTEN_ONLY` ou `TWAI_MODE_NORMAL`. Il reste désactivé
+sans configuration locale `BENCH_ONLY` et n'expose aucune API d'émission.
 
 ```text
-ESP32-S3 -- contrôleur TWAI interne -- transceiver externe -- un bus de test
-    |                                  |
-    +-- inhibition TX indépendante    +-- mode silent matériel
+ESP32-S3 -- contrôleur TWAI interne -- interface 3V3/5V -- TJA1055 -- K-CAN banc
+ GPIO5/TX -------------------------------------------> TXD
+ GPIO4/RX <------------------------------------------- RXD
 ```
 
 Un seul bus sera étudié à la fois en écoute seule. Si l'observation simultanée de
@@ -77,12 +80,12 @@ Le banc haute vitesse historique de Phase 3B retient précisément :
 
 Ce choix documente uniquement une couche physique ISO 11898-2 haute vitesse.
 Il ne convient pas à la couche physique K-CAN basse vitesse tolérante aux
-défauts. La Phase 3F a depuis gelé un prototype K-CAN RX-only distinct autour
-du `TJA1055T/3/2Z`, après la comparaison Phase 3E avec MAX3055 et AMIS-41683.
-Ce design gelé n'est pas encore qualifié électriquement et ne vaut pas
-qualification véhicule : le trajet TX reste physiquement ouvert et le banc doit
-réussir les essais d'absence d'ACK et de dominant décrits dans
-[phase3f-kcan-rxonly-design-freeze.md](phase3f-kcan-rxonly-design-freeze.md).
+défauts. La Phase 3F a ensuite gelé un prototype RX-only autour du
+`TJA1055T/3/2Z`; cette révision et la Phase 3G.1 sont conservées comme historique.
+La Phase 3H garde le TJA1055 mais remplace le buffer par un traducteur
+`SN74LXC1T45-Q1` double alimentation et route TX en continu. Elle n'est pas
+encore qualifiée électriquement et ne vaut pas qualification véhicule. Voir
+[phase3h-bidirectional-kcan.md](phase3h-bidirectional-kcan.md).
 `LM5164-Q1` reste une base
 d'étude de l'alimentation automobile finale, absente du banc 5 V.
 
@@ -124,13 +127,14 @@ utilisation manuelle, relancer `-ListDevices` et reprendre avec ce numéro.
 
 ### Phase B — qualification sur bus de banc isolé
 
-1. Pour le matériel actuellement acheté, assembler uniquement la variante
-   `KCAN_RX_ONLY_P3F` décrite par `BOM.csv`, `netlist.csv` et `wiring.md`.
-2. Inspecter hors tension `R_LINK_TX` DNP, les valeurs et les deux domaines
-   d'alimentation avant toute mise sous tension.
+1. Assembler uniquement une Phase 3H dont les fichiers de fabrication ont été
+   vérifiés contre le manifeste SHA-256 ; aucune commande n'a encore été passée.
+2. Inspecter hors tension la continuité TX/RX, les valeurs, les deux domaines
+   d'alimentation et l'absence de liaison entre VBUS DevKit et `5V_TJA`.
 3. Utiliser une alimentation de laboratoire limitée en courant, sans véhicule.
-4. Exécuter entièrement la procédure Phase 3F : alimentation, reset, brownout,
-   firmware absent, absence d'ACK, absence de dominant et réception LS/FT.
+4. Exécuter une procédure Phase 3H dédiée : alimentation, reset, brownout,
+   firmware absent, mode listen-only, mode normal sans appel TX, niveaux
+   STB/EN/TXD et réception LS/FT.
 5. Archiver les formes d'onde et obtenir les revues prévues.
 6. Conserver le statut global `FAIL` tant qu'une seule ligne manque.
 
@@ -150,11 +154,11 @@ pas produit de résultats reproductibles.
 
 Les critères détaillés et la décision ESP-IDF sont dans
 [esp32s3-safe-foundation.md](esp32s3-safe-foundation.md). Un échec de validation
-sur banc interdit toute connexion au véhicule. Le schéma actuel, les
-résistances et la checklist K-CAN se trouvent dans
-[phase3f-kcan-rxonly-design-freeze.md](phase3f-kcan-rxonly-design-freeze.md) et
-[`../hardware/kcan-rxonly/wiring.md`](../hardware/kcan-rxonly/wiring.md). Le
-banc haute vitesse historique reste dans
+sur banc interdit toute connexion au véhicule. Le schéma et les marges de la
+révision actuelle sont décrits dans
+[phase3h-bidirectional-kcan.md](phase3h-bidirectional-kcan.md) et
+[`../hardware/kcan-bidirectional-pcb/README.md`](../hardware/kcan-bidirectional-pcb/README.md).
+Les fichiers Phase 3F/3G restent historiques. Le banc haute vitesse reste dans
 [phase3b-can-bench-hardware.md](phase3b-can-bench-hardware.md).
 
 ## Pourquoi la carte de développement ne restera pas dans le véhicule
@@ -178,5 +182,6 @@ avec alimentation, interfaces, protections et interverrouillages qualifiés.
 - [BMW Body Electronics II — Bus Systems](https://bmwtechinfo.bmwgroup.com/tech_training_manual/ST401%20Body%20Electronics%20II.pdf)
 - [TI TCAN1057AV-Q1](https://www.ti.com/product/TCAN1057A-Q1)
 - [TI SN74LVC1G125-Q1](https://www.ti.com/product/SN74LVC1G125-Q1)
-- [NXP TJA1055, candidat K-CAN RX-only](https://www.nxp.com/docs/en/data-sheet/TJA1055.pdf)
+- [NXP TJA1055, transceiver K-CAN Phase 3H](https://www.nxp.com/docs/en/data-sheet/TJA1055.pdf)
+- [TI SN74LXC1T45-Q1](https://www.ti.com/lit/ds/symlink/sn74lxc1t45-q1.pdf)
 - [TI LM5164-Q1](https://www.ti.com/product/LM5164-Q1)

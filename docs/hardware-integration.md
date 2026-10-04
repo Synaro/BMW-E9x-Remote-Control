@@ -53,10 +53,12 @@ CAS/JBE restent strictement dans la configuration d'infrastructure et devront
 [can-lock-command-adapter.md](can-lock-command-adapter.md) et
 [lock-command-security.md](lock-command-security.md).
 
-La recherche de cette provenance commence par un récepteur K-CAN physique
-low-speed/fault-tolerant distinct du banc PT-CAN. Son architecture RX-only, sa
-terminaison distribuée et son protocole de qualification sont définis dans
-[phase3e-kcan-passive-acquisition.md](phase3e-kcan-passive-acquisition.md).
+La recherche de cette provenance a commencé avec le récepteur K-CAN historique
+RX-only de Phase 3E/3G. Pour toute future fabrication, la carte Phase 3H utilise
+une couche physique low-speed/fault-tolerant bidirectionnelle distincte du banc
+PT-CAN. Le chemin TX est câblé en permanence ; l'écoute seule est désormais un
+mode logiciel TWAI et non une limitation du PCB. Voir
+[phase3h-bidirectional-kcan.md](phase3h-bidirectional-kcan.md).
 Les hypothèses externes `0x23A` et `0x2B4` ne constituent pas une liaison
 qualifiée : elles sont interdites comme entrée de `CanLockCommandAdapter` tant
 qu'une campagne répétée sur le véhicule de test ne les a pas confirmées.

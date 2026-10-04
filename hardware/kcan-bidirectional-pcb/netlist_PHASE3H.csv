@@ -1,0 +1,41 @@
+net,from_ref,from_pin,through_ref,through_value,to_ref,to_pin,assembly,notes
+GND,J1,2,DIRECT,0,H2,1,MOUNT,Common ground only between USB and 12V domains
+GND,J2,3,DIRECT,0,U1,13,MOUNT,Bus reference
+GND,U3,3,DIRECT,0,U3,9,MOUNT,Exposed pad grounded with no via-in-pad and four peripheral thermal vias
+3V3,H1,1,DIRECT,0,U2,1,MOUNT,U2 VCCA 3V3 logic domain
+3V3,H1,1,DIRECT,0,U2,5,MOUNT,U2 DIR fixed A to B
+3V3,H1,1,C8,100nF,GND,GND,MOUNT,U2 VCCA local bypass
+5V_TJA,U3,8,DIRECT,0,U2,6,MOUNT,U2 VCCB 5V output domain
+5V_TJA,U3,8,C7,100nF,GND,GND,MOUNT,U2 VCCB local bypass
+BAT_INPUT,J1,1,F1,0.10A_hold,BAT_FUSED,rail,MOUNT,Bench 10 to 18V current limited
+BAT_FUSED,F1,2,D1,SS16,BAT_PROTECTED,rail,MOUNT,D1 pad2 anode BAT_FUSED pad1 cathode BAT_PROTECTED
+BAT_PROTECTED,D1,1,DIRECT,0,U3,1,MOUNT,LDO input
+BAT_PROTECTED,D1,1,DIRECT,0,U3,2,MOUNT,LDO enabled only by protected 12V
+BAT_PROTECTED,BAT_PROTECTED,rail,C1,100nF,GND,GND,MOUNT,C_REG_IN placed at U3
+BAT_PROTECTED,BAT_PROTECTED,rail,R1,1k,BAT_LOCAL,rail,MOUNT,TJA BAT branch
+BAT_LOCAL,R1,2,C5,10nF,GND,GND,MOUNT,C_BAT placed at U1
+BAT_LOCAL,R1,2,DIRECT,0,U1,14,MOUNT,TJA BAT
+BAT_LOCAL,U1,14,DIRECT,0,U1,7,MOUNT,WAKE tied to BAT_LOCAL per no-local-wake design
+5V_TJA,U3,8,DIRECT,0,U1,10,MOUNT,Dedicated regulator output
+5V_TJA,U3,8,C2,2.2uF,GND,GND,MOUNT,C_REG_OUT LDO stability capacitor
+5V_TJA,U3,8,C3,100nF,GND,GND,MOUNT,C_VCC local U1 bypass
+5V_TJA,U3,8,C4,22uF,GND,GND,MOUNT,C_VCC reservoir
+KCAN_TX_MCU,H1,5,R5,1k,U2,3,MOUNT,GPIO5 TWAI_TX to translator A
+KCAN_TX_A,3V3,rail,R4,100k,U2,3,MOUNT,Defines recessive HIGH while GPIO floats
+KCAN_TXD,U2,4,DIRECT,0,U1,2,MOUNT,Continuous translated TX path with no gap jumper or DNP link
+KCAN_TXD,5V_TJA,rail,R2,10k,U1,2,MOUNT,Normal recessive TXD bias not an interlock
+KCAN_TXD,U2,4,DIRECT,0,TP5,1,FABRICATED,Measurement point only
+KCAN_RXD_OD,3V3,rail,R6,3.3k,U1,3,MOUNT,Open-drain RXD pull-up
+KCAN_RXD_OD,U1,3,R7,1k,H1,4,MOUNT,GPIO4 TWAI_RX
+KCAN_ERR_OD,3V3,rail,R8,3.3k,U1,4,MOUNT,Open-drain ERR pull-up
+KCAN_ERR_OD,U1,4,R9,1k,H1,7,MOUNT,GPIO7 status input
+KCAN_STB_MCU,H1,6,R10,1k,U1,5,MOUNT,GPIO6 STB control
+KCAN_STB,U1,5,R11,10k,GND,GND,MOUNT,Default LOW during reset
+KCAN_EN_MCU,H1,8,R12,1k,U1,6,MOUNT,GPIO15 EN control
+KCAN_EN,U1,6,R13,10k,GND,GND,MOUNT,Default LOW during reset
+KCAN_H,J2,1,DIRECT,0,U1,11,MOUNT,No 120 ohm cross termination
+KCAN_H,J2,1,R14,5.62k,U1,8,MOUNT,Weak matched local termination
+KCAN_L,J2,2,DIRECT,0,U1,12,MOUNT,No 120 ohm cross termination
+KCAN_L,J2,2,R15,5.62k,U1,9,MOUNT,Weak matched local termination
+RESET,H1,3,DIRECT,0,TP8,1,FABRICATED,Measurement only
+DEVKIT_5V_NC,H1,21,OPEN,NC,NC,NC,DNP,No copper to 5V_TJA or USB VBUS

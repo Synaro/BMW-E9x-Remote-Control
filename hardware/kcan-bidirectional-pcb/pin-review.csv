@@ -1,0 +1,62 @@
+reference,pin,function,net,footprint_pad,status,notes
+U1,1,INH,NC,1,PASS,Open by design
+U1,2,TXD,KCAN_TXD,2,PASS,Continuous path from U2 B plus 10k recessive bias
+U1,3,RXD,KCAN_RXD_OD,3,PASS,Open-drain output pulled to 3V3
+U1,4,ERR,KCAN_ERR_OD,4,PASS,Open-drain output pulled to 3V3
+U1,5,STB,KCAN_STB,5,PASS,GPIO6 through R10 plus 10k reset pulldown
+U1,6,EN,KCAN_EN,6,PASS,GPIO15 through R12 plus 10k reset pulldown
+U1,7,WAKE,BAT_LOCAL,7,PASS,Tied to protected BAT branch
+U1,8,RTH,RTH,8,PASS,5.62k to KCAN_H
+U1,9,RTL,RTL,9,PASS,5.62k to KCAN_L
+U1,10,VCC,5V_TJA,10,PASS,Regulated 5V domain
+U1,11,CANH,KCAN_H,11,PASS,To J2 pin1
+U1,12,CANL,KCAN_L,12,PASS,To J2 pin2
+U1,13,GND,GND,13,PASS,Common reference
+U1,14,BAT,BAT_LOCAL,14,PASS,R1 and C5 protected branch
+U2,1,VCCA,3V3,1,PASS,3V3 logic domain
+U2,2,GND,GND,2,PASS,Common reference
+U2,3,A,KCAN_TX_A,3,PASS,GPIO5 through R5 plus R4 bias
+U2,4,B,KCAN_TXD,4,PASS,Continuous output to TJA1055 TXD
+U2,5,DIR,3V3,5,PASS,Fixed A-to-B direction
+U2,6,VCCB,5V_TJA,6,PASS,5V TJA logic domain
+U3,1,I,BAT_PROTECTED,1,PASS,TLS715B0EJV50 pin assignment
+U3,2,EN,BAT_PROTECTED,2,PASS,Always enabled from protected input
+U3,3,GND,GND,3,PASS,
+U3,4,NC,NC,4,PASS,No copper
+U3,5,NC,NC,5,PASS,No copper
+U3,6,NC,NC,6,PASS,No copper
+U3,7,NC,NC,7,PASS,No copper
+U3,8,Q,5V_TJA,8,PASS,
+U3,EP,EXPOSED_PAD,GND,9,PASS,2.65x3.00mm EP no via-in-pad four peripheral tented 0.60/0.30mm vias
+H1,1,3V3,3V3,1,PASS,Espressif DevKitC-1 J1 pin1
+H1,2,3V3,NC,2,PASS,Not used by carrier PCB
+H1,3,RST,RESET,3,PASS,TP8 measurement only
+H1,4,GPIO4,KCAN_RX_MCU,4,PASS,TWAI_RX
+H1,5,GPIO5,KCAN_TX_MCU,5,PASS,TWAI_TX complete electrical path to U1 TXD
+H1,6,GPIO6,KCAN_STB_MCU,6,PASS,TJA1055 STB control through R10
+H1,7,GPIO7,KCAN_ERR_MCU,7,PASS,TJA1055 ERR input
+H1,8,GPIO15,KCAN_EN_MCU,8,PASS,TJA1055 EN control through R12
+H1,9,GPIO16,NC,9,PASS,Not used
+H1,10,GPIO17,NC,10,PASS,Not used
+H1,11,GPIO18,NC,11,PASS,Not used
+H1,12,GPIO8,NC,12,PASS,Not used
+H1,13,GPIO3,NC,13,PASS,Not used
+H1,14,GPIO46,NC,14,PASS,Not used
+H1,15,GPIO9,NC,15,PASS,Not used
+H1,16,GPIO10,NC,16,PASS,Not used
+H1,17,GPIO11,NC,17,PASS,Not used
+H1,18,GPIO12,NC,18,PASS,Not used
+H1,19,GPIO13,NC,19,PASS,Not used
+H1,20,GPIO14,NC,20,PASS,Not used
+H1,21,5V,NC,21,PASS,Critical no copper to 5V_TJA or USB VBUS
+H1,22,GND,NC,22,PASS,Common ground enters on H2 pin1
+H2,1,GND,GND,1,PASS,Only deliberate common rail between USB and 12V domains
+J1,1,BENCH_POSITIVE,BAT_INPUT,1,PASS,J_BAT 10..18V current-limited input
+J1,2,GND,GND,2,PASS,JST B2B-XH-A pin order verified
+J2,1,KCAN_H,KCAN_H,1,PASS,J_KCAN bench bus
+J2,2,KCAN_L,KCAN_L,2,PASS,J_KCAN bench bus
+J2,3,GND,GND,3,PASS,J_KCAN reference
+C7,1,C_U2_VCCB,5V_TJA,1,PASS,100nF local U2 VCCB bypass
+C7,2,C_U2_VCCB_RETURN,GND,2,PASS,
+C8,1,C_U2_VCCA,3V3,1,PASS,100nF local U2 VCCA bypass
+C8,2,C_U2_VCCA_RETURN,GND,2,PASS,

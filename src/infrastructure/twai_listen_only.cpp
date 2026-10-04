@@ -46,4 +46,37 @@ bool prepareTwaiListenOnlySafety(TwaiSafetyHal& safety) noexcept {
            safety.safeStateConfirmed();
 }
 
+bool activatePhase3hTransceiver(
+    GpioHal& gpio,
+    const TwaiTransceiverModePinConfig& pins) noexcept {
+    if (!pins.isValid()) {
+        return false;
+    }
+    const auto standby = static_cast<std::uint8_t>(pins.standbyPin);
+    const auto enable = static_cast<std::uint8_t>(pins.enablePin);
+    if (!gpio.configureOutputInSafeState(standby, GpioLevel::Low) ||
+        !gpio.configureOutputInSafeState(enable, GpioLevel::Low)) {
+        return false;
+    }
+    if (!gpio.write(standby, GpioLevel::High) ||
+        !gpio.write(enable, GpioLevel::High)) {
+        static_cast<void>(gpio.write(enable, GpioLevel::Low));
+        static_cast<void>(gpio.write(standby, GpioLevel::Low));
+        return false;
+    }
+    return true;
+}
+
+void deactivatePhase3hTransceiver(
+    GpioHal& gpio,
+    const TwaiTransceiverModePinConfig& pins) noexcept {
+    if (!pins.isValid()) {
+        return;
+    }
+    static_cast<void>(gpio.write(
+        static_cast<std::uint8_t>(pins.enablePin), GpioLevel::Low));
+    static_cast<void>(gpio.write(
+        static_cast<std::uint8_t>(pins.standbyPin), GpioLevel::Low));
+}
+
 }  // namespace bmw::remote::infrastructure
