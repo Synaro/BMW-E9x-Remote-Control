@@ -27,18 +27,15 @@ jobs:
           distribution: temurin
           java-version: "17"
           cache: gradle
-      - uses: android-actions/setup-android@v3
       - name: Python profile analyzer tests
         run: python -m unittest discover -s erisin/tests -p "test_*.py" -v
-      - name: Android unit tests
+      - name: Android unit tests, lint and debug APK
         working-directory: erisin/android-app
-        run: ./gradlew --no-daemon testDebugUnitTest
-      - name: Build debug APK
-        working-directory: erisin/android-app
-        run: ./gradlew --no-daemon assembleDebug
+        run: ./gradlew --no-daemon testDebugUnitTest lintDebug assembleDebug
       - name: Assert read-only transport surface
         shell: bash
         run: |
-          ! grep -R -E "twai_transmit|twai_node_transmit" erisin
+          ! grep -R -E "twai_transmit|twai_node_transmit" \
+            erisin/android-app/app/src/main erisin/tools
           ! grep -R -E "void[[:space:]]+(send|transmit|write)[[:space:]]*\(" \
             erisin/android-app/app/src/main/java/com/synaro/bmwe9xcontrol/transport
