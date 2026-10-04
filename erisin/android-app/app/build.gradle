@@ -1,0 +1,50 @@
+plugins {
+    id "com.android.application"
+}
+
+android {
+    namespace "com.synaro.bmwe9xcontrol"
+    compileSdk 35
+
+    defaultConfig {
+        applicationId "com.synaro.bmwe9xcontrol"
+        minSdk 29
+        targetSdk 29
+        versionCode 1
+        versionName "0.1.0-read-only"
+        testInstrumentationRunner "android.test.InstrumentationTestRunner"
+    }
+
+    buildTypes {
+        debug {
+            applicationIdSuffix ".debug"
+            versionNameSuffix "-debug"
+        }
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro"
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+
+    testOptions {
+        unitTests.returnDefaultValues = true
+    }
+
+    lint {
+        // This APK is a sideloaded Android 10/API 29 head-unit tool, not a
+        // Google Play release. Retaining target 29 avoids changing legacy
+        // platform behavior while the exact XRC environment is qualified.
+        disable "ExpiredTargetSdkVersion"
+        warningsAsErrors true
+    }
+}
+
+dependencies {
+    implementation "com.google.code.gson:gson:2.11.0"
+    testImplementation "junit:junit:4.13.2"
+}

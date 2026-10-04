@@ -1,0 +1,11 @@
+{
+  "name": "EXAMPLE_ONLY simulated alternating lights",
+  "version": 1,
+  "loop": false,
+  "timeline": [
+    {"timeMs": 0, "channel": "simulated_left", "value": 100, "transition": "STEP", "durationMs": 0},
+    {"timeMs": 250, "channel": "simulated_left", "value": 0, "transition": "STEP", "durationMs": 0},
+    {"timeMs": 250, "channel": "simulated_right", "value": 100, "transition": "STEP", "durationMs": 0},
+    {"timeMs": 500, "channel": "simulated_right", "value": 0, "transition": "STEP", "durationMs": 0}
+  ]
+}
