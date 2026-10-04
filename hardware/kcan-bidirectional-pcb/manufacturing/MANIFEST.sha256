@@ -1,4 +1,4 @@
-e394413da73ac92545fde8cdde18d6e4fb13277a6fc8c8928295caf404814759  3d/BMW-E9x-KCAN-Bidirectional.step
+0bac16d26e9a308e69683590500e009075dbd0ad23812d5113693ab91cea964b  3d/BMW-E9x-KCAN-Bidirectional.step
 3360567da82a9347d2a3e60df74473d588ecbe4a858a1a0807d3f6c28bdb69ad  assembly/BMW-E9x-KCAN-Bidirectional-all-pos.csv
 950a0c4dbe783b837871d52fd68950d982047449f4c7c14ffea55b075652095c  BMW-E9x-KCAN-Bidirectional-fabrication.zip
 06d966f79bfb0ad732c5ecbb163241cb000687f4952e813ed16f7727eb8128bf  bom/BMW-E9x-KCAN-Bidirectional-PCBA-BOM-JLCPCB.csv
@@ -26,8 +26,8 @@ b87ed711a9b1d982f436ff7d19d62e58025060281754f0da90fceb9b8e7079e1  gerbers/BMW-E9
 009022004cf45cbcfb6b171687b54fd432bb0c1f85f512ee9c267539e7f1f674  images/BMW-E9x-KCAN-Bidirectional-back.png
 c2688b4709c5d0442a38f91ef4ae0fec9425a6665b2a5c093ae9af7c6482f9fb  images/BMW-E9x-KCAN-Bidirectional-front.png
 7a761474e51f657ca7e6e30cef91ba0d76a27881992ed9128152576d621697d9  nextpcb/BMW-E9x-KCAN-Bidirectional-PCBA-BOM-NextPCB.csv
-234f1cc80cb3f01dac02538edcf80a27037eeba4692f21ec2106a071a63aadd9  nextpcb/BMW-E9x-KCAN-Bidirectional-PCBA-Centroid-NextPCB.zip
-0aa18f7563f46248115923f5d5b85892c29d606400812de9f767f19789a25b65  nextpcb/BMW-E9x-KCAN-Bidirectional-PCBA-Top.pos
+9acfb11e0e432c4d5a58aed50091f74b91bd003b465cad0051d0a32d0ffd23d3  nextpcb/BMW-E9x-KCAN-Bidirectional-PCBA-Centroid-NextPCB.zip
+e4abcf9871006c8735ceb2b73d5963164366d69f83cbc2051d6f9b43cded1c4d  nextpcb/BMW-E9x-KCAN-Bidirectional-PCBA-Top.pos
 e386d5755ab7e45c5148b60574cda3b0f39db30edf04cf3ce736a637c40aea2e  reports/BMW-E9x-KCAN-Bidirectional.ipc
 3795713d7e95b25c76e7dbecee367d83a5fa1fa50cfbcaf4f4bed84bb37134c2  reports/board-statistics.txt
 aac89257fa8d6a92eb1a3da8597a1d2b0d66938931429e9a3eb8a3dda6bc3338  reports/drill-report.txt

@@ -85,9 +85,9 @@ Invoke-Checked @(
 $stepPath = Join-Path $outputRoot "3d\$name.step"
 $stepLines = [System.IO.File]::ReadAllLines($stepPath) |
     ForEach-Object { $_.TrimEnd() }
-[System.IO.File]::WriteAllLines(
+[System.IO.File]::WriteAllText(
     $stepPath,
-    $stepLines,
+    (($stepLines -join "`n") + "`n"),
     [System.Text.UTF8Encoding]::new($false)
 )
 Invoke-Checked @(

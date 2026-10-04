@@ -21,6 +21,15 @@ if ($LASTEXITCODE -ne 0) {
     throw "KiCad NextPCB position export failed ($LASTEXITCODE)."
 }
 
+# Store deterministic LF bytes so the standalone file, ZIP member and Git
+# checkout remain identical on Windows and Linux.
+$positionLines = [System.IO.File]::ReadAllLines($positionFile)
+[System.IO.File]::WriteAllText(
+    $positionFile,
+    (($positionLines -join "`n") + "`n"),
+    [System.Text.UTF8Encoding]::new($false)
+)
+
 python (Join-Path $PSScriptRoot 'generate_phase3h_nextpcb.py')
 if ($LASTEXITCODE -ne 0) {
     throw 'NextPCB BOM/centroid validation and packaging failed.'
