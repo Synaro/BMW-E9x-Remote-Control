@@ -159,6 +159,26 @@ L'audit historique et sa résolution sont détaillés dans
 des livrables de revue seulement : aucune commande n'a été passée et cette
 phase ne commence pas la Phase 4.
 
+## Phase 3G.1 — Optimisation DFM et coût du PCB
+
+- [x] Identifier les neuf vias 0,50/0,20 mm dans le pad U3 comme cause du
+  process via-in-pad spécial observé au premier DFM JLCPCB
+- [x] Revalider le pad exposé et le stencil à partir du boîtier Infineon
+  `PG-DSO-8-52`
+- [x] Démontrer l'enveloppe thermique avec la donnée conservatrice 153 K/W,
+  sans créditer le cuivre étendu ni les vias périphériques
+- [x] Supprimer tous les trous du pad U3 et employer quatre vias GND
+  périphériques tentés 0,60/0,30 mm
+- [x] Conserver l'architecture électrique, la barrière TX et le firmware
+  strictement inchangés
+- [x] Régénérer et valider le package de fabrication complet
+- [ ] Recharger le ZIP Phase 3G.1 dans le configurateur et confirmer le DFM et
+  le coût réels avant toute commande
+
+La décision et ses limites sont détaillées dans
+[phase3g1-dfm-cost-optimization.md](phase3g1-dfm-cost-optimization.md). Elle
+n'autorise ni commande fabricant, ni connexion BMW, ni Phase 4.
+
 ## Phase 4 — Capture et analyse hors ligne
 
 - [ ] Implémenter le transport et l'écriture PC du format Capture V2

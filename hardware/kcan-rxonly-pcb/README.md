@@ -1,7 +1,7 @@
 # Phase 3G — carte K-CAN RX-only
 
-Cette arborescence décrit la **révision PCB Phase 3G**. Elle ne remplace pas
-le prototype perfboard gelé dans `hardware/kcan-rxonly/`.
+Cette arborescence décrit la **révision PCB Phase 3G / DFM Phase 3G.1**. Elle
+ne remplace pas le prototype perfboard gelé dans `hardware/kcan-rxonly/`.
 
 Le prototype Phase 3G est exclusivement destiné au banc. Il emploie un
 TJA1055T/3 pour observer un bus ISO 11898-3 à 100 kbit/s et conserve une
@@ -39,7 +39,10 @@ Le projet KiCad est généré de manière reproductible par
 `tools/generate_phase3g_kicad.py`. Les exports se régénèrent avec
 `tools/generate_phase3g_manufacturing.ps1`, qui refuse de continuer si ERC ou
 DRC échoue. Les règles et résultats de revue sont détaillés dans
-`docs/phase3g-pcb-manufacturing.md`.
+`docs/phase3g-pcb-manufacturing.md`. La révision Phase 3G.1 remplace les neuf
+vias 0,20 mm dans le pad U3 par quatre vias périphériques tentés 0,60/0,30 mm,
+sans changer les nets, les composants ou l'architecture électrique ; voir
+`docs/phase3g1-dfm-cost-optimization.md`.
 
 Les fichiers de fabrication sont des **artefacts de revue**. Ils n'autorisent
 ni commande, ni connexion BMW. Les essais électriques de

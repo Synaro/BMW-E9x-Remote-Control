@@ -1,5 +1,5 @@
 Drill report for BMW-E9x-KCAN-RXOnly.kicad_pcb
-Created on 2026-10-03T21:00:24
+Created on 2026-10-04T02:30:09
 
 Copper Layer Stackup:
     =============================================================
@@ -10,12 +10,11 @@ Copper Layer Stackup:
 Drill file 'BMW-E9x-KCAN-RXOnly-PTH.drl' contains
     plated through holes:
     =============================================================
-    T1  0.200mm  0.0079"  (9 holes))
-    T2  0.300mm  0.0118"  (29 holes))
-    T3  0.950mm  0.0374"  (3 holes))
-    T4  1.000mm  0.0394"  (48 holes))
+    T1  0.300mm  0.0118"  (33 holes))
+    T2  0.950mm  0.0374"  (3 holes))
+    T3  1.000mm  0.0394"  (48 holes))
 
-    Total plated holes count 89
+    Total plated holes count 84
 
 
 Drill file 'BMW-E9x-KCAN-RXOnly-NPTH.drl' contains

@@ -20,6 +20,27 @@ ROOT = Path(__file__).resolve().parents[1]
 HW = ROOT / "hardware" / "kcan-rxonly-pcb"
 MANUFACTURING = HW / "manufacturing"
 
+FABRICATION_NOTES = """BMW E9x K-CAN RX-only Phase 3G.1 - REVIEW ONLY / DO NOT ORDER
+
+Board: 120.0 x 80.0 mm, two layers, FR-4, 1.6 mm, 1 oz copper.
+Surface finish for quote: lead-free HASL or ENIG; no electrical substitution.
+Minimum routed track: 0.20 mm. Minimum clearance: 0.20 mm.
+All vias, including the four U3 peripheral thermal vias: 0.60 mm pad / 0.30 mm drill.
+U3 exposed pad: 2.65 x 3.00 mm, no drilled hole and no via-in-pad.
+U3 peripheral vias are tented on both sides. Do not add epoxy fill, copper cap,
+special via plating, or any sub-0.30 mm drill.
+Mounting holes: four 3.20 mm NPTH.
+
+Critical safety feature:
+TP_GATE_Y and TP_TXD are separate copper islands. There is no component,
+footprint, pad, via, track, or zone connecting them. Preserve both
+TX_PHYSICAL_GAP_KEEP_OUT rule areas. Never add or populate an R_LINK_TX.
+
+Exact critical MPNs are listed in the PCBA BOM. No silent substitution.
+ESP32-S3-DEVKITC-1-N8R8 and the RX_MODE shunt are user installed.
+This package is for manufacturing review only and is not a purchase release.
+"""
+
 
 def read_csv(path: Path) -> tuple[list[str], list[dict[str, str]]]:
     with path.open(newline="", encoding="utf-8-sig") as handle:
@@ -120,6 +141,12 @@ def build_pcba_files() -> None:
     )
 
 
+def write_fabrication_notes() -> None:
+    (MANUFACTURING / "fabrication-notes.txt").write_text(
+        FABRICATION_NOTES, encoding="utf-8"
+    )
+
+
 def zip_info(relative: Path) -> ZipInfo:
     info = ZipInfo(relative.as_posix(), date_time=(2026, 10, 3, 0, 0, 0))
     info.compress_type = ZIP_DEFLATED
@@ -157,6 +184,7 @@ def main() -> int:
     parser.add_argument("--finalize", action="store_true")
     args = parser.parse_args()
     build_pcba_files()
+    write_fabrication_notes()
     if args.finalize:
         build_fabrication_zip()
         write_manifest()

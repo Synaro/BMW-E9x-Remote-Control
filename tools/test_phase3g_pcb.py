@@ -12,6 +12,12 @@ KICAD = HW / "kicad"
 MFG = HW / "manufacturing"
 BOARD = KICAD / "BMW-E9x-KCAN-RXOnly.kicad_pcb"
 SCHEMATIC = KICAD / "BMW-E9x-KCAN-RXOnly.kicad_sch"
+U3_FOOTPRINT = (
+    KICAD
+    / "footprints"
+    / "Phase3G.pretty"
+    / "Infineon_PG-DSO-8-52_3.9x4.9mm_EP2.65x3mm_NoViaInPad.kicad_mod"
+)
 
 
 def read_csv(path: Path) -> list[dict[str, str]]:
@@ -125,17 +131,70 @@ class Phase3GPcbTests(unittest.TestCase):
         self.assertEqual("TLS715B0EJV50XUMA1", by_ref["U3"]["mpn"])
         self.assertIn("PG-DSO-8-52", by_ref["U3"]["package"])
         self.assertIn("TLS715B0EJV50XUMA1", self.schematic)
-        self.assertIn("Infineon_PG-DSO-8-52_3.9x4.9mm_EP2.65x3mm_ThermalVias", self.board)
+        self.assertIn("Infineon_PG-DSO-8-52_3.9x4.9mm_EP2.65x3mm_NoViaInPad", self.board)
 
-    def test_regulator_pinout_and_thermal_vias(self):
+    def test_regulator_pinout_and_exposed_pad_are_unchanged_electrically(self):
         u3 = footprint(self.board, "U3")
         expected = {"1": "BAT_PROTECTED", "2": "BAT_PROTECTED", "3": "GND", "8": "5V_TJA", "9": "GND"}
         for pad, net in expected.items():
             self.assertTrue(pad_has_net(u3, pad, net), f"U3.{pad} -> {net}")
-        footprint_text = (KICAD / "footprints" / "Phase3G.pretty" / "Infineon_PG-DSO-8-52_3.9x4.9mm_EP2.65x3mm_ThermalVias.kicad_mod").read_text(encoding="utf-8")
-        thermal_pads = sexpr_blocks(footprint_text, '(pad "9" thru_hole')
-        self.assertEqual(9, len(thermal_pads))
-        self.assertTrue(all('(size 0.5 0.5)' in pad and '(drill 0.2)' in pad for pad in thermal_pads))
+        footprint_text = U3_FOOTPRINT.read_text(encoding="utf-8")
+        exposed_pads = sexpr_blocks(footprint_text, '(pad "9"')
+        self.assertEqual(1, len(exposed_pads))
+        self.assertIn('(pad "9" smd rect', exposed_pads[0])
+        self.assertIn('(size 2.65 3)', exposed_pads[0])
+        self.assertIn('(layers "F.Cu" "F.Mask")', exposed_pads[0])
+        self.assertNotIn("thru_hole", exposed_pads[0])
+        self.assertNotIn("(drill ", exposed_pads[0])
+
+    def test_phase3g1_has_four_standard_tented_peripheral_u3_vias(self):
+        vias = sexpr_blocks(self.board, "(via\n")
+        expected_positions = ("57.2 70", "58.8 70", "57.2 74", "58.8 74")
+        matched = []
+        for position in expected_positions:
+            matches = [via for via in vias if f"(at {position})" in via]
+            self.assertEqual(1, len(matches), position)
+            via = matches[0]
+            self.assertIn("(size 0.6)", via)
+            self.assertIn("(drill 0.3)", via)
+            self.assertIn('(layers "F.Cu" "B.Cu")', via)
+            self.assertIn("(front yes)", via)
+            self.assertIn("(back yes)", via)
+            self.assertIn('(net "GND")', via)
+            matched.append(via)
+        self.assertEqual(4, len(matched))
+
+    def test_phase3g1_has_no_sub_030_mm_via_drill_or_via_in_pad(self):
+        via_drills = []
+        for via in sexpr_blocks(self.board, "(via\n"):
+            match = re.search(r"\(drill ([0-9.]+)\)", via)
+            self.assertIsNotNone(match, via)
+            via_drills.append(float(match.group(1)))
+        self.assertGreater(len(via_drills), 4)
+        self.assertGreaterEqual(min(via_drills), 0.30)
+        self.assertNotIn("(drill 0.2)", self.board)
+        footprint_text = U3_FOOTPRINT.read_text(encoding="utf-8")
+        self.assertNotIn("thru_hole", footprint_text)
+        self.assertFalse(
+            (U3_FOOTPRINT.parent / "Infineon_PG-DSO-8-52_3.9x4.9mm_EP2.65x3mm_ThermalVias.kicad_mod").exists()
+        )
+
+    def test_phase3g1_u3_stencil_matches_infineon_segmented_pattern(self):
+        footprint_text = U3_FOOTPRINT.read_text(encoding="utf-8")
+        paste_pads = [
+            pad
+            for pad in sexpr_blocks(footprint_text, '(pad ""')
+            if '(layers "F.Paste")' in pad
+        ]
+        self.assertEqual(4, len(paste_pads))
+        expected_centers = ("-0.665 -0.75", "-0.665 0.75", "0.665 -0.75", "0.665 0.75")
+        for center in expected_centers:
+            matches = [pad for pad in paste_pads if f"(at {center})" in pad]
+            self.assertEqual(1, len(matches), center)
+            self.assertIn("(size 1.125 1.3)", matches[0])
+        printed_area = 4 * 1.125 * 1.3
+        exposed_pad_area = 2.65 * 3.0
+        self.assertAlmostEqual(73.5849, 100 * printed_area / exposed_pad_area, places=4)
 
     def test_devkit_5v_is_physically_unconnected(self):
         h1 = footprint(self.board, "H1")
@@ -170,7 +229,7 @@ class Phase3GPcbTests(unittest.TestCase):
             "Hauteur: 80,0000 mm",
             "Isolation minimum de piste: 0,2016 mm",
             "Largeur minimum de piste: 0,2000 mm",
-            "Diamètre de perçage min: 0,2000 mm",
+            "Diamètre de perçage min: 0,3000 mm",
             "Epaisseur du PCB: 1,6000 mm",
         ):
             self.assertIn(expected, stats)
@@ -272,6 +331,30 @@ class Phase3GPcbTests(unittest.TestCase):
             path = MFG / Path(relative)
             self.assertTrue(path.is_file(), path)
             self.assertEqual(digest, hashlib.sha256(path.read_bytes()).hexdigest(), relative)
+
+    def test_phase3g1_fabrication_notes_request_only_standard_vias(self):
+        notes = (MFG / "fabrication-notes.txt").read_text(encoding="utf-8")
+        self.assertIn("0.60 mm pad / 0.30 mm drill", notes)
+        self.assertIn("no drilled hole and no via-in-pad", notes)
+        self.assertIn("tented on both sides", notes)
+        self.assertIn("Do not add epoxy fill", notes)
+        self.assertNotIn("0.20 mm drill", notes)
+
+    def test_phase3g1_thermal_envelope_is_documented_conservatively(self):
+        decision = (ROOT / "docs" / "phase3g1-dfm-cost-optimization.md").read_text(
+            encoding="utf-8"
+        )
+        for required in (
+            "Pmax = 0,263836 W",
+            "RthJA_requise <= (150 - 85) / 0,263836 = 246,37 K/W",
+            "deltaT = 0,263836 x 153 = 40,37 °C",
+            "Tj = 85 + 40,37 = 125,37 °C",
+            "marge = 150 - 125,37 = 24,63 °C",
+            "459,429 mm²",
+            "73,58 %",
+            "pas `RELEASED FOR ORDER`",
+        ):
+            self.assertIn(required, decision)
 
     def test_gerber_review_renders_and_drill_maps_exist(self):
         for name in (

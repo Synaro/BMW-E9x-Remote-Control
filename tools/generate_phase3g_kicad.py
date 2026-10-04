@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import argparse
 import os
+import re
 from pathlib import Path
 
 
@@ -31,7 +32,7 @@ FOOTPRINTS = Path(os.environ.get(
 FOOTPRINT = {
     "U1": "Package_SO:SO-14_3.9x8.65mm_P1.27mm",
     "U2": "Package_TO_SOT_SMD:SOT-23-5",
-    "U3": "Phase3G:Infineon_PG-DSO-8-52_3.9x4.9mm_EP2.65x3mm_ThermalVias",
+    "U3": "Phase3G:Infineon_PG-DSO-8-52_3.9x4.9mm_EP2.65x3mm_NoViaInPad",
     "DEV": "Connector_PinSocket_2.54mm:PinSocket_1x22_P2.54mm_Vertical",
     "R0805": "Resistor_SMD:R_0805_2012Metric",
     "R1206": "Resistor_SMD:R_1206_3216Metric",
@@ -64,6 +65,17 @@ TESTPOINTS = [
     ("TP14", "TP_CANL", "KCAN_L"),
     ("TP15", "TP_GND", "GND"),
 ]
+
+
+# Phase 3G.1 keeps the regulator exposed pad free of drilled holes.  Four
+# ordinary tented vias outside the exposed-pad copper connect the large F.Cu
+# heat spreader to the B.Cu GND plane without invoking a via-in-pad process.
+U3_PERIPHERAL_THERMAL_VIA_OFFSETS = (
+    (-0.8, -2.0),
+    (0.8, -2.0),
+    (-0.8, 2.0),
+    (0.8, 2.0),
+)
 
 
 def _symbol_table() -> str:
@@ -102,7 +114,8 @@ def write_local_footprints() -> None:
     avoids silently attaching the wrong package identifier to the PCBA BOM.
     """
     source_name = "Infineon_PG-DSO-8-27_3.9x4.9mm_EP2.65x3mm_ThermalVias"
-    target_name = "Infineon_PG-DSO-8-52_3.9x4.9mm_EP2.65x3mm_ThermalVias"
+    old_target_name = "Infineon_PG-DSO-8-52_3.9x4.9mm_EP2.65x3mm_ThermalVias"
+    target_name = "Infineon_PG-DSO-8-52_3.9x4.9mm_EP2.65x3mm_NoViaInPad"
     source = FOOTPRINTS / "Package_SO.pretty" / f"{source_name}.kicad_mod"
     target_dir = OUT / "footprints" / "Phase3G.pretty"
     target_dir.mkdir(parents=True, exist_ok=True)
@@ -116,6 +129,48 @@ def write_local_footprints() -> None:
         "Infineon  PG-DSO, 8 Pin",
         "Infineon PG-DSO-8-52, TLS715B0EJV50, 8 Pin plus exposed pad",
     )
+    # The Infineon PG-DSO-8-52 package drawing specifies the 2.65 x 3.00 mm
+    # NSMD exposed pad and four 1.125 x 1.30 mm stencil apertures.  Remove the
+    # nine 0.20 mm via-in-pad holes from KiCad's older -27 source footprint;
+    # Phase 3G.1 adds standard 0.60/0.30 mm tented vias beside the pad on the
+    # PCB instead.  Keeping paste off drilled holes avoids solder wicking and
+    # the filled/capped-via process detected during the first JLCPCB DFM pass.
+    contents = contents.replace('(pad "" smd roundrect', '(pad "" smd rect')
+    contents = contents.replace("(at -0.66 -0.75)", "(at -0.665 -0.75)")
+    contents = contents.replace("(at -0.66 0.75)", "(at -0.665 0.75)")
+    contents = contents.replace("(at 0.66 -0.75)", "(at 0.665 -0.75)")
+    contents = contents.replace("(at 0.66 0.75)", "(at 0.665 0.75)")
+    contents = contents.replace("(size 1.11 1.25)", "(size 1.125 1.3)")
+    contents = contents.replace("\n\t\t(roundrect_rratio 0.225225)", "")
+
+    contents, removed_vias = re.subn(
+        r'\n\t\(pad "9" thru_hole circle.*?\n\t\)',
+        "",
+        contents,
+        flags=re.DOTALL,
+    )
+    if removed_vias != 9:
+        raise RuntimeError(f"Expected nine source thermal vias, found {removed_vias}")
+
+    pad9_pattern = re.compile(
+        r'\n\t\(pad "9" smd rect\n(?:(?!\n\t\)).)*?\n\t\)',
+        flags=re.DOTALL,
+    )
+    removed_bottom_pad = 0
+
+    def keep_front_exposed_pad(match: re.Match[str]) -> str:
+        nonlocal removed_bottom_pad
+        block = match.group(0)
+        if '(layers "B.Cu")' in block:
+            removed_bottom_pad += 1
+            return ""
+        return block
+
+    contents = pad9_pattern.sub(keep_front_exposed_pad, contents)
+    if removed_bottom_pad != 1:
+        raise RuntimeError(
+            f"Expected one source B.Cu exposed-pad duplicate, found {removed_bottom_pad}"
+        )
     # KiCad does not currently ship a model carrying the -52 package name.
     # Use the exact 3.9 x 4.9 mm / 1.27 mm mechanical envelope model; the
     # exposed-pad geometry remains authoritative in the footprint copper.
@@ -123,6 +178,7 @@ def write_local_footprints() -> None:
         "Package_SO.3dshapes/Infineon_PG-DSO-8-27_3.9x4.9mm_EP2.65x3mm.step",
         "Package_SO.3dshapes/SO-8_3.9x4.9mm_P1.27mm.step",
     )
+    (target_dir / f"{old_target_name}.kicad_mod").unlink(missing_ok=True)
     (target_dir / f"{target_name}.kicad_mod").write_text(
         contents, encoding="utf-8"
     )
@@ -308,11 +364,9 @@ def generate_pcb() -> None:
     # 0.15 mm neck-down merely because it is manufacturable.
     settings.m_TrackMinWidth = pcbnew.FromMM(0.20)
     settings.m_ViasMinSize = pcbnew.FromMM(0.6)
-    # The exact Infineon thermal-via footprint contains nine 0.20 mm drills.
-    # They are the only sub-0.30 mm drills in the design and are explicitly
-    # called out in the fabrication notes; both retained prototype houses can
-    # manufacture 0.20 mm mechanically drilled vias in this stack-up.
-    settings.m_MinThroughDrill = pcbnew.FromMM(0.2)
+    # Phase 3G.1 uses only ordinary 0.30 mm mechanically drilled vias.  U3's
+    # exposed pad itself has no drilled hole and requires no filled/capped via.
+    settings.m_MinThroughDrill = pcbnew.FromMM(0.3)
 
     nets: dict[str, object] = {}
     for name in [
@@ -428,6 +482,18 @@ def generate_pcb() -> None:
             for pad in matching_pads:
                 pad.SetNet(nets[net_name])
 
+    u3_position = footprints["U3"].GetPosition()
+    for dx, dy in U3_PERIPHERAL_THERMAL_VIA_OFFSETS:
+        via = pcbnew.PCB_VIA(board)
+        via.SetPosition(u3_position + pcbnew.VECTOR2I_MM(dx, dy))
+        via.SetWidth(pcbnew.FromMM(0.60))
+        via.SetDrill(pcbnew.FromMM(0.30))
+        via.SetLayerPair(pcbnew.F_Cu, pcbnew.B_Cu)
+        via.SetNet(nets["GND"])
+        via.SetFrontTentingMode(pcbnew.TENTING_MODE_TENTED)
+        via.SetBackTentingMode(pcbnew.TENTING_MODE_TENTED)
+        board.Add(via)
+
     def edge(x1: float, y1: float, x2: float, y2: float) -> None:
         shape = pcbnew.PCB_SHAPE(board)
         shape.SetShape(pcbnew.SHAPE_T_SEGMENT)
@@ -499,6 +565,107 @@ def import_routing(session_path: Path) -> None:
     if not pcbnew.ImportSpecctraSES(board, str(session_path)):
         raise RuntimeError(f"Could not import routing session: {session_path}")
     pcbnew.SaveBoard(str(board_path), board)
+
+
+def apply_phase3g1_dfm() -> None:
+    """Apply the reviewed U3 no-via-in-pad DFM revision to the routed PCB."""
+    import pcbnew
+
+    write_project_tables()
+    board_path = OUT / f"{NAME}.kicad_pcb"
+    schematic_path = OUT / f"{NAME}.kicad_sch"
+    board = pcbnew.LoadBoard(str(board_path))
+
+    old_name = "Infineon_PG-DSO-8-52_3.9x4.9mm_EP2.65x3mm_ThermalVias"
+    new_name = FOOTPRINT["U3"].split(":", 1)[1]
+    matches = [fp for fp in board.GetFootprints() if fp.GetReference() == "U3"]
+    if len(matches) != 1:
+        raise RuntimeError(f"Expected one U3 footprint, found {len(matches)}")
+    old_fp = matches[0]
+    current_name = old_fp.GetFPID().GetLibItemName()
+
+    if current_name == old_name:
+        net_by_pad: dict[str, object] = {}
+        for pad in old_fp.Pads():
+            if pad.GetNetCode() != 0:
+                net_by_pad[pad.GetNumber()] = pad.GetNet()
+
+        library = OUT / "footprints" / "Phase3G.pretty"
+        new_fp = pcbnew.FootprintLoad(str(library), new_name)
+        if new_fp is None:
+            raise RuntimeError(f"Footprint not found: {new_name}")
+        new_fp.SetReference(old_fp.GetReference())
+        new_fp.SetValue(old_fp.GetValue())
+        new_fp.SetPosition(old_fp.GetPosition())
+        new_fp.SetOrientationDegrees(old_fp.GetOrientationDegrees())
+        new_fp.Reference().SetLayer(pcbnew.F_Fab)
+        new_fp.Reference().SetVisible(True)
+        new_fp.Value().SetVisible(False)
+
+        board.Remove(old_fp)
+        board.Add(new_fp)
+        for pad in new_fp.Pads():
+            net = net_by_pad.get(pad.GetNumber())
+            if net is not None:
+                pad.SetNet(net)
+        u3 = new_fp
+    elif current_name == new_name:
+        u3 = old_fp
+    else:
+        raise RuntimeError(f"Unexpected U3 footprint: {current_name}")
+
+    pad9 = [pad for pad in u3.Pads() if pad.GetNumber() == "9"]
+    if len(pad9) != 1 or pad9[0].GetAttribute() != pcbnew.PAD_ATTRIB_SMD:
+        raise RuntimeError("Phase 3G.1 U3 must have one SMD exposed pad and no via-in-pad")
+    if not pad9[0].IsOnLayer(pcbnew.F_Cu) or pad9[0].IsOnLayer(pcbnew.B_Cu):
+        raise RuntimeError("Phase 3G.1 U3 exposed pad must be F.Cu only")
+
+    gnd = board.FindNet("GND")
+    if gnd is None:
+        raise RuntimeError("GND net missing from routed board")
+    expected_positions = [
+        u3.GetPosition() + pcbnew.VECTOR2I_MM(dx, dy)
+        for dx, dy in U3_PERIPHERAL_THERMAL_VIA_OFFSETS
+    ]
+    expected_keys = {(position.x, position.y) for position in expected_positions}
+    existing_by_position = {
+        (item.GetPosition().x, item.GetPosition().y): item
+        for item in board.GetTracks()
+        if isinstance(item, pcbnew.PCB_VIA)
+        and (item.GetPosition().x, item.GetPosition().y) in expected_keys
+    }
+    for position in expected_positions:
+        existing = existing_by_position.get((position.x, position.y))
+        if existing is not None:
+            if (
+                existing.GetNetname() != "GND"
+                or existing.GetWidth(pcbnew.F_Cu) != pcbnew.FromMM(0.60)
+                or existing.GetDrillValue() != pcbnew.FromMM(0.30)
+            ):
+                raise RuntimeError(f"Unexpected item at U3 thermal-via position {position}")
+            via = existing
+        else:
+            via = pcbnew.PCB_VIA(board)
+            via.SetPosition(position)
+            via.SetWidth(pcbnew.FromMM(0.60))
+            via.SetDrill(pcbnew.FromMM(0.30))
+            via.SetLayerPair(pcbnew.F_Cu, pcbnew.B_Cu)
+            via.SetNet(gnd)
+            board.Add(via)
+        via.SetFrontTentingMode(pcbnew.TENTING_MODE_TENTED)
+        via.SetBackTentingMode(pcbnew.TENTING_MODE_TENTED)
+
+    board.GetDesignSettings().m_MinThroughDrill = pcbnew.FromMM(0.30)
+    if not pcbnew.ZONE_FILLER(board).Fill(board.Zones()):
+        raise RuntimeError("Copper-zone fill failed")
+    pcbnew.SaveBoard(str(board_path), board)
+
+    schematic = schematic_path.read_text(encoding="utf-8")
+    if old_name in schematic:
+        schematic = schematic.replace(old_name, new_name)
+        schematic_path.write_text(schematic, encoding="utf-8")
+    elif new_name not in schematic:
+        raise RuntimeError("Unexpected U3 schematic footprint reference")
 
 
 def finalize_pcb() -> None:
@@ -595,7 +762,14 @@ def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "mode",
-        choices=("schematic", "pcb", "tables", "import-ses", "finalize"),
+        choices=(
+            "schematic",
+            "pcb",
+            "tables",
+            "import-ses",
+            "phase3g1-dfm",
+            "finalize",
+        ),
     )
     parser.add_argument("--ses", type=Path)
     args = parser.parse_args()
@@ -607,6 +781,8 @@ def main() -> int:
         if args.ses is None:
             parser.error("import-ses requires --ses")
         import_routing(args.ses.resolve())
+    elif args.mode == "phase3g1-dfm":
+        apply_phase3g1_dfm()
     elif args.mode == "finalize":
         finalize_pcb()
     else:
