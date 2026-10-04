@@ -1,0 +1,37 @@
+### Footprint positions - created on 2026-10-04T11:08:20 ###
+### Printed by KiCad version 10.0.6
+## Unit = mm, Angle = deg.
+## Side : top
+# Ref     Val                     Package                                                    PosX       PosY       Rot  Side
+C1        C_REG_IN_100n_50V       C_0805_2012Metric                                       51.0000   -65.0000    0.0000  top
+C2        C_REG_OUT_2.2u_25V      C_0805_2012Metric                                       65.0000   -65.0000    0.0000  top
+C3        C_VCC_100n              C_0805_2012Metric                                       65.0000   -57.0000    0.0000  top
+C4        C_VCC_22u_10V           C_1206_3216Metric                                       70.0000   -61.0000    0.0000  top
+C5        C_BAT_10n_50V           C_0805_2012Metric                                       51.0000   -54.0000    0.0000  top
+C6        C_U2_100n               C_0805_2012Metric                                       84.0000   -41.0000    0.0000  top
+D1        D_BAT_SS16              D_SMA                                                   46.0000   -73.0000    0.0000  top
+F1        F_BAT_MINISMDC010F-2    Fuse_1812_4532Metric_Pad1.30x3.40mm_Reviewed            36.0000   -73.0000    0.0000  top
+H1        ESP32-S3_DEVKIT_J1      PinSocket_1x22_P2.54mm_Vertical                         98.0000   -22.0000    0.0000  top
+H2        ESP32-S3_DEVKIT_J3      PinSocket_1x22_P2.54mm_Vertical                        123.4000   -22.0000    0.0000  top
+J1        J_BAT_10..18V_BENCH     JST_XH_B2B-XH-A_1x02_P2.50mm_Vertical                   25.0000   -73.0000   90.0000  top
+J2        J_KCAN_H_L_GND          JST_XH_B3B-XH-A_1x03_P2.50mm_Vertical                   25.0000   -29.0000   90.0000  top
+JP1       RX_MODE_REMOVE_AT_BOOT  PinHeader_1x02_P2.54mm_Vertical                         73.0000   -48.0000   90.0000  top
+R1        R_BAT_1k                R_1206_3216Metric                                       45.0000   -57.0000    0.0000  top
+R2        R_TXD_10k               R_0805_2012Metric                                       69.0000   -38.0000    0.0000  top
+R3        R_OE_10k                R_0805_2012Metric                                       82.0000   -55.0000    0.0000  top
+R4        R_A_100k                R_0805_2012Metric                                       89.0000   -55.0000    0.0000  top
+R5        R_TX_SER_1k             R_0805_2012Metric                                       92.0000   -48.0000    0.0000  top
+R6        R_RX_PULL_3.3k          R_0805_2012Metric                                       74.0000   -31.0000    0.0000  top
+R7        R_RX_SER_1k             R_0805_2012Metric                                       81.0000   -31.0000    0.0000  top
+R8        R_ERR_PULL_3.3k         R_0805_2012Metric                                       74.0000   -35.0000    0.0000  top
+R9        R_ERR_SER_1k            R_0805_2012Metric                                       81.0000   -35.0000    0.0000  top
+R10       R_STB_SER_1k            R_0805_2012Metric                                       67.0000   -46.0000    0.0000  top
+R11       R_STB_PD_10k            R_0805_2012Metric                                       67.0000   -49.0000    0.0000  top
+R12       R_EN_SER_1k             R_0805_2012Metric                                       67.0000   -52.0000    0.0000  top
+R13       R_EN_PD_10k             R_0805_2012Metric                                       67.0000   -55.0000    0.0000  top
+R14       R_RTH_5.62k             R_0805_2012Metric                                       39.0000   -28.0000    0.0000  top
+R15       R_RTL_5.62k             R_0805_2012Metric                                       39.0000   -34.0000    0.0000  top
+U1        TJA1055T/3/2Z           SO-14_3.9x8.65mm_P1.27mm                                56.0000   -41.0000   90.0000  top
+U2        CLVC1G125QDBVRQ1        SOT-23-5                                                84.0000   -48.0000    0.0000  top
+U3        TLS715B0EJV50XUMA1      Infineon_PG-DSO-8-52_3.9x4.9mm_EP2.65x3mm_NoViaInPad    58.0000   -72.0000    0.0000  top
+## End
