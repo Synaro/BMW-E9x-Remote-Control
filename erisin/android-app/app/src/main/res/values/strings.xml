@@ -1,0 +1,5 @@
+<resources>
+    <string name="app_name">BMW E9x Control</string>
+    <string name="read_only_title">BMW E9x Control — READ ONLY / SIMULATED</string>
+    <string name="waiting_for_data">Waiting for data…</string>
+</resources>

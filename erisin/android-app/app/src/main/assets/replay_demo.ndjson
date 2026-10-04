@@ -1,0 +1,4 @@
+{"timestamp_ms":0,"type":"snapshot","source":"EXAMPLE_ONLY","values":{"rpm":0,"speed_kmh":0,"brake":false,"low_beam":false,"high_beam":false,"turn_left":false,"turn_right":false,"door_driver":false,"reverse":false}}
+{"timestamp_ms":500,"type":"snapshot","source":"EXAMPLE_ONLY","values":{"rpm":780,"speed_kmh":0,"brake":true,"low_beam":true,"high_beam":false,"turn_left":false,"turn_right":false,"door_driver":false,"reverse":false}}
+{"timestamp_ms":1000,"type":"snapshot","source":"EXAMPLE_ONLY","values":{"rpm":790,"speed_kmh":8,"brake":false,"low_beam":true,"high_beam":false,"turn_left":true,"turn_right":false,"door_driver":false,"reverse":false}}
+{"timestamp_ms":1500,"type":"raw_frame","source":"EXAMPLE_ONLY","id":"UNASSIGNED","payload":"00 00","decoded_value":"synthetic event"}

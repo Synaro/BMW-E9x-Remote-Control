@@ -1,0 +1,44 @@
+name: Erisin Android MVP
+
+on:
+  push:
+    paths:
+      - "erisin/android-app/**"
+      - "erisin/tools/**"
+      - "erisin/tests/**"
+      - ".github/workflows/erisin-android.yml"
+  pull_request:
+    paths:
+      - "erisin/android-app/**"
+      - "erisin/tools/**"
+      - "erisin/tests/**"
+      - ".github/workflows/erisin-android.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  android-and-tools:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+          cache: gradle
+      - uses: android-actions/setup-android@v3
+      - name: Python profile analyzer tests
+        run: python -m unittest discover -s erisin/tests -p "test_*.py" -v
+      - name: Android unit tests
+        working-directory: erisin/android-app
+        run: ./gradlew --no-daemon testDebugUnitTest
+      - name: Build debug APK
+        working-directory: erisin/android-app
+        run: ./gradlew --no-daemon assembleDebug
+      - name: Assert read-only transport surface
+        shell: bash
+        run: |
+          ! grep -R -E "twai_transmit|twai_node_transmit" erisin
+          ! grep -R -E "void[[:space:]]+(send|transmit|write)[[:space:]]*\(" \
+            erisin/android-app/app/src/main/java/com/synaro/bmwe9xcontrol/transport
