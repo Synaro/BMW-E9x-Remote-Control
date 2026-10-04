@@ -1,0 +1,4 @@
+# EXAMPLE_ONLY — every record is synthetic and must remain labelled REPLAY.
+{"timestamp_ms":0,"type":"snapshot","source":"EXAMPLE_ONLY","values":{"rpm":0,"speed_kmh":0,"brake":false,"low_beam":false}}
+{"timestamp_ms":500,"type":"snapshot","source":"EXAMPLE_ONLY","values":{"rpm":780,"speed_kmh":0,"brake":true,"low_beam":true}}
+{"timestamp_ms":750,"type":"raw_frame","source":"EXAMPLE_ONLY","id":"UNASSIGNED","payload":"00 00","decoded_value":"synthetic event"}

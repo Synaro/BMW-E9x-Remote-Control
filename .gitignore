@@ -6,6 +6,7 @@ sdkconfig.*
 build/
 build-cmake*/
 build-phase*/
+build-erisin*/
 cmake-build-*/
 *.exe
 *.o
@@ -28,3 +29,18 @@ config/*.bak
 *.blf
 __pycache__/
 *.pyc
+
+# Erisin reverse-engineering: proprietary or device-specific material stays local.
+erisin/private-dumps/
+erisin/device-backups/
+erisin/vendor-apks/
+erisin/decompiled-vendor/
+erisin/firmware-images/
+erisin/captures-private/
+
+# Android/Gradle generated and machine-local files.
+erisin/android-app/.gradle/
+erisin/android-app/local.properties
+erisin/android-app/**/build/
+erisin/android-app/.idea/
+*.iml
