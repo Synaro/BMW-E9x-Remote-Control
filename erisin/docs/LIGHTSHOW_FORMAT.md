@@ -1,37 +1,44 @@
-# Light-show format v1
-
-The v1 parser and scheduler are implemented, but only
-`SimulatedLightSink` exists. This format does not authorize a real output.
+# Light-show JSON format v2
 
 ```json
 {
-  "name": "EXAMPLE_ONLY",
-  "version": 1,
-  "loop": false,
+  "name": "WIG_WAG",
+  "version": 2,
+  "loop": true,
+  "repeatCount": 1,
+  "durationMs": 500,
   "timeline": [
     {
       "timeMs": 0,
-      "channel": "simulated_left",
+      "channel": "discovered_capability_id",
       "value": 100,
       "transition": "STEP",
-      "durationMs": 0
+      "durationMs": 250,
+      "group": "",
+      "scene": "",
+      "pause": false
     }
   ]
 }
 ```
 
-Rules currently enforced:
+Rules:
 
-- version is exactly 1;
-- name and channel are non-empty;
-- timeline is monotonic and timestamps are non-negative;
-- values are integer percentages from 0 through 100;
-- playback speed is positive;
-- `stop()` cancels scheduled work and calls `allOff()` on the sink.
+- versions `1` and `2` are accepted; new files use `2`;
+- `timeMs` is monotonic and non-negative;
+- `value` is an integer percentage from 0 through 100;
+- `transition` is `STEP` or `FADE`;
+- `durationMs` is the step hold/fade duration; show-level `durationMs` can
+  define a longer cycle;
+- a step targets a `channel`, `group`, `scene`, or is an explicit `pause`;
+- `repeatCount` applies to finite shows; `loop` repeats until STOP;
+- playback speed must be positive;
+- STOP and natural completion request `restoreControl()` on the output sink.
 
-`transition` and `durationMs` are reserved for future fades/editor work; only
-step scheduling is implemented. Loop, pause, visual editor, BPM and music
-analysis are not MVP functionality.
+The editor stores shows in app-private `files/lightshows/`. Import/export does
+not embed BMW target data.
 
-Real channels must later come from a detected FRM and verified capabilities,
-not from the conceptual list in the product vision.
+`SimulatedLightSink` is immediately available. `FrmLightSink` accepts only
+capability IDs discovered from imported SGBD metadata and explicitly armed by
+the user. Preset semantic roles must be bound to those IDs before real
+execution; the simulated bindings are never presented as BMW output names.

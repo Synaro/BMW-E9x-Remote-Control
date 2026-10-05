@@ -32,10 +32,11 @@ jobs:
       - name: Android unit tests, lint and debug APK
         working-directory: erisin/android-app
         run: ./gradlew --no-daemon testDebugUnitTest lintDebug assembleDebug
-      - name: Assert read-only transport surface
+      - name: Assert telemetry remains read-only and no embedded TWAI path is introduced
         shell: bash
         run: |
           ! grep -R -E "twai_transmit|twai_node_transmit" \
             erisin/android-app/app/src/main erisin/tools
           ! grep -R -E "void[[:space:]]+(send|transmit|write)[[:space:]]*\(" \
             erisin/android-app/app/src/main/java/com/synaro/bmwe9xcontrol/transport
+          ! find erisin -type f \( -iname "*.prg" -o -iname "*.ipo" \) -print -quit | grep .

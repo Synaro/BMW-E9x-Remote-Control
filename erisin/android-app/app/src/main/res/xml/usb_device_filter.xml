@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- FTDI's vendor id. Product ids intentionally remain unrestricted because
+         genuine and compatible K+DCAN interfaces expose several FTDI variants. -->
+    <usb-device vendor-id="1027" />
+</resources>

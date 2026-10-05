@@ -39,7 +39,7 @@ or leave it unknown.
 ## Android layers
 
 ```text
-UI (Diagnostics / Live Data / Raw Events)
+UI (Home / Lights / Ghost / Shows / Music / Diagnostics / Settings)
                    |
 VehicleRepository + evidence log
                    |
@@ -50,12 +50,41 @@ MockTransport  ReplayTransport  XrcMcuTransport
 SIMULATED      REPLAY           DISCOVERY_ONLY / unavailable
 ```
 
-Future transports (`UsbCanTransport`, `SocketCanTransport`) are architectural
-options only. They are not implemented or selected.
+Vehicle telemetry remains read-only. Active diagnostic work uses a separate
+interface so a diagnostic job can never be confused with a raw CAN frame:
 
-The light-show parser and scheduler are independent from the transport. The
-only current output is `SimulatedLightSink`; no vehicle-light output class
-exists.
+```text
+LightShowEngine / GhostController / Manual Controls
+                     |
+                 FrmLightSink
+                     |
+              DiagnosticTransport
+                     |
+              UsbKdcanTransport
+                     |
+                EdiabasBridge
+                     |
+       EdiabasLib .NET Android runtime (not yet packaged)
+                     |
+             FTDI USB K+DCAN cable
+                     |
+               BMW D-CAN / FRM
+```
+
+`UsbKdcanTransport` detects FTDI devices and owns Android USB permission and
+connection state. `UnavailableEdiabasBridge` is the production default in this
+branch and fails every connection/job explicitly. This is intentional: current
+EdiabasLib is a .NET for Android codebase and cannot be linked as a Java Maven
+dependency. A GPL-compatible bridge build is still required before vehicle I/O.
+
+The light-show parser and scheduler remain transport-independent.
+`SimulatedLightSink` is immediately usable; `FrmLightSink` exists but accepts
+only discovered, explicitly armed capabilities and only after the diagnostic
+transport is connected. It never guesses a job or output name.
+
+An eventual `ObdLinkCxBleTransport` can implement `DiagnosticTransport`
+without changing the show engine and without consuming Wi-Fi needed by
+Wireless CarPlay.
 
 ## Decision gate for the internal interface
 

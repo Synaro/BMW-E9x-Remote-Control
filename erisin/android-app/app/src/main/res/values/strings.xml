@@ -1,5 +1,8 @@
 <resources>
     <string name="app_name">BMW E9x Control</string>
-    <string name="read_only_title">BMW E9x Control — READ ONLY / SIMULATED</string>
-    <string name="waiting_for_data">Waiting for data…</string>
+    <string name="read_only_title">BMW E9x Control</string>
+    <string name="page_title_format">BMW E9x Control — %1$s</string>
+    <string name="capability_format">%1$s\n%2$s/%3$s\n%4$s</string>
+    <string name="show_step_format">%1$d: %2$dms  %3$s = %4$d%%  %5$s  duration=%6$d</string>
+    <string name="info_format">%1$s:  %2$s</string>
 </resources>

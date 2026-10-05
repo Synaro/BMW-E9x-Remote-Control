@@ -1,6 +1,6 @@
 # Public source register
 
-Consulted on 2026-10-04. “Confirmed on our device” remains **NO** unless the
+Consulted on 2026-10-05. “Confirmed on our device” remains **NO** unless the
 owner's ES3360I supplied the evidence.
 
 | Title | URL | Language | Relevance | Confidence | Confirmed on our device |
@@ -16,6 +16,10 @@ owner's ES3360I supplied the evidence.
 | OdazhiuLS | https://github.com/SerhiiOdazhiu1/OdazhiuLS | EN | MIT EDIABAS/FRM light-show implementation | STRONG EVIDENCE | NO |
 | pydiabas | https://github.com/BembelBytes/pydiabas | EN | MIT Python wrapper around installed EDIABAS | STRONG EVIDENCE | NO |
 | EdiabasLib / ediabasx | https://github.com/uholeschak/ediabaslib | EN | Open diagnostic implementation reference | STRONG EVIDENCE | NO |
+| EdiabasLib adapter types | https://github.com/uholeschak/ediabaslib/blob/master/docs/AdapterTypes.md | EN | Documents direct FTDI USB support for BMW-DS2, BMW-FAST and D-CAN on Android | STRONG EVIDENCE | NO |
+| EdiabasLib configuration | https://github.com/uholeschak/ediabaslib/blob/master/docs/EdiabasLib.config_file.md | EN | Documents `STD:OBD`, `EcuPath`, trace and FTDI selection | STRONG EVIDENCE | NO |
+| Ediabas Tool | https://github.com/uholeschak/ediabaslib/blob/master/docs/EdiabasTool.md | EN | Documents Android Tool32-like PRG/job workflow | STRONG EVIDENCE | NO |
+| EdiabasLib binaries 20260607 | https://github.com/uholeschak/ediabaslib/releases/tag/binaries_20260607 | EN | Pinned reference release for the planned bridge | STRONG EVIDENCE | NO |
 | Device reverse engineering | https://github.com/armeehn/device-reveng | EN | Apache-2.0, detailed but different Choiceway/RLC/HiWorld unit | STRONG EVIDENCE | NO |
 | K-CAN App wiki | https://wiki.kcan-app.de/ | EN/DE | E-series Android app using an external CAN interface | STRONG EVIDENCE | NO |
 | K-CAN App license page | https://shop.ibus-app.de/en/i-bus-app/licenses/358/k-can-app-license-beta-version | EN | Product scope and interface requirement | COMMUNITY REPORT | NO |
