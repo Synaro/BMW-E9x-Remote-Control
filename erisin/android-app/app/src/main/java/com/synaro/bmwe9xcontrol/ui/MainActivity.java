@@ -1,12 +1,8 @@
 package com.synaro.bmwe9xcontrol.ui;
 
 import android.Manifest;
-import android.annotation.SuppressLint;
 import android.app.Activity;
-import android.content.BroadcastReceiver;
-import android.content.Context;
 import android.content.Intent;
-import android.content.IntentFilter;
 import android.content.pm.PackageManager;
 import android.graphics.Color;
 import android.net.Uri;
@@ -33,7 +29,10 @@ import com.synaro.bmwe9xcontrol.diagnostic.UsbDeviceDescriptor;
 import com.synaro.bmwe9xcontrol.diagnostic.UsbKdcanTransport;
 import com.synaro.bmwe9xcontrol.ediabas.EdiabasFileStore;
 import com.synaro.bmwe9xcontrol.ediabas.EdiabasSession;
-import com.synaro.bmwe9xcontrol.ediabas.UnavailableEdiabasBridge;
+import com.synaro.bmwe9xcontrol.ediabas.BridgeEndpointRegistry;
+import com.synaro.bmwe9xcontrol.ediabas.EdiabasBridge;
+import com.synaro.bmwe9xcontrol.ediabas.EdiabasBridgeLauncher;
+import com.synaro.bmwe9xcontrol.ediabas.LocalEdiabasBridgeClient;
 import com.synaro.bmwe9xcontrol.frm.FrmCapability;
 import com.synaro.bmwe9xcontrol.frm.FrmCommandLogger;
 import com.synaro.bmwe9xcontrol.frm.FrmDiscoveryResult;
@@ -81,7 +80,8 @@ public final class MainActivity extends Activity implements VehicleRepository.Ob
     private LinearLayout page;
     private TextView title;
     private EdiabasFileStore ediabasFiles;
-    private UnavailableEdiabasBridge ediabasBridge;
+    private EdiabasBridge ediabasBridge;
+    private EdiabasBridgeLauncher bridgeLauncher;
     private UsbKdcanTransport diagnosticTransport;
     private EdiabasSession ediabasSession;
     private FrmDiscoveryResult frm = new FrmDiscoveryResult(null, "", new ArrayList<>(), "Not scanned");
@@ -92,29 +92,19 @@ public final class MainActivity extends Activity implements VehicleRepository.Ob
     private LightShowStore showStore;
     private MusicSyncController music;
     private AudioFeatures latestAudio;
-    private boolean usbReceiverRegistered;
-
-    private final BroadcastReceiver usbReceiver = new BroadcastReceiver() {
-        @Override public void onReceive(Context context, Intent intent) {
-            if (UsbKdcanTransport.ACTION_USB_PERMISSION.equals(intent.getAction())) {
-                toast("USB permission response received");
-                render();
-            }
-        }
-    };
-
     @Override protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         repository = new VehicleRepository(new MockTransport());
         repository.addObserver(this);
         ediabasFiles = new EdiabasFileStore(this);
-        ediabasBridge = new UnavailableEdiabasBridge();
+        bridgeLauncher = new EdiabasBridgeLauncher(this);
+        ediabasBridge = new LocalEdiabasBridgeClient(BridgeEndpointRegistry::get, bridgeLauncher::isInstalled);
+        bridgeLauncher.start();
         diagnosticTransport = new UsbKdcanTransport(this, ediabasBridge, ediabasFiles.directory());
         ediabasSession = new EdiabasSession(ediabasBridge, ediabasFiles);
         showStore = new LightShowStore(this);
         editingShow.name = "Custom 1";
         setContentView(buildUi());
-        registerUsbReceiver();
         new Thread(() -> {
             profile = DeviceProfileCollector.collectBasic();
             runOnUiThread(this::render);
@@ -336,7 +326,8 @@ public final class MainActivity extends Activity implements VehicleRepository.Ob
         info("FINGERPRINT", profile.fingerprint);
         info("XRC / MCU", profile.xrcVersion + " / " + profile.mcuVersion);
         info("ROOT / SELINUX", profile.rootState + " / " + profile.selinux);
-        info("USB FTDI", adapter == null ? "NOT DETECTED IN THIS ENVIRONMENT" : adapter.identity() + " permission=" + adapter.permissionGranted);
+        info("USB FTDI", adapter == null ? "NOT DETECTED IN THIS ENVIRONMENT" :
+                adapter.identity() + " — permission and handle owned by .NET bridge");
         info("EDIABAS", ediabasBridge.implementationVersion() + " — " + (ediabasBridge.isInstalled() ? "INSTALLED" : "BRIDGE NOT INSTALLED"));
         info("PRG directory", ediabasFiles.directory().getAbsolutePath());
         info("Imported PRG", Integer.toString(ediabasFiles.importedPrgFiles().length));
@@ -345,7 +336,7 @@ public final class MainActivity extends Activity implements VehicleRepository.Ob
         info("Interface", "USB K+DCAN");
         info("Status", frm.status);
         LinearLayout actions = horizontal();
-        actions.addView(action("USB PERMISSION", v -> { if (!diagnosticTransport.requestUsbPermission()) toast("No request needed or no FTDI found"); render(); }));
+        actions.addView(action("START BRIDGE", v -> { toast(bridgeLauncher.start() ? "Bridge start requested" : "Bridge APK not installed"); render(); }));
         actions.addView(action("CONNECT", v -> runDiagnosticConnect()));
         actions.addView(action("IMPORT PRG", v -> selectFile(IMPORT_PRG, "application/octet-stream")));
         actions.addView(action("DISCOVER FRM", v -> discoverFrm()));
@@ -480,14 +471,6 @@ public final class MainActivity extends Activity implements VehicleRepository.Ob
         render();
     }
 
-    @SuppressLint("UnspecifiedRegisterReceiverFlag")
-    private void registerUsbReceiver() {
-        IntentFilter filter = new IntentFilter(UsbKdcanTransport.ACTION_USB_PERMISSION);
-        if (Build.VERSION.SDK_INT >= 33) registerReceiver(usbReceiver, filter, Context.RECEIVER_NOT_EXPORTED);
-        else registerReceiver(usbReceiver, filter);
-        usbReceiverRegistered = true;
-    }
-
     @Override public void onRepositoryChanged() { runOnUiThread(this::render); }
     @Override public void onFeatures(AudioFeatures features) { latestAudio = features; if (features.beat) runOnUiThread(this::render); }
     @Override public void onError(String detail) { runOnUiThread(() -> toast(detail)); }
@@ -519,9 +502,12 @@ public final class MainActivity extends Activity implements VehicleRepository.Ob
 
     @Override protected void onDestroy() {
         if (music != null) music.close();
-        showEngine.close(); diagnosticTransport.close();
+        showEngine.close();
+        // The companion foreground service owns FTDI and the EDIABAS session.
+        // Do not tear it down for an Activity recreation (for example a
+        // configuration change); only a real user exit releases the adapter.
+        if (isFinishing()) diagnosticTransport.close();
         repository.removeObserver(this); repository.close();
-        if (usbReceiverRegistered) unregisterReceiver(usbReceiver);
         super.onDestroy();
     }
 }

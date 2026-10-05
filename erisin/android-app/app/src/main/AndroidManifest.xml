@@ -2,6 +2,11 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <uses-feature android:name="android.hardware.usb.host" android:required="true" />
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <uses-permission android:name="android.permission.INTERNET" />
+
+    <queries>
+        <package android:name="com.synaro.bmwe9xediabasbridge" />
+    </queries>
 
     <application
         android:allowBackup="false"
@@ -23,5 +28,8 @@
                 android:name="android.hardware.usb.action.USB_DEVICE_ATTACHED"
                 android:resource="@xml/usb_device_filter" />
         </activity>
+        <receiver
+            android:name=".ediabas.BridgeBootstrapReceiver"
+            android:exported="false" />
     </application>
 </manifest>

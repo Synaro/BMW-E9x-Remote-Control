@@ -10,8 +10,8 @@ android {
         applicationId "com.synaro.bmwe9xcontrol"
         minSdk 29
         targetSdk 29
-        versionCode 2
-        versionName "0.2.0-light-control"
+        versionCode 3
+        versionName "0.3.0-ediabas-bridge"
         testInstrumentationRunner "android.test.InstrumentationTestRunner"
     }
 

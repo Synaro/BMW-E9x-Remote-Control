@@ -5,13 +5,18 @@ import android.net.Uri;
 import android.provider.OpenableColumns;
 import android.database.Cursor;
 
+import com.google.gson.GsonBuilder;
+
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStreamWriter;
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.Locale;
+import java.util.List;
 
 public final class EdiabasFileStore {
     private final Context context;
@@ -47,6 +52,17 @@ public final class EdiabasFileStore {
             byte[] buffer = new byte[8192];
             int count;
             while ((count = input.read(buffer)) >= 0) output.write(buffer, 0, count);
+        }
+        return destination;
+    }
+
+    public File writeJobDump(String sgbd, List<EdiabasJobDefinition> jobs) throws IOException {
+        File directory = new File(context.getFilesDir(), "ediabas/jobs");
+        if (!directory.exists() && !directory.mkdirs()) throw new IOException("unable to create job dump directory");
+        String safeSgbd = sanitize(sgbd).toLowerCase(Locale.ROOT);
+        File destination = new File(directory, "frm_jobs_" + safeSgbd + ".json");
+        try (OutputStreamWriter writer = new OutputStreamWriter(new FileOutputStream(destination), StandardCharsets.UTF_8)) {
+            new GsonBuilder().setPrettyPrinting().create().toJson(jobs, writer);
         }
         return destination;
     }

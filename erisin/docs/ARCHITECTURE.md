@@ -1,5 +1,17 @@
 # Erisin investigation architecture
 
+## EDIABAS companion boundary
+
+Real K+DCAN access is split across two Android packages. The Java/Gradle application
+remains responsible for UI, capability qualification, safety, shows and logging.
+`erisin/ediabas-bridge/` is a .NET for Android foreground service that owns Android USB
+permission, the FTDI handle and EdiabasLib. The packages exchange versioned NDJSON only
+through authenticated `127.0.0.1`; no DLL is loaded into the JVM.
+
+PRGs are copied from the Java app's private import area into the bridge's private ECU
+directory over the authenticated channel with a SHA-256 check. Neither package uses a
+broad shared-storage permission.
+
 ## Scope
 
 This subproject starts from observable evidence, not from the assumption that
@@ -64,18 +76,27 @@ LightShowEngine / GhostController / Manual Controls
                      |
                 EdiabasBridge
                      |
-       EdiabasLib .NET Android runtime (not yet packaged)
+       LocalEdiabasBridgeClient (NDJSON / 127.0.0.1)
+                     |
+       BMW E9x EDIABAS Bridge foreground service
+                     |
+       EdiabasLib .NET for Android (pinned upstream)
                      |
              FTDI USB K+DCAN cable
                      |
                BMW D-CAN / FRM
 ```
 
-`UsbKdcanTransport` detects FTDI devices and owns Android USB permission and
-connection state. `UnavailableEdiabasBridge` is the production default in this
-branch and fails every connection/job explicitly. This is intentional: current
-EdiabasLib is a .NET for Android codebase and cannot be linked as a Java Maven
-dependency. A GPL-compatible bridge build is still required before vehicle I/O.
+`UsbKdcanTransport` performs informational FTDI enumeration and owns only the
+Java-side connection state. `LocalEdiabasBridgeClient` is the production backend;
+the separately installed .NET foreground service alone requests Android USB
+permission, opens FTDI and owns `EdiabasNet`. `UnavailableEdiabasBridge` remains a
+fail-closed fallback/test implementation, not the selected runtime backend.
+
+The bridge now builds as an ARM64 Android APK and uses the pinned GPL-compatible
+EdiabasLib source. Compilation proves the integration boundary, not a successful
+vehicle session: FTDI detection, EDIABAS communication, SGBD response, FRM identity
+and light-output verification remain independent runtime evidence gates.
 
 The light-show parser and scheduler remain transport-independent.
 `SimulatedLightSink` is immediately usable; `FrmLightSink` exists but accepts

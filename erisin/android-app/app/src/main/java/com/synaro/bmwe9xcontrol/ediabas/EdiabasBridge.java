@@ -10,8 +10,9 @@ import java.util.List;
 /**
  * Boundary around the GPL EdiabasLib Android runtime.
  *
- * EdiabasLib is .NET for Android, while this APK is Java/Gradle. A separately built
- * bridge must implement this boundary. Until then, UnavailableEdiabasBridge fails closed.
+ * EdiabasLib is .NET for Android, while this APK is Java/Gradle. The separately
+ * installed .NET Android bridge implements this boundary through
+ * authenticated loopback NDJSON. No .NET assembly is loaded into the JVM.
  */
 public interface EdiabasBridge {
     boolean isInstalled();
@@ -22,4 +23,6 @@ public interface EdiabasBridge {
     DiagnosticResult probe(File prgFile);
     List<EdiabasJobDefinition> listJobs(File prgFile);
     DiagnosticResult execute(DiagnosticRequest request);
+    DiagnosticResult abortJob();
+    String getTrace();
 }

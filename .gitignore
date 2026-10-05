@@ -47,4 +47,8 @@ erisin/android-app/.gradle/
 erisin/android-app/local.properties
 erisin/android-app/**/build/
 erisin/android-app/.idea/
+erisin/ediabas-bridge/**/bin/
+erisin/ediabas-bridge/**/obj/
+erisin/ediabas-bridge/.idea/
+erisin/ediabas-bridge/artifacts/
 *.iml

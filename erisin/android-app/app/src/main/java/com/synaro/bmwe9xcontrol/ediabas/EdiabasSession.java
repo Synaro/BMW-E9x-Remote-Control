@@ -26,7 +26,13 @@ public final class EdiabasSession {
             if (!probe.isSuccess()) continue;
             String sgbd = bridge.identifySgbd(prg);
             if (sgbd == null || sgbd.trim().isEmpty()) continue;
-            List<FrmCapability> capabilities = FrmCapabilityDiscovery.fromJobs(sgbd, bridge.listJobs(prg));
+            List<EdiabasJobDefinition> jobs = bridge.listJobs(prg);
+            try { store.writeJobDump(sgbd, jobs); }
+            catch (java.io.IOException ex) {
+                return new FrmDiscoveryResult(prg, sgbd, new ArrayList<>(),
+                        "SGBD responded but metadata dump failed: " + ex.getMessage());
+            }
+            List<FrmCapability> capabilities = FrmCapabilityDiscovery.fromJobs(sgbd, jobs);
             if (!capabilities.isEmpty()) {
                 return new FrmDiscoveryResult(prg, sgbd, capabilities,
                         "CONNECTED; candidates require target-vehicle review");

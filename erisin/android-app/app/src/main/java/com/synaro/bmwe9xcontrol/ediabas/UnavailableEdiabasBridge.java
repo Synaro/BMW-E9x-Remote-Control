@@ -23,4 +23,6 @@ public final class UnavailableEdiabasBridge implements EdiabasBridge {
     @Override public DiagnosticResult execute(DiagnosticRequest request) {
         return DiagnosticResult.unavailable(REASON);
     }
+    @Override public DiagnosticResult abortJob() { return DiagnosticResult.unavailable(REASON); }
+    @Override public String getTrace() { return ""; }
 }

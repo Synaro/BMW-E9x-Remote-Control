@@ -42,6 +42,8 @@ public final class MockEdiabasBridge implements EdiabasBridge {
         requests.add(request);
         return result("SIMULATED_JOB_RESULT");
     }
+    @Override public DiagnosticResult abortJob() { return result("SIMULATED_ABORT"); }
+    @Override public String getTrace() { return "SIMULATED_TRACE"; }
     private static DiagnosticResult result(String detail) {
         Map<String, String> values = new LinkedHashMap<>();
         values.put("origin", "SIMULATED");

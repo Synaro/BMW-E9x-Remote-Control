@@ -1,0 +1,3 @@
+[submodule "erisin/ediabas-bridge/vendor/ediabaslib"]
+	path = erisin/ediabas-bridge/vendor/ediabaslib
+	url = https://github.com/uholeschak/ediabaslib.git
