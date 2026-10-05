@@ -12,6 +12,7 @@ import java.util.List;
 public final class UnavailableEdiabasBridge implements EdiabasBridge {
     public static final String REASON = "EDIABAS_DOTNET_BRIDGE_NOT_INSTALLED";
     @Override public boolean isInstalled() { return false; }
+    @Override public EdiabasBridgeStatus status() { return EdiabasBridgeStatus.unavailable(REASON); }
     @Override public String implementationVersion() { return "none"; }
     @Override public DiagnosticResult connect(UsbDeviceDescriptor device, File ecuDirectory) {
         return DiagnosticResult.unavailable(REASON);

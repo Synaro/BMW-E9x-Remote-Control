@@ -21,6 +21,11 @@ public final class MockEdiabasBridge implements EdiabasBridge {
     public MockEdiabasBridge addJob(EdiabasJobDefinition job) { jobs.add(job); return this; }
     public List<DiagnosticRequest> requests() { return Collections.unmodifiableList(requests); }
     @Override public boolean isInstalled() { return true; }
+    @Override public EdiabasBridgeStatus status() {
+        return new EdiabasBridgeStatus(true, "SIMULATED", "SIMULATED", Collections.emptyList(),
+                false, connected, "SIMULATED", "", connected ? "SIMULATED_CONNECTED" : "SIMULATED",
+                requests.isEmpty() ? "" : requests.get(requests.size() - 1).getJob(), 1, 0, 1, "");
+    }
     @Override public String implementationVersion() { return "SIMULATED"; }
     @Override public DiagnosticResult connect(UsbDeviceDescriptor device, File ecuDirectory) {
         connected = true;

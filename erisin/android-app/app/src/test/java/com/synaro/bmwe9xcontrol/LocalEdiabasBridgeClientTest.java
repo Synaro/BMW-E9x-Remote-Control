@@ -5,6 +5,7 @@ import com.synaro.bmwe9xcontrol.diagnostic.DiagnosticRequest;
 import com.synaro.bmwe9xcontrol.diagnostic.DiagnosticResult;
 import com.synaro.bmwe9xcontrol.diagnostic.UsbDeviceDescriptor;
 import com.synaro.bmwe9xcontrol.ediabas.BridgeEndpoint;
+import com.synaro.bmwe9xcontrol.ediabas.EdiabasBridgeStatus;
 import com.synaro.bmwe9xcontrol.ediabas.LocalEdiabasBridgeClient;
 
 import org.junit.Test;
@@ -27,7 +28,11 @@ public class LocalEdiabasBridgeClientTest {
     @Test public void status_and_execute_round_trip_over_loopback_ndjson() throws Exception {
         try (MockServer server = new MockServer((request) -> {
             String method = request.substring(request.indexOf("\"method\":\"") + 10).split("\"")[0];
-            if ("status".equals(method)) return ok("{\"bridgeVersion\":\"1.0.0\"}");
+            if ("status".equals(method)) return ok("{\"bridgeVersion\":\"1.0.0\",\"ediabasVersion\":\"7.6.0\"," +
+                    "\"usbDevices\":[{\"vendorId\":1027,\"productId\":24577,\"deviceName\":\"FTDI\"," +
+                    "\"serialNumber\":\"FT123\",\"permissionGranted\":true}],\"usbPermissionGranted\":true," +
+                    "\"ediabasConfigured\":true,\"ecuPath\":\"/private/ecu\",\"activeSgbd\":\"FRM_87.PRG\"," +
+                    "\"state\":\"EDIABAS_CONFIGURED\"}");
             if ("setEcuPath".equals(method)) return ok("{\"ecuPath\":\"private\"}");
             if ("connect".equals(method)) return ok("{\"connected\":true}");
             if ("executeJob".equals(method)) return ok("{\"elapsedMs\":20,\"jobExecutionMs\":18,\"ipcDispatchMs\":2,\"sets\":[],\"ediabasError\":null}");
@@ -35,6 +40,16 @@ public class LocalEdiabasBridgeClientTest {
         })) {
             LocalEdiabasBridgeClient client = client(server.port(), 1000);
             assertEquals("1.0.0", client.implementationVersion());
+            EdiabasBridgeStatus status = client.status();
+            assertTrue(status.bridgeConnected);
+            assertEquals("7.6.0", status.ediabasVersion);
+            assertEquals(0x0403, status.usbDevices.get(0).vendorId);
+            assertEquals(0x6001, status.usbDevices.get(0).productId);
+            assertEquals("FT123", status.usbDevices.get(0).serialNumber);
+            assertTrue(status.usbPermissionGranted);
+            assertTrue(status.ediabasConfigured);
+            assertEquals("/private/ecu", status.ecuPath);
+            assertEquals("FRM_87.PRG", status.activeSgbd);
             assertTrue(client.connect(new UsbDeviceDescriptor(0x0403, 0x6001, "x", "", false), new File(".")).isSuccess());
             DiagnosticResult result = client.execute(new DiagnosticRequest("FRM_87", "IDENT", Collections.emptyMap()));
             assertTrue(result.isSuccess());
@@ -42,6 +57,10 @@ public class LocalEdiabasBridgeClientTest {
             assertNotNull(result.getValues().get("roundTripMs"));
             assertNotNull(result.getValues().get("ipcOverheadMs"));
             assertEquals("2", result.getValues().get("bridgeDispatchMs"));
+            EdiabasBridgeStatus afterJob = client.status();
+            assertEquals("FRM_87/IDENT", afterJob.lastJob);
+            assertEquals(18, afterJob.jobExecutionMs);
+            assertTrue(afterJob.roundTripMs >= 0);
         }
     }
 

@@ -52,6 +52,7 @@ public sealed record BridgeStatus(
     int Version,
     string BridgeVersion,
     string EdiabasVersion,
+    IReadOnlyList<UsbDeviceInfo> UsbDevices,
     bool UsbDetected,
     bool UsbPermissionGranted,
     bool EdiabasConfigured,

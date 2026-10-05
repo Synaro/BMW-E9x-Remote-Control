@@ -65,20 +65,21 @@ jobs:
         with:
           distribution: temurin
           java-version: "17"
-      - name: Android unit tests, lint and debug APK
+      - name: Android unit tests, lint, debug and release APKs
         working-directory: erisin/android-app
-        run: ./gradlew --no-daemon testDebugUnitTest lintDebug assembleDebug
+        run: ./gradlew --no-daemon testDebugUnitTest lintDebug assembleDebug assembleRelease
       - name: Collect APK artifacts
         shell: bash
         run: |
           mkdir -p erisin/build-artifacts
           cp erisin/android-app/app/build/outputs/apk/debug/app-debug.apk \
             erisin/build-artifacts/BMW-E9x-Control-debug.apk
-          bridge_apk=$(find erisin/ediabas-bridge/EdiabasBridgeService/bin/Debug/net10.0-android36.1/android-arm64/publish \
-            -type f -name "*-Signed.apk" | head -n 1)
-          test -n "$bridge_apk"
-          cp "$bridge_apk" erisin/build-artifacts/BMW-E9x-EdiabasBridge-debug.apk
-          sha256sum erisin/build-artifacts/*.apk > erisin/build-artifacts/SHA256SUMS.txt
+          mapfile -t bridge_apks < <(find erisin/ediabas-bridge/EdiabasBridgeService/bin/Debug/net10.0-android36.1/android-arm64/publish \
+            -type f -name "*-Signed.apk" -print)
+          test "${#bridge_apks[@]}" -eq 1
+          cp "${bridge_apks[0]}" erisin/build-artifacts/BMW-E9x-EdiabasBridge-debug.apk
+          (cd erisin/build-artifacts && sha256sum \
+            BMW-E9x-Control-debug.apk BMW-E9x-EdiabasBridge-debug.apk > SHA256SUMS.txt)
       - uses: actions/upload-artifact@v4
         with:
           name: bmw-e9x-erisin-debug-apks

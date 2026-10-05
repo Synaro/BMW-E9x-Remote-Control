@@ -31,6 +31,7 @@ import com.synaro.bmwe9xcontrol.ediabas.EdiabasFileStore;
 import com.synaro.bmwe9xcontrol.ediabas.EdiabasSession;
 import com.synaro.bmwe9xcontrol.ediabas.BridgeEndpointRegistry;
 import com.synaro.bmwe9xcontrol.ediabas.EdiabasBridge;
+import com.synaro.bmwe9xcontrol.ediabas.EdiabasBridgeStatus;
 import com.synaro.bmwe9xcontrol.ediabas.EdiabasBridgeLauncher;
 import com.synaro.bmwe9xcontrol.ediabas.LocalEdiabasBridgeClient;
 import com.synaro.bmwe9xcontrol.frm.FrmCapability;
@@ -321,20 +322,36 @@ public final class MainActivity extends Activity implements VehicleRepository.Ob
     private void renderDiagnostics() {
         heading("FRM DIAGNOSTICS");
         UsbDeviceDescriptor adapter = diagnosticTransport.detectedAdapter();
+        EdiabasBridgeStatus bridgeStatus = ediabasBridge.status();
+        UsbDeviceDescriptor bridgeFtdi = bridgeStatus.usbDevices.isEmpty() ? null : bridgeStatus.usbDevices.get(0);
         info("DEVICE", profile.manufacturer + " " + profile.model);
         info("ANDROID", profile.androidRelease + " / API " + profile.apiLevel);
         info("FINGERPRINT", profile.fingerprint);
         info("XRC / MCU", profile.xrcVersion + " / " + profile.mcuVersion);
         info("ROOT / SELINUX", profile.rootState + " / " + profile.selinux);
-        info("USB FTDI", adapter == null ? "NOT DETECTED IN THIS ENVIRONMENT" :
-                adapter.identity() + " — permission and handle owned by .NET bridge");
-        info("EDIABAS", ediabasBridge.implementationVersion() + " — " + (ediabasBridge.isInstalled() ? "INSTALLED" : "BRIDGE NOT INSTALLED"));
-        info("PRG directory", ediabasFiles.directory().getAbsolutePath());
+        info("Bridge", bridgeStatus.bridgeConnected ? "CONNECTED" : "NOT CONNECTED");
+        info("Bridge version", bridgeStatus.bridgeVersion.isEmpty() ? "unknown" : bridgeStatus.bridgeVersion);
+        info("EdiabasLib", bridgeStatus.ediabasVersion.isEmpty() ? "unknown" : bridgeStatus.ediabasVersion);
+        info("FTDI", bridgeFtdi != null ? bridgeFtdi.identity() : adapter == null ?
+                "NOT DETECTED IN THIS ENVIRONMENT" : adapter.identity() + " — Android catalog only");
+        info("USB permission", bridgeFtdi == null ? "REQUIRED / NOT AVAILABLE" :
+                bridgeStatus.usbPermissionGranted ? "GRANTED" : "REQUIRED");
+        info("EDIABAS", bridgeStatus.ediabasConfigured ?
+                "CONNECTED (SESSION; VEHICLE RESPONSE NOT YET IMPLIED)" :
+                bridgeStatus.bridgeConnected ? "ERROR / NOT CONFIGURED" : "ERROR / BRIDGE NOT CONNECTED");
+        info("ECU path", bridgeStatus.ecuPath.isEmpty() ? "not configured" : bridgeStatus.ecuPath);
+        info("App PRG directory", ediabasFiles.directory().getAbsolutePath());
         info("Imported PRG", Integer.toString(ediabasFiles.importedPrgFiles().length));
-        info("FRM detected", frm.sgbd.isEmpty() ? "NO" : frm.sgbd);
-        info("SGBD", frm.prgFile == null ? "none" : frm.prgFile.getName());
+        info("SGBD", bridgeStatus.activeSgbd.isEmpty() ?
+                frm.prgFile == null ? "none" : frm.prgFile.getName() : bridgeStatus.activeSgbd);
+        info("FRM", frm.sgbd.isEmpty() ? "NOT DETECTED" : frm.sgbd);
+        info("Last job", bridgeStatus.lastJob.isEmpty() ? "none" : bridgeStatus.lastJob);
+        info("Job execution", bridgeStatus.jobExecutionMs + " ms");
+        info("IPC", bridgeStatus.ipcMs + " ms");
+        info("Round trip", bridgeStatus.roundTripMs + " ms");
+        info("Last error", bridgeStatus.lastError.isEmpty() ? "none" : bridgeStatus.lastError);
         info("Interface", "USB K+DCAN");
-        info("Status", frm.status);
+        info("Status", bridgeStatus.state + " — " + frm.status);
         LinearLayout actions = horizontal();
         actions.addView(action("START BRIDGE", v -> { toast(bridgeLauncher.start() ? "Bridge start requested" : "Bridge APK not installed"); render(); }));
         actions.addView(action("CONNECT", v -> runDiagnosticConnect()));

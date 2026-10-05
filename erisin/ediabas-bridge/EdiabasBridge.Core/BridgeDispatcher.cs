@@ -86,6 +86,7 @@ public sealed class BridgeDispatcher
                 var usb = await _engine.ListUsbDevicesAsync(cancellationToken).ConfigureAwait(false);
                 return RpcResponse.Success(request.Id, new BridgeStatus(
                     BridgeProtocol.Version, _bridgeVersion, _engine.EdiabasVersion,
+                    usb,
                     usb.Count > 0, usb.Any(x => x.PermissionGranted), _engine.IsConfigured,
                     _engine.IsJobRunning, _engine.EcuPath, _engine.ActiveSgbd,
                     _engine.IsConfigured ? "EDIABAS_CONFIGURED" : usb.Count > 0 ? "FTDI_DETECTED" : "IDLE"));

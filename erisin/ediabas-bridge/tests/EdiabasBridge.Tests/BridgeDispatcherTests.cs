@@ -30,6 +30,13 @@ public sealed class BridgeDispatcherTests : IDisposable
         Assert.Equal("PROTOCOL_VERSION_MISMATCH", version.Error?.Code);
         RpcResponse ok = await Call("status");
         Assert.True(ok.Ok);
+        BridgeStatus? status = JsonSerializer.Deserialize<BridgeStatus>(
+            JsonSerializer.Serialize(ok.Result, BridgeProtocol.JsonOptions), BridgeProtocol.JsonOptions);
+        Assert.NotNull(status);
+        Assert.Single(status.UsbDevices);
+        Assert.Equal(0x0403, status.UsbDevices[0].VendorId);
+        Assert.Equal(0x6001, status.UsbDevices[0].ProductId);
+        Assert.True(status.UsbDevices[0].PermissionGranted);
     }
 
     [Fact]

@@ -34,6 +34,24 @@ firmware or device dump belongs in Git.
 The Android project targets `net10.0-android36.1`, matching the pinned upstream release,
 while declaring Android 10/API 29 as the supported minimum and target device baseline.
 
+### Android-only MSBuild graph
+
+The upstream `EdiabasLib.csproj` is intentionally multi-targeted for Windows, .NET
+Framework and Android. A consumer-side `SetTargetFramework` chooses the Android output
+for normal project-reference builds, but NuGet restore does not honor that metadata when
+walking the restore graph. On Linux it would therefore evaluate the upstream
+`net10.0-windows10.0.26100.0` inner build and fail with `NETSDK1100` before reaching the
+requested Android target.
+
+`EdiabasBridgeService/Directory.Build.rsp` scopes the command-line global property
+`TargetFrameworks=net10.0-android36.1` to builds whose source entry point is the Android
+service. Global properties flow to project dependencies and cannot be overwritten by the
+upstream project, so both restore and build see only the Android TFM. Host tests are in a
+different source directory and retain their normal `net10.0` target. Android restores use
+an isolated `obj/android/` MSBuild extensions path so a host-test restore cannot overwrite
+their assets file, while the entire `obj/` directory remains excluded from source discovery.
+This avoids both editing the pinned submodule and falsely enabling Windows targeting on Linux.
+
 ## RPC protocol v1
 
 Each request and response is one UTF-8 JSON line. The server binds only to

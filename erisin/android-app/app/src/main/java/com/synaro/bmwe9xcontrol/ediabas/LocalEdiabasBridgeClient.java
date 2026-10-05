@@ -37,6 +37,11 @@ public final class LocalEdiabasBridgeClient implements EdiabasBridge {
     private final Supplier<Boolean> installedSupplier;
     private final int connectTimeoutMs;
     private final int readTimeoutMs;
+    private volatile String lastJob = "";
+    private volatile long lastJobExecutionMs;
+    private volatile long lastIpcMs;
+    private volatile long lastRoundTripMs;
+    private volatile String lastError = "";
 
     public LocalEdiabasBridgeClient(Supplier<BridgeEndpoint> endpointSupplier,
                                     Supplier<Boolean> installedSupplier) {
@@ -52,18 +57,40 @@ public final class LocalEdiabasBridgeClient implements EdiabasBridge {
     }
 
     @Override public boolean isInstalled() { return Boolean.TRUE.equals(installedSupplier.get()); }
-    @Override public String implementationVersion() {
-        if (!isInstalled()) return "not-installed";
+    @Override public EdiabasBridgeStatus status() {
+        if (!isInstalled()) return EdiabasBridgeStatus.unavailable("BRIDGE_APK_NOT_INSTALLED");
         try {
             JsonObject result = call("status", new JsonObject());
-            return text(result, "bridgeVersion", "installed/not-started");
-        } catch (RuntimeException ex) { return "installed/not-started"; }
+            List<UsbDeviceDescriptor> usbDevices = new ArrayList<>();
+            JsonArray devices = result.has("usbDevices") ? result.getAsJsonArray("usbDevices") : new JsonArray();
+            for (JsonElement element : devices) {
+                JsonObject device = element.getAsJsonObject();
+                usbDevices.add(new UsbDeviceDescriptor(intValue(device, "vendorId"),
+                        intValue(device, "productId"), text(device, "deviceName", ""),
+                        text(device, "serialNumber", ""), boolValue(device, "permissionGranted")));
+            }
+            return new EdiabasBridgeStatus(true, text(result, "bridgeVersion", "unknown"),
+                    text(result, "ediabasVersion", "unknown"), usbDevices,
+                    boolValue(result, "usbPermissionGranted"), boolValue(result, "ediabasConfigured"),
+                    text(result, "ecuPath", ""), text(result, "activeSgbd", ""),
+                    text(result, "state", "UNKNOWN"), lastJob, lastJobExecutionMs,
+                    lastIpcMs, lastRoundTripMs, lastError);
+        } catch (RuntimeException ex) {
+            remember(ex);
+            return EdiabasBridgeStatus.unavailable(lastError);
+        }
+    }
+    @Override public String implementationVersion() {
+        EdiabasBridgeStatus current = status();
+        return current.bridgeVersion.isEmpty() ? (isInstalled() ? "installed/not-started" : "not-installed")
+                : current.bridgeVersion;
     }
 
     @Override public DiagnosticResult connect(UsbDeviceDescriptor ignored, File ecuDirectory) {
         try {
             call("setEcuPath", new JsonObject());
             JsonObject result = call("connect", new JsonObject());
+            lastError = "";
             return success(result, "EDIABAS configured; FTDI owned by bridge", false);
         } catch (RuntimeException ex) { return failure(ex); }
     }
@@ -128,15 +155,23 @@ public final class LocalEdiabasBridgeClient implements EdiabasBridge {
             JsonObject result = call("executeJob", p);
             long roundTripMs = Math.max(0L, (System.nanoTime() - startedNs) / 1_000_000L);
             long jobExecutionMs = longValue(result, "jobExecutionMs");
+            long ipcMs = Math.max(0L, roundTripMs - jobExecutionMs);
+            lastJob = request.getSgbd() + "/" + request.getJob();
+            lastJobExecutionMs = jobExecutionMs;
+            lastIpcMs = ipcMs;
+            lastRoundTripMs = roundTripMs;
             Map<String, String> values = new LinkedHashMap<>();
             values.put("sets", result.has("sets") ? result.get("sets").toString() : "[]");
             values.put("roundTripMs", Long.toString(roundTripMs));
             values.put("jobExecutionMs", Long.toString(jobExecutionMs));
-            values.put("ipcOverheadMs", Long.toString(Math.max(0L, roundTripMs - jobExecutionMs)));
+            values.put("ipcOverheadMs", Long.toString(ipcMs));
             values.put("bridgeDispatchMs", text(result, "ipcDispatchMs", "0"));
             String error = text(result, "ediabasError", "");
-            if (!error.isEmpty()) return new DiagnosticResult(DiagnosticResult.Status.ERROR, values,
-                    error, roundTripMs, false);
+            if (!error.isEmpty()) {
+                lastError = error;
+                return new DiagnosticResult(DiagnosticResult.Status.ERROR, values, error, roundTripMs, false);
+            }
+            lastError = "";
             return new DiagnosticResult(DiagnosticResult.Status.SUCCESS, values, "EDIABAS_JOB_OK",
                     roundTripMs, false);
         } catch (RuntimeException ex) { return failure(ex); }
@@ -207,13 +242,21 @@ public final class LocalEdiabasBridgeClient implements EdiabasBridge {
     private static String join(JsonArray values) { if (values == null) return ""; List<String> s = new ArrayList<>(); for (JsonElement e : values) s.add(e.getAsString()); return String.join(" | ", s); }
     private static List<String> strings(JsonArray values) { if (values == null) return Collections.emptyList(); List<String> s = new ArrayList<>(); for (JsonElement e : values) s.add(e.getAsString()); return s; }
     private static String text(JsonObject o, String n, String fallback) { return o != null && o.has(n) && !o.get(n).isJsonNull() ? o.get(n).getAsString() : fallback; }
+    private static boolean boolValue(JsonObject o, String n) { return o != null && o.has(n) && o.get(n).getAsBoolean(); }
+    private static int intValue(JsonObject o, String n) { return o != null && o.has(n) ? o.get(n).getAsInt() : 0; }
     private static long longValue(JsonObject o, String n) { return o != null && o.has(n) ? o.get(n).getAsLong() : 0; }
     private static String hex(byte[] b) { StringBuilder s = new StringBuilder(); for (byte v : b) s.append(String.format("%02x", v)); return s.toString(); }
     private static DiagnosticResult success(JsonObject result, String detail, boolean simulated) { Map<String,String> v=new LinkedHashMap<>(); v.put("result", result.toString()); return new DiagnosticResult(DiagnosticResult.Status.SUCCESS,v,detail,0,simulated); }
-    private static DiagnosticResult failure(RuntimeException ex) {
+    private DiagnosticResult failure(RuntimeException ex) {
+        remember(ex);
         String code = ex instanceof BridgeException ? ((BridgeException) ex).code : "MALFORMED_RESPONSE";
         DiagnosticResult.Status s = "COMMAND_BUSY".equals(code) ? DiagnosticResult.Status.REJECTED : DiagnosticResult.Status.UNAVAILABLE;
         return new DiagnosticResult(s, Collections.emptyMap(), code + ": " + ex.getMessage(),0,false);
+    }
+
+    private void remember(RuntimeException ex) {
+        String code = ex instanceof BridgeException ? ((BridgeException) ex).code : "MALFORMED_RESPONSE";
+        lastError = code + ": " + (ex.getMessage() == null ? "" : ex.getMessage());
     }
 
     private static final class BridgeException extends RuntimeException {

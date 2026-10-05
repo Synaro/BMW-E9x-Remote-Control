@@ -16,6 +16,7 @@ import java.util.List;
  */
 public interface EdiabasBridge {
     boolean isInstalled();
+    EdiabasBridgeStatus status();
     String implementationVersion();
     DiagnosticResult connect(UsbDeviceDescriptor device, File ecuDirectory);
     void disconnect();

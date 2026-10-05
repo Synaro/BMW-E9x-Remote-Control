@@ -16,8 +16,11 @@
     <AndroidUseAapt2>true</AndroidUseAapt2>
   </PropertyGroup>
   <ItemGroup>
-    <ProjectReference Include="..\EdiabasBridge.Core\EdiabasBridge.Core.csproj" />
+    <ProjectReference Include="..\EdiabasBridge.Core\EdiabasBridge.Core.csproj"
+                      SetTargetFramework="TargetFramework=net10.0-android36.1"
+                      AdditionalProperties="TargetFramework=net10.0-android36.1;TargetFrameworks=net10.0-android36.1" />
     <ProjectReference Include="..\vendor\ediabaslib\EdiabasLib\EdiabasLib\EdiabasLib.csproj"
-                      AdditionalProperties="EnableAndroidTargets=true" />
+                      SetTargetFramework="TargetFramework=net10.0-android36.1"
+                      AdditionalProperties="EnableAndroidTargets=true;TargetFramework=net10.0-android36.1;TargetFrameworks=net10.0-android36.1" />
   </ItemGroup>
 </Project>
