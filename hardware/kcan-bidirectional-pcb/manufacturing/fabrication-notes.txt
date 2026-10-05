@@ -1,0 +1,20 @@
+BMW E9x K-CAN full bidirectional Phase 3H - REVIEW ONLY / DO NOT ORDER
+
+Board: 120.0 x 80.0 mm, two layers, FR-4, 1.6 mm, 1 oz copper.
+Surface finish for quote: lead-free HASL or ENIG; no electrical substitution.
+Minimum routed track: 0.20 mm. Minimum clearance: 0.20 mm.
+All vias, including the four U3 peripheral thermal vias: 0.60 mm pad / 0.30 mm drill.
+U3 exposed pad: 2.65 x 3.00 mm, no drilled hole and no via-in-pad.
+U3 peripheral vias are tented on both sides. Do not add epoxy fill, copper cap,
+special via plating, or any sub-0.30 mm drill.
+Mounting holes: four 3.20 mm NPTH.
+
+Critical electrical feature:
+The TWAI TX path is continuous: ESP32 GPIO5 -> R5 -> U2 A/B -> TJA1055 TXD.
+There is no TX jumper, solder bridge, physical gap, or assembly option.
+TP_TX_MCU and TP_TXD are measurement points and do not interrupt either net.
+
+Exact critical MPNs are listed in the PCBA BOM. No silent substitution.
+ESP32-S3-DEVKITC-1-N8R8 is user installed. GPIO6 controls STB through R10;
+GPIO15 controls EN through R12. Listen-only is a firmware mode, not a PCB limit.
+This package is for manufacturing review only and is not a purchase release.

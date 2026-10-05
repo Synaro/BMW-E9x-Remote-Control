@@ -109,13 +109,14 @@ Une analyse de risques formelle et des essais HIL doivent compléter ces défens
 Le rôle exact et les limites de la défense logicielle sont détaillés dans
 [actuator-safety-supervisor.md](actuator-safety-supervisor.md).
 
-Pour l'acquisition K-CAN passive, `TWAI_MODE_LISTEN_ONLY` n'est qu'une défense
-logicielle. Le transceiver LS/FT retenu exige son mode normal pour délivrer le
-flux RX complet ; ses modes standby/sleep ne sont donc pas des modes silent de
-capture. La variante RX-only doit cumuler une porte TX inhibée, une liaison TXD
-physiquement non montée et un maintien récessif de TXD. Toute hypothèse CAN
-communautaire reste interdite comme précondition ou déclencheur. Voir
-[phase3e-kcan-passive-acquisition.md](phase3e-kcan-passive-acquisition.md).
+Pour une acquisition K-CAN passive, `TWAI_MODE_LISTEN_ONLY` reste une défense
+logicielle : le TJA1055 doit être en mode normal pour délivrer le flux RX
+complet. Les cartes Phase 3E/3G RX-only conservent historiquement leur coupure
+TX. La carte Phase 3H, destinée aux futures fabrications, possède au contraire
+un chemin TX continu et sélectionne l'écoute seule dans le contrôleur TWAI.
+Cette capacité électrique n'autorise aucune émission BMW : aucune API TX, aucun
+ID BMW et aucune commande véhicule ne sont livrés par la Phase 3H. Voir
+[phase3h-bidirectional-kcan.md](phase3h-bidirectional-kcan.md).
 
 ## Hors périmètre actuel
 

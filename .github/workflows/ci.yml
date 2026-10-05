@@ -53,10 +53,12 @@ jobs:
             .pio/build/esp32s3dev/config/sdkconfig.h
           grep -q 'TWAI_MODE_LISTEN_ONLY' \
             src/infrastructure/esp_idf_twai_receiver.cpp
+          grep -q 'TWAI_MODE_NORMAL' \
+            src/infrastructure/esp_idf_twai_receiver.cpp
           if grep -ERn \
-            'twai_transmit|twai_node_transmit|TWAI_MODE_NORMAL|TWAI_MODE_NO_ACK' \
+            'twai_transmit|twai_node_transmit|TWAI_MODE_NO_ACK' \
             src include libs; then
-            echo 'Forbidden TWAI transmission API or active mode in firmware sources.'
+            echo 'Forbidden TWAI transmission API or unsupported mode in firmware sources.'
             exit 1
           fi
           symbols="$(pio pkg exec --package toolchain-xtensa-esp-elf -- \

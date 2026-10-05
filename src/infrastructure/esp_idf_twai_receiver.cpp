@@ -53,6 +53,20 @@ void removeStatus(
     return TWAI_TIMING_CONFIG_100KBITS();
 }
 
+[[nodiscard]] constexpr twai_mode_t driverModeFor(
+    const TwaiOperatingMode mode) noexcept {
+    return mode == TwaiOperatingMode::Normal
+        ? TWAI_MODE_NORMAL
+        : TWAI_MODE_LISTEN_ONLY;
+}
+
+[[nodiscard]] constexpr can_core::CanReceiverState runningStateFor(
+    const TwaiOperatingMode mode) noexcept {
+    return mode == TwaiOperatingMode::Normal
+        ? can_core::CanReceiverState::RunningNormal
+        : can_core::CanReceiverState::RunningListenOnly;
+}
+
 }  // namespace
 
 EspIdfTwaiReceiver::~EspIdfTwaiReceiver() {
@@ -60,15 +74,22 @@ EspIdfTwaiReceiver::~EspIdfTwaiReceiver() {
 }
 
 can_core::CanReceiverStartStatus EspIdfTwaiReceiver::start() noexcept {
-    if (state_.load(std::memory_order_acquire) ==
-        can_core::CanReceiverState::RunningListenOnly) {
+    const can_core::CanReceiverState currentState =
+        state_.load(std::memory_order_acquire);
+    if (currentState == can_core::CanReceiverState::RunningListenOnly ||
+        currentState == can_core::CanReceiverState::RunningNormal) {
         return can_core::CanReceiverStartStatus::AlreadyRunning;
     }
     if (!config_.isValid()) {
         state_.store(can_core::CanReceiverState::Fault, std::memory_order_release);
         return can_core::CanReceiverStartStatus::InvalidConfiguration;
     }
-    if (!prepareTwaiListenOnlySafety(safety_)) {
+    const bool phase3h = config_.hardwareTopology ==
+        TwaiHardwareTopology::Phase3hBidirectional;
+    const bool hardwareReady = phase3h
+        ? activatePhase3hTransceiver(gpio_, config_.transceiverModePins)
+        : prepareTwaiListenOnlySafety(safety_);
+    if (!hardwareReady) {
         state_.store(can_core::CanReceiverState::Fault, std::memory_order_release);
         return can_core::CanReceiverStartStatus::SafetyRejected;
     }
@@ -76,7 +97,7 @@ can_core::CanReceiverStartStatus EspIdfTwaiReceiver::start() noexcept {
     twai_general_config_t general = TWAI_GENERAL_CONFIG_DEFAULT(
         static_cast<gpio_num_t>(config_.transmitPin),
         static_cast<gpio_num_t>(config_.receivePin),
-        TWAI_MODE_LISTEN_ONLY);
+        driverModeFor(config_.operatingMode));
     general.tx_queue_len = 0U;
     general.rx_queue_len = config_.driverReceiveQueueDepth;
     general.alerts_enabled = ReceiveAlerts;
@@ -84,6 +105,9 @@ can_core::CanReceiverStartStatus EspIdfTwaiReceiver::start() noexcept {
     const twai_filter_config_t filter = TWAI_FILTER_CONFIG_ACCEPT_ALL();
 
     if (twai_driver_install(&general, &timing, &filter) != ESP_OK) {
+        if (phase3h) {
+            deactivatePhase3hTransceiver(gpio_, config_.transceiverModePins);
+        }
         state_.store(can_core::CanReceiverState::Fault, std::memory_order_release);
         return can_core::CanReceiverStartStatus::DriverInstallFailed;
     }
@@ -91,6 +115,9 @@ can_core::CanReceiverStartStatus EspIdfTwaiReceiver::start() noexcept {
     if (twai_start() != ESP_OK) {
         static_cast<void>(twai_driver_uninstall());
         driverInstalled_ = false;
+        if (phase3h) {
+            deactivatePhase3hTransceiver(gpio_, config_.transceiverModePins);
+        }
         state_.store(can_core::CanReceiverState::Fault, std::memory_order_release);
         return can_core::CanReceiverStartStatus::DriverStartFailed;
     }
@@ -102,7 +129,7 @@ can_core::CanReceiverStartStatus EspIdfTwaiReceiver::start() noexcept {
     running_.store(true, std::memory_order_release);
     taskHandle_ = xTaskCreateStaticPinnedToCore(
         receiveTaskEntry,
-        "twai_rx_only",
+        "twai_rx",
         TaskStackDepth,
         this,
         static_cast<UBaseType_t>(config_.taskPriority),
@@ -115,18 +142,23 @@ can_core::CanReceiverStartStatus EspIdfTwaiReceiver::start() noexcept {
         static_cast<void>(twai_stop());
         static_cast<void>(twai_driver_uninstall());
         driverInstalled_ = false;
+        if (phase3h) {
+            deactivatePhase3hTransceiver(gpio_, config_.transceiverModePins);
+        }
         state_.store(can_core::CanReceiverState::Fault, std::memory_order_release);
         return can_core::CanReceiverStartStatus::TaskStartFailed;
     }
 
-    state_.store(
-        can_core::CanReceiverState::RunningListenOnly,
-        std::memory_order_release);
+    state_.store(runningStateFor(config_.operatingMode), std::memory_order_release);
     return can_core::CanReceiverStartStatus::Started;
 }
 
 void EspIdfTwaiReceiver::stop() noexcept {
     if (!driverInstalled_) {
+        if (config_.hardwareTopology ==
+            TwaiHardwareTopology::Phase3hBidirectional) {
+            deactivatePhase3hTransceiver(gpio_, config_.transceiverModePins);
+        }
         state_.store(can_core::CanReceiverState::Stopped, std::memory_order_release);
         return;
     }
@@ -140,6 +172,10 @@ void EspIdfTwaiReceiver::stop() noexcept {
     }
 
     if (!taskExited_.load(std::memory_order_acquire)) {
+        if (config_.hardwareTopology ==
+            TwaiHardwareTopology::Phase3hBidirectional) {
+            deactivatePhase3hTransceiver(gpio_, config_.transceiverModePins);
+        }
         state_.store(can_core::CanReceiverState::Fault, std::memory_order_release);
         return;
     }
@@ -147,6 +183,10 @@ void EspIdfTwaiReceiver::stop() noexcept {
     static_cast<void>(twai_driver_uninstall());
     driverInstalled_ = false;
     taskHandle_ = nullptr;
+    if (config_.hardwareTopology ==
+        TwaiHardwareTopology::Phase3hBidirectional) {
+        deactivatePhase3hTransceiver(gpio_, config_.transceiverModePins);
+    }
     state_.store(can_core::CanReceiverState::Stopped, std::memory_order_release);
 }
 

@@ -23,8 +23,9 @@ public:
 
     EspIdfTwaiReceiver(
         TwaiSafetyHal& safety,
-        TwaiListenOnlyConfig config) noexcept
-        : safety_(safety), config_(config) {}
+        GpioHal& gpio,
+        TwaiDriverConfig config) noexcept
+        : safety_(safety), gpio_(gpio), config_(config) {}
 
     ~EspIdfTwaiReceiver() override;
 
@@ -70,7 +71,8 @@ private:
         const std::uint8_t* data) noexcept;
 
     TwaiSafetyHal& safety_;
-    TwaiListenOnlyConfig config_{};
+    GpioHal& gpio_;
+    TwaiDriverConfig config_{};
     can_core::BoundedSpscQueue<
         can_core::CanFrame,
         FrameQueueCapacity> queue_{};

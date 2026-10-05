@@ -179,6 +179,28 @@ La décision et ses limites sont détaillées dans
 [phase3g1-dfm-cost-optimization.md](phase3g1-dfm-cost-optimization.md). Elle
 n'autorise ni commande fabricant, ni connexion BMW, ni Phase 4.
 
+## Phase 3H — matériel K-CAN entièrement bidirectionnel
+
+- [x] Conserver `TJA1055T/3/2Z` et le power tree Phase 3G.1
+- [x] Remplacer le buffer mono-alimentation par un traducteur automobile
+  double alimentation `SN74LXC1T45QDCKRQ1`
+- [x] Router un chemin TX continu de GPIO5/TWAI_TX jusqu'à TXD du TJA1055
+- [x] Conserver le chemin RX de RXD vers GPIO4/TWAI_RX
+- [x] Supprimer jumper, pont, DNP, keepout et coupure cuivre TX
+- [x] Conserver l'optimisation U3 sans via-in-pad et ses vias 0,60/0,30 mm
+- [x] Ajouter au firmware le choix explicite `LISTEN_ONLY`/`NORMAL`, sans API TX
+- [x] Régénérer Gerbers, drills, IPC-D-356, BOM/CPL, JLCPCB, NextPCB, STEP,
+  PDF, rendus, ZIP et manifeste SHA-256
+- [x] Valider ERC, DRC, chemins TX/RX et absence de piste non routée
+- [ ] Assembler et qualifier électriquement la carte sur banc
+- [ ] Obtenir une autorisation séparée avant toute connexion ou émission BMW
+
+La Phase 3H remplace Phase 3G/3G.1 uniquement comme révision à fabriquer ; les
+anciennes révisions et leurs tags restent historiques. Elle n'ajoute aucun ID
+BMW, aucune commande véhicule, aucun contournement CAS/EWS et ne commence pas
+la Phase 4. Voir
+[phase3h-bidirectional-kcan.md](phase3h-bidirectional-kcan.md).
+
 ## Phase 4 — Capture et analyse hors ligne
 
 - [ ] Implémenter le transport et l'écriture PC du format Capture V2

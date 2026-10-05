@@ -25,8 +25,10 @@ matériel.
   et injections de défauts ;
 - détection abstraite de trois impulsions de verrouillage avec gardes de
   provenance, fraîcheur et ordre, mais sans liaison BMW qualifiée ;
-- couche CAN générique, file RX fixe, statistiques et acquisition ESP-IDF/TWAI
-  exclusivement `TWAI_MODE_LISTEN_ONLY`, désactivée par défaut ;
+- couche CAN générique, file RX fixe et statistiques ; le pilote ESP-IDF/TWAI
+  reste désactivé par défaut, démarre en `TWAI_MODE_LISTEN_ONLY` par défaut et
+  peut sélectionner explicitement `TWAI_MODE_NORMAL` sur le profil Phase 3H,
+  sans exposer encore aucune API d'émission ;
 - contrats Capture V2, imports tabulaires et base de preuves Phase 3C/3D en
   lecture seule ;
 - télémétrie V1 limitée aux trois fonctions réellement implémentées, toutes
@@ -37,17 +39,19 @@ matériel.
 Ces validations sont logicielles et hors véhicule. Elles ne qualifient ni le
 montage électrique K-CAN, ni une fonction de démarrage réel.
 
-### Phase 3F — matériel K-CAN RX-only
+### Phase 3F/3G.1 — révisions K-CAN RX-only historiques
 
-- design `KCAN_RX_ONLY_P3F` gelé et approvisionnement audité ;
+- design `KCAN_RX_ONLY_P3F` gelé, approvisionnement audité et PCB Phase 3G.1
+  conservé comme révision historique reproductible ;
 - carte d'achat actuelle : **ESP32-S3-DevKitC-1-N8R8** ; les 8 MiB de PSRAM
   supplémentaires ne sont pas utilisés par le firmware ;
-- composants prêts à être commandés, mais montage pas encore assemblé ni
-  qualifié électriquement ;
+- composants non commandés, montage non assemblé et non qualifié
+  électriquement ;
 - `R_LINK_TX` physiquement DNP : aucune pièce, aucun cavalier et aucune
   continuité TX autorisés ;
 - aucune connexion à la BMW avant un PASS électrique complet et documenté ;
-- aucune Phase 4 active.
+- aucune Phase 4 active. Cette révision ne doit plus être utilisée pour une
+  nouvelle fabrication.
 
 Les sources normatives sont volontairement séparées :
 
@@ -59,20 +63,32 @@ Les sources normatives sont volontairement séparées :
   contrôles. En cas de divergence, aucun résumé du README ne remplace ces
   fichiers.
 
-### Phase 3G — audit PCB manufacturable
+### Phase 3H — matériel K-CAN entièrement bidirectionnel
 
-La conception PCB est actuellement **bloquée avant schéma et routage** : le
-rail 5 V provenant du VBUS USB du DevKit, après sa diode Schottky et `F_5V`, ne
-peut pas garantir les 4,75 V minimum requis par le TJA1055. Aucun fichier KiCad
-ou de fabrication n'a été produit et aucune correction électrique n'a été
-choisie sans revue humaine. Le calcul, les sources constructeurs et les options
-à arbitrer sont consignés dans
-[`docs/phase3g-pcb-feasibility-audit.md`](docs/phase3g-pcb-feasibility-audit.md).
+La carte destinée à une future fabrication est désormais la Phase 3H :
+
+- `ESP32-S3 GPIO5/TWAI_TX -> SN74LXC1T45-Q1 -> TJA1055 TXD` est un chemin
+  cuivre continu ;
+- `TJA1055 RXD -> ESP32-S3 GPIO4/TWAI_RX` reste le chemin de réception ;
+- aucun jumper, pont de soudure, composant DNP ou gap cuivre ne verrouille TX ;
+- le DevKit reste alimenté par USB et son 5 V n'est pas relié à `5V_TJA` ;
+- le rail `5V_TJA` est fourni par le `TLS715B0EJV50XUMA1` validé en Phase 3G.1 ;
+- les Gerbers, drills, BOM/CPL JLCPCB, BOM/centroid NextPCB, STEP, PDF, rendus
+  et manifeste SHA-256 sont régénérés sous
+  [`hardware/kcan-bidirectional-pcb/`](hardware/kcan-bidirectional-pcb/) ;
+- aucune commande fabricant n'a été passée et aucune émission BMW n'est
+  autorisée par cette révision.
+
+La justification électrique, les GPIO, les marges logiques et les limites sont
+documentés dans
+[`docs/phase3h-bidirectional-kcan.md`](docs/phase3h-bidirectional-kcan.md).
 
 ### Non implémenté ou interdit à ce stade
 
 L'adaptateur BMW réel de verrouillage, les actionneurs, les commandes
-CAS/DDE/KL50, le remote-start actif et tout chemin TX véhicule restent absents.
+CAS/DDE/KL50 et le remote-start actif restent absents. Le **chemin électrique**
+TX existe désormais sur la carte Phase 3H, mais aucune API ou commande
+d'émission véhicule n'est implémentée.
 Les observations communautaires ou diagnostiques ne deviennent jamais une
 commande. Aucun essai BMW, rejeu ou contournement CAS/EWS/antidémarrage n'est
 autorisé par l'état actuel du dépôt.
@@ -144,6 +160,9 @@ et
 [docs/phase3f-kcan-rxonly-design-freeze.md](docs/phase3f-kcan-rxonly-design-freeze.md).
 L'arrêt de conception PCB Phase 3G est motivé dans
 [docs/phase3g-pcb-feasibility-audit.md](docs/phase3g-pcb-feasibility-audit.md).
+La révision bidirectionnelle qui remplace ces cartes pour toute future
+fabrication est décrite dans
+[docs/phase3h-bidirectional-kcan.md](docs/phase3h-bidirectional-kcan.md).
 Le configurateur PC est décrit dans
 [docs/configurator.md](docs/configurator.md).
 Le protocole entre configurateur et boîtier est spécifié dans

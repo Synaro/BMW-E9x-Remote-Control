@@ -52,6 +52,7 @@ struct CanReceiveStatistics final {
 enum class CanReceiverState : std::uint8_t {
     Stopped,
     RunningListenOnly,
+    RunningNormal,
     Fault,
 };
 

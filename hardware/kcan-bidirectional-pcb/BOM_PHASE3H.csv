@@ -1,0 +1,22 @@
+reference,quantity,manufacturer,mpn,value,package,assembly,role
+U1,1,NXP,TJA1055T/3/2Z,TJA1055T/3,SO-14_3.9x8.7mm,MOUNT,ISO11898-3 full bidirectional K-CAN transceiver
+U2,1,Texas Instruments,SN74LXC1T45QDCKRQ1,SN74LXC1T45-Q1,SC70-6 DCK,MOUNT,Automotive dual-supply 3V3-to-5V TX translator
+U3,1,Infineon,TLS715B0EJV50XUMA1,5V 150mA,PG-DSO-8-52 EP,MOUNT,Dedicated 5V_TJA regulator
+DEV1,1,Espressif Systems,ESP32-S3-DEVKITC-1-N8R8,DevKitC-1,Removable module,USER_INSTALL,USB-powered TWAI controller
+H1 H2,2,Samtec,SSQ-122-03-G-S,1x22 female,2.54mm THT,MOUNT,DevKit sockets
+F1,1,Littelfuse,MINISMDC010F-2,0.10A hold,1812,MOUNT,F_BAT input current protection
+D1,1,Vishay,SS16-E3/61T,SS16 / D_BAT,SMA,MOUNT,Input reverse-polarity protection
+R1,1,Yageo,RC1206FR-071KL,1k 1%,1206,MOUNT,R_BAT TJA BAT series
+R2 R11 R13,3,Yageo,RC0805FR-0710KL,10k 1%,0805,MOUNT,TXD recessive bias and STB EN reset pulldowns
+R4,1,Yageo,RC0805FR-07100KL,100k 1%,0805,MOUNT,U2 A input recessive bias
+R5 R7 R9 R10 R12,5,Yageo,RC0805FR-071KL,1k 1%,0805,MOUNT,TX RX ERR STB EN series resistors
+R6 R8,2,Yageo,RC0805FR-073K3L,3.3k 1%,0805,MOUNT,RXD ERR open-drain pull-ups to 3V3
+R14 R15,2,Yageo,RT0805BRD075K62L,5.62k 0.1%,0805,MOUNT,RTH RTL weak matched LSFT termination
+C1 C3 C6 C7 C8,5,Wurth Elektronik,885012207098,100nF 50V X7R,0805,MOUNT,Input VCC and dual-rail logic decoupling
+C5,1,Wurth Elektronik,885012207092,10nF 50V X7R,0805,MOUNT,C_BAT TJA BAT local
+C2,1,TDK,CGA4J3X7R1E225K125AB,2.2uF 25V X7R,0805,MOUNT,C_REG_OUT U3 stability
+C4,1,Murata,GCM31CR71A226ME02L,22uF 10V X7R,1206,MOUNT,C_VCC TJA reservoir
+J1,1,JST,B2B-XH-A(LF)(SN),2-pin XH,2.50mm THT,MOUNT,J_BAT bench power
+J2,1,JST,B3B-XH-A(LF)(SN),3-pin XH,2.50mm THT,MOUNT,J_KCAN bench bus
+TP1 TP2 TP3 TP5 TP7 TP8 TP9 TP10 TP11 TP12 TP13 TP14 TP15,13,PCB FABRICATED,TEST_PAD_1P5,Test pad,1.5mm exposed copper,FABRICATED,BAT 5V 3V3 TXD TX_MCU RESET STB EN RXD ERR CANH CANL GND
+MH1 MH2 MH3 MH4,4,PCB FABRICATED,M3_NPTH,3.2mm mounting hole,NPTH,FABRICATED,Mechanical mounting only

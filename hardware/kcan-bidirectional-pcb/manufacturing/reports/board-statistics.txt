@@ -1,0 +1,57 @@
+Statistiques du PCB
+=====================
+- Date: 05/10/2026 01:54:29
+- Projet: BMW-E9x-KCAN-Bidirectional
+- Nom du CI: BMW-E9x-KCAN-Bidirectional
+
+Circuit Imprimé
+-----
+- Largeur: 120,0000 mm
+- Hauteur: 80,0000 mm
+- Surface: 9600,00 mm²
+- Zone de cuivre dessus: 911,14 mm²
+- Zone cuivre dessous: 8624,072 mm²
+- Isolation minimum de piste: 0,2016 mm
+- Largeur minimum de piste: 0,2000 mm
+- Diamètre de perçage min: 0,3000 mm
+- Epaisseur du PCB: 1,6000 mm
+
+- Surface empreintes dessus: 1052,307 mm²
+- Surface empreintes dessous: 203,758 mm²
+- Densité des composants dessus: 10,96 %
+- Densité des composants dessous: 2,12 %
+Pads
+----
+- Pad traversant: 49
+- SMD: 94
+- Connecteur: 0
+- NPTH: 4
+- Castellated: 0
+- Press-fit: 0
+
+Vias
+----
+- Vias traversantes: 47
+- Vias aveugles: 0
+- Vias enterrées: 0
+- Micro vias: 0
+
+Composants
+----------
+
+|               | Dessus | Dessous | Total |
+|---------------|--------|---------|-------|
+|THT:           |      4 |       0 |     4 |
+|SMD:           |     27 |       0 |    27 |
+|Non spécifié:  |     17 |       0 |    17 |
+|Total:         |     48 |       0 |    48 |
+
+Perçages
+-----------
+
+| Nombre | Forme |  Taille X |  Taille Y |        Métallisé | Via/Pad | Premiere couche | Dernière couche |
+|--------|-------|-----------|-----------|------------------|---------|-----------------|-----------------|
+|     47 |  Rond | 0,3000 mm | 0,3000 mm | Trous métallisés |     Via |            F.Cu |            B.Cu |
+|     46 |  Rond | 1,0000 mm | 1,0000 mm | Trous métallisés |     Pad |            F.Cu |            B.Cu |
+|      4 |  Rond | 3,2000 mm | 3,2000 mm |             NPTH |     Pad |            F.Cu |            B.Cu |
+|      3 |  Rond | 0,9500 mm | 0,9500 mm | Trous métallisés |     Pad |            F.Cu |            B.Cu |
