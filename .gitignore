@@ -37,10 +37,18 @@ erisin/vendor-apks/
 erisin/decompiled-vendor/
 erisin/firmware-images/
 erisin/captures-private/
+erisin/private-ediabas/
+erisin/**/*.prg
+erisin/**/*.PRG
+erisin/android-app/app/src/main/assets/ediabas/
 
 # Android/Gradle generated and machine-local files.
 erisin/android-app/.gradle/
 erisin/android-app/local.properties
 erisin/android-app/**/build/
 erisin/android-app/.idea/
+erisin/ediabas-bridge/**/bin/
+erisin/ediabas-bridge/**/obj/
+erisin/ediabas-bridge/.idea/
+erisin/ediabas-bridge/artifacts/
 *.iml

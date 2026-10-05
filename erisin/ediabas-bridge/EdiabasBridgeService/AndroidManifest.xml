@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+  <uses-sdk android:minSdkVersion="29" android:targetSdkVersion="29" />
+  <uses-feature android:name="android.hardware.usb.host" android:required="true" />
+  <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+  <uses-permission android:name="android.permission.INTERNET" />
+  <application android:allowBackup="false" android:label="BMW E9x EDIABAS Bridge">
+    <service
+      android:name="com.synaro.bmwe9xediabasbridge.EdiabasBridgeService"
+      android:enabled="true"
+      android:exported="true"
+      android:stopWithTask="false" />
+  </application>
+</manifest>

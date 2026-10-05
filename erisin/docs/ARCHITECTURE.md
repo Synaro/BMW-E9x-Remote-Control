@@ -1,5 +1,17 @@
 # Erisin investigation architecture
 
+## EDIABAS companion boundary
+
+Real K+DCAN access is split across two Android packages. The Java/Gradle application
+remains responsible for UI, capability qualification, safety, shows and logging.
+`erisin/ediabas-bridge/` is a .NET for Android foreground service that owns Android USB
+permission, the FTDI handle and EdiabasLib. The packages exchange versioned NDJSON only
+through authenticated `127.0.0.1`; no DLL is loaded into the JVM.
+
+PRGs are copied from the Java app's private import area into the bridge's private ECU
+directory over the authenticated channel with a SHA-256 check. Neither package uses a
+broad shared-storage permission.
+
 ## Scope
 
 This subproject starts from observable evidence, not from the assumption that
@@ -39,7 +51,7 @@ or leave it unknown.
 ## Android layers
 
 ```text
-UI (Diagnostics / Live Data / Raw Events)
+UI (Home / Lights / Ghost / Shows / Music / Diagnostics / Settings)
                    |
 VehicleRepository + evidence log
                    |
@@ -50,12 +62,50 @@ MockTransport  ReplayTransport  XrcMcuTransport
 SIMULATED      REPLAY           DISCOVERY_ONLY / unavailable
 ```
 
-Future transports (`UsbCanTransport`, `SocketCanTransport`) are architectural
-options only. They are not implemented or selected.
+Vehicle telemetry remains read-only. Active diagnostic work uses a separate
+interface so a diagnostic job can never be confused with a raw CAN frame:
 
-The light-show parser and scheduler are independent from the transport. The
-only current output is `SimulatedLightSink`; no vehicle-light output class
-exists.
+```text
+LightShowEngine / GhostController / Manual Controls
+                     |
+                 FrmLightSink
+                     |
+              DiagnosticTransport
+                     |
+              UsbKdcanTransport
+                     |
+                EdiabasBridge
+                     |
+       LocalEdiabasBridgeClient (NDJSON / 127.0.0.1)
+                     |
+       BMW E9x EDIABAS Bridge foreground service
+                     |
+       EdiabasLib .NET for Android (pinned upstream)
+                     |
+             FTDI USB K+DCAN cable
+                     |
+               BMW D-CAN / FRM
+```
+
+`UsbKdcanTransport` performs informational FTDI enumeration and owns only the
+Java-side connection state. `LocalEdiabasBridgeClient` is the production backend;
+the separately installed .NET foreground service alone requests Android USB
+permission, opens FTDI and owns `EdiabasNet`. `UnavailableEdiabasBridge` remains a
+fail-closed fallback/test implementation, not the selected runtime backend.
+
+The bridge now builds as an ARM64 Android APK and uses the pinned GPL-compatible
+EdiabasLib source. Compilation proves the integration boundary, not a successful
+vehicle session: FTDI detection, EDIABAS communication, SGBD response, FRM identity
+and light-output verification remain independent runtime evidence gates.
+
+The light-show parser and scheduler remain transport-independent.
+`SimulatedLightSink` is immediately usable; `FrmLightSink` exists but accepts
+only discovered, explicitly armed capabilities and only after the diagnostic
+transport is connected. It never guesses a job or output name.
+
+An eventual `ObdLinkCxBleTransport` can implement `DiagnosticTransport`
+without changing the show engine and without consuming Wi-Fi needed by
+Wireless CarPlay.
 
 ## Decision gate for the internal interface
 

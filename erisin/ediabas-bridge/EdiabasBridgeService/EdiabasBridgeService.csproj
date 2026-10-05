@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0-android36.1</TargetFramework>
+    <SupportedOSPlatformVersion>29</SupportedOSPlatformVersion>
+    <OutputType>Exe</OutputType>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <ApplicationId>com.synaro.bmwe9xediabasbridge</ApplicationId>
+    <ApplicationTitle>BMW E9x EDIABAS Bridge</ApplicationTitle>
+    <ApplicationVersion>1</ApplicationVersion>
+    <ApplicationDisplayVersion>1.0.0</ApplicationDisplayVersion>
+    <AssemblyName>BMW-E9x-EdiabasBridge</AssemblyName>
+    <RuntimeIdentifiers>android-arm64</RuntimeIdentifiers>
+    <AndroidPackageFormat>apk</AndroidPackageFormat>
+    <AndroidCreatePackagePerAbi>false</AndroidCreatePackagePerAbi>
+    <AndroidUseAapt2>true</AndroidUseAapt2>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\EdiabasBridge.Core\EdiabasBridge.Core.csproj"
+                      SetTargetFramework="TargetFramework=net10.0-android36.1"
+                      AdditionalProperties="TargetFramework=net10.0-android36.1;TargetFrameworks=net10.0-android36.1" />
+    <ProjectReference Include="..\vendor\ediabaslib\EdiabasLib\EdiabasLib\EdiabasLib.csproj"
+                      SetTargetFramework="TargetFramework=net10.0-android36.1"
+                      AdditionalProperties="EnableAndroidTargets=true;TargetFramework=net10.0-android36.1;TargetFrameworks=net10.0-android36.1" />
+  </ItemGroup>
+</Project>

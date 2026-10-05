@@ -4,14 +4,18 @@ on:
   push:
     paths:
       - "erisin/android-app/**"
+      - "erisin/ediabas-bridge/**"
       - "erisin/tools/**"
       - "erisin/tests/**"
+      - ".gitmodules"
       - ".github/workflows/erisin-android.yml"
   pull_request:
     paths:
       - "erisin/android-app/**"
+      - "erisin/ediabas-bridge/**"
       - "erisin/tools/**"
       - "erisin/tests/**"
+      - ".gitmodules"
       - ".github/workflows/erisin-android.yml"
 
 permissions:
@@ -22,20 +26,71 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: gradle
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+      - name: Restore .NET Android workload
+        working-directory: erisin/ediabas-bridge
+        run: dotnet workload restore EdiabasBridgeService/EdiabasBridgeService.csproj -p:EnableAndroidTargets=true
+      - name: Install Android 36.1 platform for .NET
+        working-directory: erisin/ediabas-bridge
+        run: >-
+          dotnet build EdiabasBridgeService/EdiabasBridgeService.csproj
+          -t:InstallAndroidDependencies -f net10.0-android36.1
+          -p:EnableAndroidTargets=true
+          -p:AndroidSdkDirectory=$ANDROID_SDK_ROOT
+          -p:JavaSdkDirectory=$JAVA_HOME
+          -p:AcceptAndroidSDKLicenses=true
+      - name: .NET bridge host tests
+        working-directory: erisin/ediabas-bridge
+        run: dotnet test tests/EdiabasBridge.Tests/EdiabasBridge.Tests.csproj -c Release
+      - name: Build BMW E9x EDIABAS Bridge APK
+        working-directory: erisin/ediabas-bridge
+        run: >-
+          dotnet publish EdiabasBridgeService/EdiabasBridgeService.csproj
+          -c Debug -f net10.0-android36.1 -r android-arm64
+          -p:EnableAndroidTargets=true
+          -p:AndroidSdkDirectory=$ANDROID_SDK_ROOT
+          -p:JavaSdkDirectory=$JAVA_HOME
+      - name: Python profile analyzer tests
+        run: python -m unittest discover -s erisin/tests -p "test_*.py" -v
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: "17"
-          cache: gradle
-      - name: Python profile analyzer tests
-        run: python -m unittest discover -s erisin/tests -p "test_*.py" -v
-      - name: Android unit tests, lint and debug APK
+      - name: Android unit tests, lint, debug and release APKs
         working-directory: erisin/android-app
-        run: ./gradlew --no-daemon testDebugUnitTest lintDebug assembleDebug
-      - name: Assert read-only transport surface
+        run: ./gradlew --no-daemon testDebugUnitTest lintDebug assembleDebug assembleRelease
+      - name: Collect APK artifacts
+        shell: bash
+        run: |
+          mkdir -p erisin/build-artifacts
+          cp erisin/android-app/app/build/outputs/apk/debug/app-debug.apk \
+            erisin/build-artifacts/BMW-E9x-Control-debug.apk
+          mapfile -t bridge_apks < <(find erisin/ediabas-bridge/EdiabasBridgeService/bin/Debug/net10.0-android36.1/android-arm64/publish \
+            -type f -name "*-Signed.apk" -print)
+          test "${#bridge_apks[@]}" -eq 1
+          cp "${bridge_apks[0]}" erisin/build-artifacts/BMW-E9x-EdiabasBridge-debug.apk
+          (cd erisin/build-artifacts && sha256sum \
+            BMW-E9x-Control-debug.apk BMW-E9x-EdiabasBridge-debug.apk > SHA256SUMS.txt)
+      - uses: actions/upload-artifact@v4
+        with:
+          name: bmw-e9x-erisin-debug-apks
+          path: erisin/build-artifacts/
+      - name: Assert telemetry remains read-only and no embedded TWAI path is introduced
         shell: bash
         run: |
           ! grep -R -E "twai_transmit|twai_node_transmit" \
             erisin/android-app/app/src/main erisin/tools
           ! grep -R -E "void[[:space:]]+(send|transmit|write)[[:space:]]*\(" \
             erisin/android-app/app/src/main/java/com/synaro/bmwe9xcontrol/transport
+          ! find erisin \
+            -path erisin/ediabas-bridge/vendor -prune -o \
+            -type f \( -iname "*.prg" -o -iname "*.ipo" \) -print -quit | grep .

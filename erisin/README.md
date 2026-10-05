@@ -1,25 +1,31 @@
 # BMW E9x Control for Erisin ES3360I
 
-This directory is the isolated, read-only-first investigation and Android MVP
-for the Erisin ES3360I installed in the test BMW E90 LCI.
+This directory contains the Android 10/API 29 BMW E9x Control application and
+the evidence-driven investigation for the Erisin ES3360I.
 
-The current scope is deliberately limited to:
+The current application provides:
 
 - collecting a fresh device profile through read-only ADB commands;
 - identifying the proven CAN/MCU/Android data path;
-- displaying simulated or replayed vehicle data in a compilable Android app;
+- displaying simulated or replayed vehicle data;
+- manual light, Ghost, presets, light-show editor and music-analysis screens;
+- FTDI USB K+DCAN detection and Android permission handling;
+- private user import of BMW `.PRG` files;
+- an explicit EDIABAS/FRM diagnostic backend boundary and NDJSON job logging;
 - preserving raw evidence and provenance;
-- preparing, but **not enabling**, an XRC MCU backend.
+- preserving, but not conflating, the separate XRC MCU research backend.
 
-There is no vehicle transmit API in the application. `XrcMcuTransport` is a
-read-only discovery placeholder and reports itself unavailable until the exact
-device protocol is established from the owner's unit.
+`VehicleTransport` remains read-only. Active FRM work uses
+`DiagnosticTransport`; the committed production implementation fails closed
+because the required EdiabasLib .NET Android bridge is not yet packaged. Thus
+the APK is functional in Mock/Replay but does not claim real vehicle control.
+See [EDIABAS_FTDI.md](docs/EDIABAS_FTDI.md).
 
 ## Quick start without the vehicle
 
 ```powershell
 cd erisin/android-app
-.\gradlew.bat testDebugUnitTest assembleDebug
+.\gradlew.bat testDebugUnitTest lintDebug assembleDebug assembleRelease
 ```
 
 The APK is generated at:
@@ -45,5 +51,6 @@ Git. See [DEVICE_PROFILE.md](docs/DEVICE_PROFILE.md) before collecting.
 ## Safety boundary
 
 No script remounts a partition, changes a property, installs an APK, clears a
-log, writes a serial device, sends CAN, or invokes a vehicle diagnostic job.
-See [SAFETY.md](docs/SAFETY.md).
+log or writes an XRC serial device. The checked-in EDIABAS backend rejects all
+jobs until the real bridge is explicitly integrated; discovered FRM
+capabilities also start unarmed. See [SAFETY.md](docs/SAFETY.md).
